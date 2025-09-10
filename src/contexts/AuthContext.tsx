@@ -30,9 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await authService.signIn(email, password);
       setUser(userData);
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
-      setError(err.message || 'Login failed');
+      setError(err instanceof Error ? err.message : 'Login failed');
       return false;
     } finally {
       setLoading(false);
@@ -46,9 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await authService.signUp(email, password);
       setUser(userData);
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Sign up error:', err);
-      setError(err.message || 'Sign up failed');
+      setError(err instanceof Error ? err.message : 'Sign up failed');
       return false;
     } finally {
       setLoading(false);
@@ -60,9 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(null);
       await authService.signOut();
       setUser(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Logout error:', err);
-      setError(err.message || 'Logout failed');
+      setError(err instanceof Error ? err.message : 'Logout failed');
     }
   };
 

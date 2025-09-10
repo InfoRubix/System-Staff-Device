@@ -1,0 +1,70 @@
+3:21:01 PM: Netlify Build                                                 
+3:21:01 PM: ────────────────────────────────────────────────────────────────
+3:21:01 PM: 
+3:21:01 PM: ❯ Version
+3:21:01 PM:   @netlify/build 35.1.6
+3:21:01 PM: 
+3:21:01 PM: ❯ Flags
+3:21:01 PM:   accountId: 6735783266df00c8d93ffd99
+3:21:01 PM:   baseRelDir: true
+3:21:01 PM:   buildId: 68c126ab5caf261f14636480
+3:21:01 PM:   deployId: 68c126ab5caf261f14636482
+3:21:01 PM: 
+3:21:01 PM: ❯ Current directory
+3:21:01 PM:   /opt/build/repo
+3:21:01 PM: 
+3:21:01 PM: ❯ Config file
+3:21:01 PM:   No config file was defined: using default values.
+3:21:01 PM: 
+3:21:01 PM: ❯ Context
+3:21:01 PM:   production
+3:21:02 PM: 
+3:21:02 PM: ❯ Using Next.js Runtime - v5.13.1
+3:21:03 PM: No Next.js cache to restore
+3:21:03 PM: 
+3:21:03 PM: Build command from Netlify app                                
+3:21:03 PM: ────────────────────────────────────────────────────────────────
+3:21:03 PM: 
+3:21:03 PM: $ npm run build
+3:21:03 PM: > my-project@0.1.0 build
+3:21:03 PM: > next build --turbopack
+3:21:04 PM: ⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+3:21:04 PM:    ▲ Next.js 15.5.2 (Turbopack)
+3:21:04 PM:    Creating an optimized production build ...
+3:21:09 PM:  ✓ Finished writing to disk in 4ms
+3:21:09 PM:  ✓ Compiled successfully in 4.8s
+3:21:09 PM:    Linting and checking validity of types ...
+3:21:14 PM: Failed during stage 'building site': Build script returned non-zero exit code: 2
+3:21:14 PM: 
+3:21:14 PM: Failed to compile.
+3:21:14 PM: ./src/contexts/AuthContext.tsx
+3:21:14 PM: 33:19  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+3:21:14 PM: 49:19  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+3:21:14 PM: 63:19  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+3:21:14 PM: ./src/scripts/migrateData.ts
+3:21:14 PM: 12:15  Warning: 'id' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+3:21:14 PM: info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+3:21:14 PM: 
+3:21:14 PM: "build.command" failed                                        
+3:21:14 PM: ────────────────────────────────────────────────────────────────
+3:21:14 PM: 
+3:21:14 PM:   Error message
+3:21:14 PM:   Command failed with exit code 1: npm run build
+3:21:14 PM: 
+3:21:14 PM:   Error location
+3:21:14 PM:   In Build command from Netlify app:
+3:21:14 PM:   npm run build
+3:21:14 PM: 
+3:21:14 PM:   Resolved config
+3:21:14 PM:   build:
+3:21:14 PM:     command: npm run build
+3:21:14 PM:     commandOrigin: ui
+3:21:14 PM:     publish: /opt/build/repo/.next
+3:21:14 PM:     publishOrigin: ui
+3:21:14 PM:   plugins:
+3:21:14 PM:     - inputs: {}
+3:21:14 PM:       origin: ui
+3:21:14 PM:       package: "@netlify/plugin-nextjs"
+3:21:14 PM: Build failed due to a user error: Build script returned non-zero exit code: 2
+3:21:14 PM: Failing build: Failed to build site
+3:21:15 PM: Finished processing build request in 48.267s

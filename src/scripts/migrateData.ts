@@ -9,7 +9,7 @@ export async function migrateDataToFirebase() {
     
     for (const device of mockDevices) {
       // Remove the id field as Firebase will generate new ones
-      const { id, ...deviceData } = device;
+      const { id: _id, ...deviceData } = device;
       
       try {
         const newId = await deviceService.addDevice(deviceData);
