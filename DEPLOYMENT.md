@@ -10,7 +10,11 @@
 - **Problem**: `next.config.ts` required TypeScript to be available during build initialization
 - **Solution**: Converted to `next.config.js` to avoid TypeScript dependency during build setup
 
-### 3. Build Configuration
+### 3. Tailwind CSS Configuration
+- **Problem**: Using Tailwind CSS v4 with `@tailwindcss/postcss` plugin caused module resolution issues
+- **Solution**: Downgraded to stable Tailwind CSS v3.4.1 with traditional PostCSS configuration
+
+### 4. Build Configuration
 - **Problem**: npm ci can be restrictive with package versions
 - **Solution**: Changed to `npm install` for more flexibility
 
@@ -41,6 +45,41 @@ auto-install-peers=true
 fund=false
 audit=false
 engine-strict=false
+```
+
+### postcss.config.mjs
+```js
+const config = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+
+export default config;
+```
+
+### tailwind.config.js
+```js
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+```
+
+### globals.css
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 ```
 
 ## Environment Variables Required
