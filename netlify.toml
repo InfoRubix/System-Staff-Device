@@ -1,17 +1,13 @@
 [build]
-  command = "npm run build"
+  command = "npm ci && npm run build"
   publish = ".next"
-
-[functions]
-  # Set Node.js version for functions
-  node_bundler = "esbuild"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
   NODE_VERSION = "18"
-  NPM_FLAGS = "--prefix=/dev/null"
+  NODE_ENV = "production"
 
 # Redirect all requests to Next.js
 [[redirects]]
