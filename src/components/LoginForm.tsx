@@ -10,13 +10,13 @@ function LoginForm() {
   const [showForm, setShowForm] = useState(false);
   const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    const success = login(username, password);
+    const success = await login(username, password);
     if (!success) {
-      setError('Invalid credentials. Use admin/admin123');
+      setError('Invalid admin credentials');
     }
   };
 
@@ -25,20 +25,20 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 animate-gradient-x">
-      {/* Floating Emojis */}
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-gray-100 via-red-50 to-white animate-gradient-x">
+      {/* Floating Computer Emojis */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="animate-float-slow absolute top-20 left-10 text-3xl">💻</div>
-        <div className="animate-float-medium absolute top-40 right-20 text-2xl">✨</div>
-        <div className="animate-float-fast absolute bottom-32 left-20 text-3xl">🌟</div>
-        <div className="animate-float-slow absolute top-60 left-1/2 text-2xl">💫</div>
-        <div className="animate-float-medium absolute bottom-20 right-10 text-3xl">🎯</div>
-        <div className="animate-float-fast absolute top-32 right-1/3 text-2xl">🚀</div>
-        <div className="animate-float-slow absolute bottom-40 left-1/3 text-2xl">⭐</div>
+        <div className="animate-float-medium absolute top-40 right-20 text-2xl">🖥️</div>
+        <div className="animate-float-fast absolute bottom-32 left-20 text-3xl">⌨️</div>
+        <div className="animate-float-slow absolute top-60 left-1/2 text-2xl">🖱️</div>
+        <div className="animate-float-medium absolute bottom-20 right-10 text-3xl">💾</div>
+        <div className="animate-float-fast absolute top-32 right-1/3 text-2xl">🔧</div>
+        <div className="animate-float-slow absolute bottom-40 left-1/3 text-2xl">💻</div>
       </div>
 
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-sm mx-auto">
+      <div className="min-h-screen flex items-start justify-center pt-24 p-4 z-10">
+        <div className="w-full max-w-sm">
           <div className="relative perspective-1000">
             <div className={`relative w-full transition-transform duration-700 transform-style-preserve-3d ${showForm ? 'rotate-y-180' : ''}`}>
               
@@ -46,37 +46,35 @@ function LoginForm() {
               <div className="backface-hidden">
                 <div className="text-center space-y-6 animate-fade-in">
                   <div className="space-y-4">
-                    <h1 className="text-4xl font-bold text-gray-800 animate-bounce-slow">
+                    <h1 className="text-4xl font-bold text-gray-900 animate-bounce-slow">
                       Device Manager
                     </h1>
-                    <p className="text-lg text-gray-600 animate-slide-up">
-                      Welcome to our cute admin portal! 🌈
+                    <p className="text-lg text-gray-700 animate-slide-up">
+                      Welcome to the admin portal
                     </p>
                   </div>
                   
                   <button
                     onClick={handleLoginClick}
-                    className="group relative bg-gradient-to-r from-pink-300 to-pink-400 hover:from-pink-400 hover:to-pink-500 text-white font-semibold py-4 px-8 rounded-full shadow-lg transform transition-all duration-300 hover:scale-110 hover:shadow-xl animate-pulse-soft"
+                    className="group relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-4 px-8 rounded-lg shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
                   >
                     <span className="flex items-center justify-center space-x-2">
-                      <span className="text-2xl animate-bounce">🔐</span>
-                      <span className="text-xl">Login to Magic Portal</span>
-                      <span className="text-2xl animate-bounce delay-100">✨</span>
+                      <span className="text-xl">Login</span>
                     </span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-pink-400 to-pink-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-shimmer"></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-700 to-red-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </button>
                 </div>
               </div>
 
               {/* Back - Login Form */}
               <div className="absolute inset-0 backface-hidden rotate-y-180">
-                <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-white/20 animate-fade-in">
+                <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-gray-200 animate-fade-in">
                   <div className="text-center mb-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                      Admin Portal 🎯
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                      Admin Portal
                     </h2>
-                    <p className="text-sm text-gray-600">
-                      Enter your magical credentials
+                    <p className="text-sm text-gray-700">
+                      Enter your admin credentials
                     </p>
                   </div>
 
@@ -84,12 +82,12 @@ function LoginForm() {
                     <div className="space-y-4">
                       <div className="relative">
                         <input
-                          type="text"
+                          type="email"
                           required
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
-                          className="w-full px-4 py-3 border-2 border-purple-200 rounded-2xl focus:border-purple-400 focus:outline-none transition-all duration-300 placeholder-gray-400 bg-white/70 backdrop-blur-sm"
-                          placeholder="✨ Username"
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-red-500 focus:outline-none transition-all duration-300 placeholder-gray-400 bg-white/70 backdrop-blur-sm"
+                          placeholder="🔐 Admin Email"
                         />
                       </div>
                       <div className="relative">
@@ -98,8 +96,8 @@ function LoginForm() {
                           required
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="w-full px-4 py-3 border-2 border-purple-200 rounded-2xl focus:border-purple-400 focus:outline-none transition-all duration-300 placeholder-gray-400 bg-white/70 backdrop-blur-sm"
-                          placeholder="🔑 Password"
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-red-500 focus:outline-none transition-all duration-300 placeholder-gray-400 bg-white/70 backdrop-blur-sm"
+                          placeholder="🔑 Admin Password"
                         />
                       </div>
                     </div>
@@ -113,11 +111,10 @@ function LoginForm() {
                     <div className="space-y-3">
                       <button
                         type="submit"
-                        className="w-full bg-gradient-to-r from-purple-300 to-purple-400 hover:from-purple-400 hover:to-purple-500 text-white font-semibold py-3 px-4 rounded-2xl shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                        className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-3 px-4 rounded-2xl shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
                       >
                         <span className="flex items-center justify-center space-x-2">
-                          <span>Enter Magic Portal</span>
-                          <span className="animate-bounce">🚀</span>
+                          <span>Enter Admin Portal</span>
                         </span>
                       </button>
                       
@@ -133,7 +130,7 @@ function LoginForm() {
 
                   <div className="mt-4 text-center">
                     <p className="text-xs text-gray-500">
-                      Hint: admin / admin123 🤫
+                      Admin access only 🔐
                     </p>
                   </div>
                 </div>

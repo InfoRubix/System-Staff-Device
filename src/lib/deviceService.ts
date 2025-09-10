@@ -76,31 +76,25 @@ export const deviceService = {
     }
   },
 
-  // Search devices by staff name
+  // Search devices by staff name only
   async searchDevices(staffName: string): Promise<Device[]> {
     try {
       if (!staffName.trim()) {
         return await this.getAllDevices();
       }
 
-      const q = query(
-        collection(db, COLLECTION_NAME),
-        where('staffName', '>=', staffName),
-        where('staffName', '<=', staffName + '\uf8ff'),
-        orderBy('staffName')
+      // Get all devices first (since Firestore doesn't support full-text search)
+      const allDevices = await this.getAllDevices();
+      
+      // Convert search term to lowercase for case-insensitive matching
+      const lowerSearchTerm = staffName.toLowerCase().trim();
+      
+      // Filter devices based on staff name substring match only
+      const filteredDevices = allDevices.filter(device => 
+        device.staffName && device.staffName.toLowerCase().includes(lowerSearchTerm)
       );
       
-      const querySnapshot = await getDocs(q);
-      
-      return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        } as Device;
-      });
+      return filteredDevices;
     } catch (error) {
       console.error('Error searching devices:', error);
       throw error;

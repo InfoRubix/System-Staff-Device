@@ -61,31 +61,12 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
   const validateForm = (): boolean => {
     const newErrors: Partial<DeviceFormData> = {};
 
+    // Only validate that staff name has some value (can be empty for others)
     if (!formData.staffName.trim()) {
       newErrors.staffName = 'Staff name is required';
     }
-    if (!formData.department.trim()) {
-      newErrors.department = 'Department is required';
-    }
-    if (!formData.deviceModel.trim()) {
-      newErrors.deviceModel = 'Device model is required';
-    }
-    if (!formData.operatingSystem.trim()) {
-      newErrors.operatingSystem = 'Operating system is required';
-    }
-    if (!formData.processor.trim()) {
-      newErrors.processor = 'Processor is required';
-    }
-    if (!formData.ram.trim()) {
-      newErrors.ram = 'RAM is required';
-    }
-    if (!formData.graphics.trim()) {
-      newErrors.graphics = 'Graphics is required';
-    }
-    if (!formData.storage.trim()) {
-      newErrors.storage = 'Storage is required';
-    }
 
+    // All other fields are now optional and can be empty
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -99,35 +80,31 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 animate-fade-in">
-      <div className="relative top-5 mx-auto p-6 max-w-3xl animate-modal-slide-up">
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20">
-          <div className="p-8">
-            <div className="text-center mb-6">
-              <div className="text-4xl mb-2">
-                {device ? '✨' : '➕'}
-              </div>
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                {device ? '✨ Edit Magical Device ✨' : '🎯 Add New Device to Portal 🎯'}
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 animate-fade-in">
+      <div className="relative min-h-full flex items-center justify-center p-4 sm:p-6">
+        <div className="w-full max-w-4xl bg-white rounded-lg shadow-xl border border-gray-200">
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="text-center mb-4 sm:mb-6">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                {device ? 'Edit Device' : 'Add New Device'}
               </h3>
               <p className="text-sm text-gray-600 mt-2">
-                {device ? 'Update the device magic spells' : 'Cast a new device into our magical portal!'}
+                {device ? 'Update device information' : 'Enter device details and specifications'}
               </p>
             </div>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
               <div>
-                <label htmlFor="staffName" className="block text-sm font-medium text-gray-700">
-                  Staff Name *
-                </label>
+                <label htmlFor="staffName" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
+                  Staff Name                </label>
                 <input
                   type="text"
                   name="staffName"
                   id="staffName"
                   value={formData.staffName}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                     errors.staffName ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Enter staff name"
@@ -138,15 +115,14 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               </div>
 
               <div>
-                <label htmlFor="department" className="block text-sm font-medium text-gray-700">
-                  Department *
-                </label>
+                <label htmlFor="department" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
+                  Department                </label>
                 <select
                   name="department"
                   id="department"
                   value={formData.department}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                     errors.department ? 'border-red-300' : 'border-gray-300'
                   }`}
                 >
@@ -162,15 +138,14 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               </div>
 
               <div>
-                <label htmlFor="deviceType" className="block text-sm font-medium text-gray-700">
-                  Device Type *
-                </label>
+                <label htmlFor="deviceType" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
+                  Device Type                </label>
                 <select
                   name="deviceType"
                   id="deviceType"
                   value={formData.deviceType}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 >
                   <option value="Laptop">Laptop</option>
                   <option value="Desktop">Desktop</option>
@@ -179,19 +154,18 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               </div>
 
               <div>
-                <label htmlFor="deviceModel" className="block text-sm font-medium text-gray-700">
-                  Device Model *
-                </label>
+                <label htmlFor="deviceModel" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
+                  Device Model                </label>
                 <input
                   type="text"
                   name="deviceModel"
                   id="deviceModel"
                   value={formData.deviceModel}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                     errors.deviceModel ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter device model"
+                  placeholder="Enter device model (optional)"
                 />
                 {errors.deviceModel && (
                   <p className="mt-1 text-sm text-red-600">{errors.deviceModel}</p>
@@ -199,19 +173,18 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               </div>
 
               <div>
-                <label htmlFor="operatingSystem" className="block text-sm font-medium text-gray-700">
-                  Operating System *
-                </label>
+                <label htmlFor="operatingSystem" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
+                  Operating System                </label>
                 <input
                   type="text"
                   name="operatingSystem"
                   id="operatingSystem"
                   value={formData.operatingSystem}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                     errors.operatingSystem ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter operating system"
+                  placeholder="Enter operating system (optional)"
                 />
                 {errors.operatingSystem && (
                   <p className="mt-1 text-sm text-red-600">{errors.operatingSystem}</p>
@@ -219,19 +192,18 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               </div>
 
               <div>
-                <label htmlFor="processor" className="block text-sm font-medium text-gray-700">
-                  Processor/CPU *
-                </label>
+                <label htmlFor="processor" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
+                  Processor/CPU                </label>
                 <input
                   type="text"
                   name="processor"
                   id="processor"
                   value={formData.processor}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                     errors.processor ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter processor"
+                  placeholder="Enter processor (optional)"
                 />
                 {errors.processor && (
                   <p className="mt-1 text-sm text-red-600">{errors.processor}</p>
@@ -239,19 +211,18 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               </div>
 
               <div>
-                <label htmlFor="ram" className="block text-sm font-medium text-gray-700">
-                  RAM *
-                </label>
+                <label htmlFor="ram" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
+                  RAM                </label>
                 <input
                   type="text"
                   name="ram"
                   id="ram"
                   value={formData.ram}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                     errors.ram ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter RAM"
+                  placeholder="Enter RAM (optional)"
                 />
                 {errors.ram && (
                   <p className="mt-1 text-sm text-red-600">{errors.ram}</p>
@@ -259,19 +230,18 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               </div>
 
               <div>
-                <label htmlFor="graphics" className="block text-sm font-medium text-gray-700">
-                  Graphics/GPU *
-                </label>
+                <label htmlFor="graphics" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
+                  Graphics/GPU                </label>
                 <input
                   type="text"
                   name="graphics"
                   id="graphics"
                   value={formData.graphics}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                     errors.graphics ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter graphics card"
+                  placeholder="Enter graphics card (optional)"
                 />
                 {errors.graphics && (
                   <p className="mt-1 text-sm text-red-600">{errors.graphics}</p>
@@ -279,19 +249,18 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               </div>
 
               <div>
-                <label htmlFor="storage" className="block text-sm font-medium text-gray-700">
-                  Storage *
-                </label>
+                <label htmlFor="storage" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
+                  Storage                </label>
                 <input
                   type="text"
                   name="storage"
                   id="storage"
                   value={formData.storage}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${
+                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                     errors.storage ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter storage"
+                  placeholder="Enter storage (optional)"
                 />
                 {errors.storage && (
                   <p className="mt-1 text-sm text-red-600">{errors.storage}</p>
@@ -299,15 +268,14 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               </div>
 
               <div>
-                <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                  Status *
-                </label>
+                <label htmlFor="status" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
+                  Status                </label>
                 <select
                   name="status"
                   id="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 >
                   <option value="Working">Working</option>
                   <option value="Broken">Broken</option>
@@ -316,15 +284,14 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               </div>
 
               <div>
-                <label htmlFor="ownership" className="block text-sm font-medium text-gray-700">
-                  Ownership *
-                </label>
+                <label htmlFor="ownership" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
+                  Ownership                </label>
                 <select
                   name="ownership"
                   id="ownership"
                   value={formData.ownership}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 >
                   <option value="Company-owned">Company-owned</option>
                   <option value="Personal">Personal</option>
@@ -333,7 +300,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
             </div>
 
             <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="notes" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
                 Notes (Optional)
               </label>
               <textarea
@@ -342,27 +309,24 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                 rows={3}
                 value={formData.notes}
                 onChange={handleInputChange}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
                 placeholder="Enter any additional notes..."
               />
             </div>
 
-            <div className="flex justify-center space-x-4 pt-6">
+            <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4 pt-4 sm:pt-6">
               <button
                 type="button"
                 onClick={onCancel}
-                className="bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 text-gray-700 px-6 py-3 rounded-full font-medium transition-all duration-300 hover:scale-105 hover:shadow-md"
+                className="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-4 sm:py-3 rounded-lg font-medium transition-colors duration-200 text-base touch-manipulation"
               >
-                Cancel 👋
+                Cancel
               </button>
               <button
                 type="submit"
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-8 py-4 sm:py-3 rounded-lg font-semibold transition-colors duration-200 text-base touch-manipulation"
               >
-                <span className="flex items-center space-x-2">
-                  <span>{device ? 'Update Device' : 'Add Device'}</span>
-                  <span className="animate-bounce">{device ? '✨' : '🚀'}</span>
-                </span>
+                {device ? 'Update Device' : 'Add Device'}
               </button>
             </div>
           </form>

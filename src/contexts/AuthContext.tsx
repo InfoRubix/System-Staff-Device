@@ -10,12 +10,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChanged((user) => {
       setUser(user);
       setLoading(false);
+      setIsInitialized(true);
     });
 
     return unsubscribe;
@@ -71,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login, 
       signUp,
       logout,
-      loading,
+      loading: loading || !isInitialized,
       error
     }}>
       {children}
