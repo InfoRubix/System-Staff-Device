@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDevices } from '../contexts/DeviceContext';
 import DepartmentDashboard from './DepartmentDashboard';
-import DeviceList from './DeviceList';
 import DeviceForm from './DeviceForm';
 import { Device, DeviceFormData } from '../types/device';
 
@@ -13,7 +12,6 @@ function Dashboard() {
   const { addDevice, updateDevice } = useDevices();
   const [showForm, setShowForm] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | undefined>(undefined);
-  const [currentView, setCurrentView] = useState<'departments' | 'all-devices'>('departments');
 
   const handleAddDevice = () => {
     setEditingDevice(undefined);
@@ -88,30 +86,6 @@ function Dashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
-              {/* View Toggle */}
-              <div className="flex bg-white/10 backdrop-blur-sm rounded-full p-1 border border-white/20">
-                <button
-                  onClick={() => setCurrentView('departments')}
-                  className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
-                    currentView === 'departments' 
-                      ? 'bg-white text-gray-900 shadow-md' 
-                      : 'text-white hover:text-gray-200'
-                  }`}
-                >
-                  📊 Departments
-                </button>
-                <button
-                  onClick={() => setCurrentView('all-devices')}
-                  className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all ${
-                    currentView === 'all-devices' 
-                      ? 'bg-white text-gray-900 shadow-md' 
-                      : 'text-white hover:text-gray-200'
-                  }`}
-                >
-                  📱 All Devices
-                </button>
-              </div>
-              
               <div className="hidden sm:flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/20">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                 <span className="text-xs sm:text-sm text-white font-medium">Welcome, Admin</span>
@@ -133,17 +107,10 @@ function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-3 sm:py-6 animate-slide-up">
-        {currentView === 'departments' ? (
-          <DepartmentDashboard 
-            onEdit={handleEditDevice}
-            onAdd={handleAddDevice}
-          />
-        ) : (
-          <DeviceList 
-            onEdit={handleEditDevice}
-            onAdd={handleAddDevice}
-          />
-        )}
+        <DepartmentDashboard 
+          onEdit={handleEditDevice}
+          onAdd={handleAddDevice}
+        />
       </main>
 
       {/* Device Form Modal */}
