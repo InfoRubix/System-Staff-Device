@@ -12,6 +12,14 @@ interface DepartmentDashboardProps {
   onAdd?: () => void;
 }
 
+type DepartmentStats = {
+  totalDevices: number;
+  staffCount: number;
+  workingDevices: number;
+  brokenDevices: number;
+  underRepairDevices: number;
+};
+
 function DepartmentDashboard({ onEdit, onAdd }: DepartmentDashboardProps) {
   const { devices, loading, searchDevices, deleteDevice } = useDevices();
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
@@ -24,22 +32,9 @@ function DepartmentDashboard({ onEdit, onAdd }: DepartmentDashboardProps) {
 
   // Group devices by department and calculate stats
   const departmentStats = useMemo(() => {
-    if (!devices) return {};
-    
-    const stats: Record<Department, {
-      totalDevices: number;
-      staffCount: number;
-      workingDevices: number;
-      brokenDevices: number;
-      underRepairDevices: number;
-    }> = {} as Record<Department, {
-      totalDevices: number;
-      staffCount: number;
-      workingDevices: number;
-      brokenDevices: number;
-      underRepairDevices: number;
-    }>;
+    const stats: Record<Department, DepartmentStats> = {} as Record<Department, DepartmentStats>;
 
+    // Initialize all departments with empty stats
     DEPARTMENTS.forEach(dept => {
       stats[dept] = {
         totalDevices: 0,
@@ -49,6 +44,9 @@ function DepartmentDashboard({ onEdit, onAdd }: DepartmentDashboardProps) {
         underRepairDevices: 0,
       };
     });
+
+    // If no devices, return initialized stats
+    if (!devices) return stats;
 
     const staffByDepartment: Record<Department, Set<string>> = {} as Record<Department, Set<string>>;
     DEPARTMENTS.forEach(dept => {
@@ -421,7 +419,7 @@ function DepartmentDashboard({ onEdit, onAdd }: DepartmentDashboardProps) {
       )}
 
       {/* Empty State - Only show when not searching */}
-      {!loading && !searchQuery.trim() && Object.values(departmentStats).every(stat => stat.totalDevices === 0) && (
+      {!loading && !searchQuery.trim() && Object.values(departmentStats).every((stat: DepartmentStats) => stat.totalDevices === 0) && (
         <div className="text-center py-12">
           <div className="mb-4">
             <svg className="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
