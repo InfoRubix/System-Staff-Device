@@ -21,7 +21,6 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
     graphics: '',
     storage: '',
     status: 'Working',
-    ownership: 'Company-owned',
     notes: '',
   });
 
@@ -40,7 +39,6 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
         graphics: device.graphics,
         storage: device.storage,
         status: device.status,
-        ownership: device.ownership,
         notes: device.notes || '',
       });
     }
@@ -51,7 +49,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
   ) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Clear error when user starts typing
     if (errors[name as keyof DeviceFormData]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -80,9 +78,15 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 animate-fade-in">
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 animate-fade-in"
+      onClick={onCancel}
+    >
       <div className="relative min-h-full flex items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-4xl bg-white rounded-lg shadow-xl border border-gray-200">
+        <div 
+          className="w-full max-w-4xl bg-white rounded-lg shadow-xl border border-gray-200"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="text-center mb-4 sm:mb-6">
               <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -149,7 +153,8 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                 >
                   <option value="Laptop">Laptop</option>
                   <option value="Desktop">Desktop</option>
-                  <option value="Both">Both</option>
+                  <option value="Tablet">Tablet</option>
+                  <option value="Phone">Phone</option>
                 </select>
               </div>
 
@@ -175,8 +180,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               <div>
                 <label htmlFor="operatingSystem" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
                   Operating System                </label>
-                <input
-                  type="text"
+                <select
                   name="operatingSystem"
                   id="operatingSystem"
                   value={formData.operatingSystem}
@@ -184,8 +188,32 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                     errors.operatingSystem ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter operating system (optional)"
-                />
+                >
+                  <option value="">Select Operating System (optional)</option>
+                  <optgroup label="Windows">
+                    <option value="Windows 7">Windows 7</option>
+                    <option value="Windows 8.1">Windows 8.1</option>
+                    <option value="Windows 10">Windows 10</option>
+                    <option value="Windows 11">Windows 11</option>
+                  </optgroup>
+                  <optgroup label="macOS">
+                    <option value="macOS Monterey">macOS Monterey</option>
+                    <option value="macOS Ventura">macOS Ventura</option>
+                    <option value="macOS Sonoma">macOS Sonoma</option>
+                  </optgroup>
+                  <optgroup label="iOS">
+                    <option value="iOS 16">iOS 16</option>
+                    <option value="iOS 17">iOS 17</option>
+                    <option value="iOS 18">iOS 18</option>
+                  </optgroup>
+                  <optgroup label="Android">
+                    <option value="Android 11">Android 11</option>
+                    <option value="Android 12">Android 12</option>
+                    <option value="Android 13">Android 13</option>
+                    <option value="Android 14">Android 14</option>
+                    <option value="Android 15">Android 15</option>
+                  </optgroup>
+                </select>
                 {errors.operatingSystem && (
                   <p className="mt-1 text-sm text-red-600">{errors.operatingSystem}</p>
                 )}
@@ -213,8 +241,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               <div>
                 <label htmlFor="ram" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
                   RAM                </label>
-                <input
-                  type="text"
+                <select
                   name="ram"
                   id="ram"
                   value={formData.ram}
@@ -222,8 +249,15 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                     errors.ram ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter RAM (optional)"
-                />
+                >
+                  <option value="">Select RAM (optional)</option>
+                  <option value="2 GB">2 GB</option>
+                  <option value="4 GB">4 GB</option>
+                  <option value="6 GB">6 GB</option>
+                  <option value="8 GB">8 GB</option>
+                  <option value="16 GB">16 GB</option>
+                  <option value="32 GB">32 GB</option>
+                </select>
                 {errors.ram && (
                   <p className="mt-1 text-sm text-red-600">{errors.ram}</p>
                 )}
@@ -251,8 +285,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               <div>
                 <label htmlFor="storage" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
                   Storage                </label>
-                <input
-                  type="text"
+                <select
                   name="storage"
                   id="storage"
                   value={formData.storage}
@@ -260,8 +293,13 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
                     errors.storage ? 'border-red-300' : 'border-gray-300'
                   }`}
-                  placeholder="Enter storage (optional)"
-                />
+                >
+                  <option value="">Select storage (optional)</option>
+                  <option value="256 GB">256 GB</option>
+                  <option value="512 GB">512 GB</option>
+                  <option value="1 TB">1 TB</option>
+                  <option value="2 TB">2 TB</option>
+                </select>
                 {errors.storage && (
                   <p className="mt-1 text-sm text-red-600">{errors.storage}</p>
                 )}
@@ -279,29 +317,15 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                 >
                   <option value="Working">Working</option>
                   <option value="Broken">Broken</option>
-                  <option value="Under Repair">Under Repair</option>
+                  <option value="Needs Repair">Needs Repair</option>
                 </select>
               </div>
 
-              <div>
-                <label htmlFor="ownership" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
-                  Ownership                </label>
-                <select
-                  name="ownership"
-                  id="ownership"
-                  value={formData.ownership}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                >
-                  <option value="Company-owned">Company-owned</option>
-                  <option value="Personal">Personal</option>
-                </select>
-              </div>
             </div>
 
             <div>
               <label htmlFor="notes" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
-                Notes (Optional)
+                User Feedback (Optional)
               </label>
               <textarea
                 name="notes"
@@ -310,7 +334,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                 value={formData.notes}
                 onChange={handleInputChange}
                 className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
-                placeholder="Enter any additional notes..."
+                placeholder="Enter user feedback..."
               />
             </div>
 

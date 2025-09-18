@@ -26,16 +26,6 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-gray-100 via-red-50 to-white animate-gradient-x">
-      {/* Floating Computer Emojis */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="animate-float-slow absolute top-20 left-10 text-3xl">💻</div>
-        <div className="animate-float-medium absolute top-40 right-20 text-2xl">🖥️</div>
-        <div className="animate-float-fast absolute bottom-32 left-20 text-3xl">⌨️</div>
-        <div className="animate-float-slow absolute top-60 left-1/2 text-2xl">🖱️</div>
-        <div className="animate-float-medium absolute bottom-20 right-10 text-3xl">💾</div>
-        <div className="animate-float-fast absolute top-32 right-1/3 text-2xl">🔧</div>
-        <div className="animate-float-slow absolute bottom-40 left-1/3 text-2xl">💻</div>
-      </div>
 
       <div className="min-h-screen flex items-start justify-center pt-24 p-4 z-10">
         <div className="w-full max-w-sm">
@@ -87,7 +77,7 @@ function LoginForm() {
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
                           className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-red-500 focus:outline-none transition-all duration-300 placeholder-gray-400 bg-white/70 backdrop-blur-sm"
-                          placeholder="🔐 Admin Email"
+                          placeholder="Admin Email"
                         />
                       </div>
                       <div className="relative">
@@ -97,7 +87,7 @@ function LoginForm() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           className="w-full px-4 py-3 border-2 border-gray-300 rounded-2xl focus:border-red-500 focus:outline-none transition-all duration-300 placeholder-gray-400 bg-white/70 backdrop-blur-sm"
-                          placeholder="🔑 Admin Password"
+                          placeholder="Admin Password"
                         />
                       </div>
                     </div>
@@ -130,7 +120,7 @@ function LoginForm() {
 
                   <div className="mt-4 text-center">
                     <p className="text-xs text-gray-500">
-                      Admin access only 🔐
+                      Admin access only
                     </p>
                   </div>
                 </div>

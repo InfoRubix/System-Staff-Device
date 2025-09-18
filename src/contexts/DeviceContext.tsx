@@ -11,11 +11,14 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load devices from Firebase on mount
+  // Load devices from Firebase on mount, but only once
   useEffect(() => {
-    loadDevices();
-  }, []);
+    if (!isInitialized) {
+      loadDevices();
+    }
+  }, [isInitialized]);
 
   const loadDevices = async () => {
     try {
@@ -23,6 +26,7 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
       setError(null);
       const firebaseDevices = await deviceService.getAllDevices();
       setDevices(firebaseDevices);
+      setIsInitialized(true);
     } catch (err) {
       console.error('Error loading devices:', err);
       setError('Failed to load devices');

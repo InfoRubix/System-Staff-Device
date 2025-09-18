@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // Remove standalone output for development
+  // output: 'standalone',
   eslint: {
     // Allow production builds to successfully complete even if there are ESLint errors
     ignoreDuringBuilds: false,
@@ -11,6 +12,12 @@ const nextConfig = {
   },
   experimental: {
     esmExternals: true,
+  },
+  // Updated turbopack configuration
+  turbopack: {
+    rules: {
+      // Add any specific turbopack rules if needed
+    }
   },
 };
 

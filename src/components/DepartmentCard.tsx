@@ -24,63 +24,63 @@ function DepartmentCard({ department, stats, onClick }: DepartmentCardProps) {
         gradient: 'from-purple-500 to-pink-600',
         bg: 'bg-gradient-to-br from-purple-50 to-pink-50',
         border: 'border-purple-200',
-        emoji: '📢',
+        icon: 'MKT',
         accent: 'text-purple-600'
       },
       'RUBIX': {
         gradient: 'from-blue-500 to-indigo-600',
         bg: 'bg-gradient-to-br from-blue-50 to-indigo-50',
         border: 'border-blue-200',
-        emoji: '🔷',
+        icon: 'RBX',
         accent: 'text-blue-600'
       },
       'CONVEY': {
         gradient: 'from-green-500 to-teal-600',
         bg: 'bg-gradient-to-br from-green-50 to-teal-50',
         border: 'border-green-200',
-        emoji: '🚚',
+        icon: 'CNV',
         accent: 'text-green-600'
       },
       'ACCOUNT': {
         gradient: 'from-yellow-500 to-orange-600',
         bg: 'bg-gradient-to-br from-yellow-50 to-orange-50',
         border: 'border-yellow-200',
-        emoji: '💰',
+        icon: 'ACC',
         accent: 'text-yellow-600'
       },
       'HR': {
         gradient: 'from-rose-500 to-red-600',
         bg: 'bg-gradient-to-br from-rose-50 to-red-50',
         border: 'border-rose-200',
-        emoji: '👥',
+        icon: 'HR',
         accent: 'text-rose-600'
       },
       'LITIGATION': {
         gradient: 'from-gray-600 to-slate-700',
         bg: 'bg-gradient-to-br from-gray-50 to-slate-50',
         border: 'border-gray-200',
-        emoji: '⚖️',
+        icon: 'LIT',
         accent: 'text-gray-600'
       },
       'SANCO': {
         gradient: 'from-emerald-500 to-green-600',
         bg: 'bg-gradient-to-br from-emerald-50 to-green-50',
         border: 'border-emerald-200',
-        emoji: '🏥',
+        icon: 'SAN',
         accent: 'text-emerald-600'
       },
       'POT/POC': {
         gradient: 'from-cyan-500 to-blue-600',
         bg: 'bg-gradient-to-br from-cyan-50 to-blue-50',
         border: 'border-cyan-200',
-        emoji: '🔬',
+        icon: 'POC',
         accent: 'text-cyan-600'
       },
       'AFC': {
         gradient: 'from-violet-500 to-purple-600',
         bg: 'bg-gradient-to-br from-violet-50 to-purple-50',
         border: 'border-violet-200',
-        emoji: '⚡',
+        icon: 'AFC',
         accent: 'text-violet-600'
       }
     };
@@ -96,83 +96,69 @@ function DepartmentCard({ department, stats, onClick }: DepartmentCardProps) {
   return (
     <div
       onClick={onClick}
-      className={`${style.bg} ${style.border} border-2 rounded-xl p-4 sm:p-6 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-md touch-manipulation group relative overflow-hidden`}
+      className={`${style.bg} ${style.border} border-2 rounded-lg p-2 sm:p-3 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-md touch-manipulation group relative overflow-hidden`}
     >
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="grid grid-cols-8 gap-1 h-full">
-          {Array.from({ length: 64 }).map((_, i) => (
-            <div key={i} className="bg-current rounded-full"></div>
-          ))}
-        </div>
-      </div>
 
       <div className="relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r ${style.gradient} rounded-lg flex items-center justify-center text-white text-lg sm:text-xl shadow-lg`}>
-              {style.emoji}
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-900 text-sm sm:text-base">{department}</h3>
-              <p className="text-xs text-gray-600">Department</p>
+        <div className="mb-2">
+          <div className="flex items-center justify-center mb-2">
+            <div className={`w-6 h-6 bg-gradient-to-r ${style.gradient} rounded-md flex items-center justify-center text-white text-xs font-bold shadow-md`}>
+              {style.icon}
             </div>
           </div>
-          
-          {/* Health Indicator */}
-          <div className="text-right">
-            <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
-              healthPercentage >= 80 ? 'bg-green-100 text-green-800' :
-              healthPercentage >= 60 ? 'bg-yellow-100 text-yellow-800' :
-              'bg-red-100 text-red-800'
+          <div className="text-center">
+            <h3 className="font-bold text-gray-900 dark:text-white text-xs leading-tight">{department}</h3>
+            <div className={`inline-flex items-center px-1 py-0.5 rounded-full text-xs font-medium mt-1 ${
+              healthPercentage >= 80 ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300' :
+              healthPercentage >= 60 ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300' :
+              'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300'
             }`}>
-              {healthPercentage}% Healthy
+              {healthPercentage}%
             </div>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 gap-1">
           {/* Total Devices */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-white/50">
-            <div className="text-lg sm:text-xl font-bold text-gray-900">{stats.totalDevices}</div>
-            <div className="text-xs text-gray-600">Total Devices</div>
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded p-1.5 border border-white/50 dark:border-gray-600/50 text-center">
+            <div className="text-sm font-bold text-gray-900 dark:text-white">{stats.totalDevices}</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300 leading-tight">Devices</div>
           </div>
 
           {/* Staff Count */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-white/50">
-            <div className="text-lg sm:text-xl font-bold text-gray-900">{stats.staffCount}</div>
-            <div className="text-xs text-gray-600">Staff Members</div>
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded p-1.5 border border-white/50 dark:border-gray-600/50 text-center">
+            <div className="text-sm font-bold text-gray-900 dark:text-white">{stats.staffCount}</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300 leading-tight">Staff</div>
           </div>
 
           {/* Working Devices */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-white/50">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <div className="text-sm sm:text-base font-semibold text-gray-900">{stats.workingDevices}</div>
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded p-1.5 border border-white/50 dark:border-gray-600/50 text-center">
+            <div className="flex items-center justify-center space-x-1">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+              <div className="text-sm font-bold text-gray-900 dark:text-white">{stats.workingDevices}</div>
             </div>
-            <div className="text-xs text-gray-600">Working</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300 leading-tight">Working</div>
           </div>
 
-          {/* Issues (Broken + Under Repair) */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-white/50">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <div className="text-sm sm:text-base font-semibold text-gray-900">
+          {/* Issues (Broken + Needs Repair) */}
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded p-1.5 border border-white/50 dark:border-gray-600/50 text-center">
+            <div className="flex items-center justify-center space-x-1">
+              <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+              <div className="text-sm font-bold text-gray-900 dark:text-white">
                 {stats.brokenDevices + stats.underRepairDevices}
               </div>
             </div>
-            <div className="text-xs text-gray-600">Issues</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300 leading-tight">Issues</div>
           </div>
         </div>
 
         {/* Click Indicator */}
-        <div className="mt-4 flex items-center justify-center text-xs text-gray-500 group-hover:text-gray-700 transition-colors">
-          <span>Click to view details</span>
-          <svg className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+        <div className="mt-1 text-center">
+          <div className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+            Click for details
+          </div>
         </div>
       </div>
     </div>
