@@ -170,7 +170,7 @@ function DataAnalysis() {
       return {
         upgradePercentage: 0,
         upgradeStats: { upgraded: 0, total: 0 },
-        osDistribution: {},
+        osDistribution: { Windows: 0, Android: 0, iOS: 0 },
         processorBelowSpec: 0,
         processorStats: { belowSpec: 0, total: 0 },
         ramDistribution: { under8GB: 0, ram8GB: 0, ram16GBPlus: 0 }
@@ -207,14 +207,14 @@ function DataAnalysis() {
       const processor = device.processor.toLowerCase();
 
       // Intel generation to year mapping (approximate release years)
-      const intelGenerations = {
+      const intelGenerations: Record<string, number> = {
         '1st': 2010, '2nd': 2011, '3rd': 2012, '4th': 2013, '5th': 2014,
         '6th': 2015, '7th': 2016, '8th': 2017, '9th': 2018, '10th': 2019,
         '11th': 2020, '12th': 2021, '13th': 2022, '14th': 2023
       };
 
       // AMD Ryzen series to year mapping
-      const amdRyzenSeries = {
+      const amdRyzenSeries: Record<string, number> = {
         '1000': 2017, '2000': 2018, '3000': 2019, '4000': 2020,
         '5000': 2020, '6000': 2022, '7000': 2022, '8000': 2024
       };
@@ -222,7 +222,7 @@ function DataAnalysis() {
       // Check Intel processors
       if (processor.includes('intel')) {
         // Check for generation patterns
-        const genMatch = processor.match(new RegExp('(\\d+)th gen'));
+        const genMatch = processor.match(/(\\d+)th gen/);
         if (genMatch) {
           const generation = genMatch[1] + 'th';
           const releaseYear = intelGenerations[generation];
@@ -241,7 +241,7 @@ function DataAnalysis() {
 
       // Check AMD processors
       if (processor.includes('ryzen')) {
-        const seriesMatch = processor.match(new RegExp('ryzen \\d+ (\\d+)'));
+        const seriesMatch = processor.match(/ryzen \\d+ (\\d+)/);
         if (seriesMatch) {
           const series = seriesMatch[1].substring(0, 1) + '000'; // Get series (1000, 2000, etc.)
           const releaseYear = amdRyzenSeries[series];
@@ -265,7 +265,7 @@ function DataAnalysis() {
     // 4. RAM distribution
     const ramCounts = { under8GB: 0, ram8GB: 0, ram16GBPlus: 0 };
     devices.forEach(device => {
-      const ramSize = parseInt(device.ram.replace(new RegExp('[^\\d]', 'g'), ''));
+      const ramSize = parseInt(device.ram.replace(/[^\\d]/g, ''));
       if (ramSize <= 4) ramCounts.under8GB++;
       else if (ramSize === 8) ramCounts.ram8GB++;
       else ramCounts.ram16GBPlus++;
@@ -1155,7 +1155,7 @@ function DataAnalysis() {
 
                 <div className="space-y-4">
                   {devices && devices.length > 0 ? devices.map(device => {
-                    const ramSize = parseInt(device.ram.replace(new RegExp('[^\\d]', 'g'), ''));
+                    const ramSize = parseInt(device.ram.replace(/[^\\d]/g, ''));
                     let ramCategory = 'Other';
                     let ramColor = 'bg-gray-100 text-gray-700';
 
@@ -1226,14 +1226,14 @@ function DataAnalysis() {
                     const cutoffYear = currentYear - 8;
 
                     // Intel generation to year mapping
-                    const intelGenerations = {
+                    const intelGenerations: Record<string, number> = {
                       '1st': 2010, '2nd': 2011, '3rd': 2012, '4th': 2013, '5th': 2014,
                       '6th': 2015, '7th': 2016, '8th': 2017, '9th': 2018, '10th': 2019,
                       '11th': 2020, '12th': 2021, '13th': 2022, '14th': 2023
                     };
 
                     // AMD Ryzen series to year mapping
-                    const amdRyzenSeries = {
+                    const amdRyzenSeries: Record<string, number> = {
                       '1000': 2017, '2000': 2018, '3000': 2019, '4000': 2020,
                       '5000': 2020, '6000': 2022, '7000': 2022, '8000': 2024
                     };
@@ -1242,7 +1242,7 @@ function DataAnalysis() {
 
                     // Check Intel processors
                     if (processor.includes('intel')) {
-                      const genMatch = processor.match(new RegExp('(\\d+)th gen'));
+                      const genMatch = processor.match(/(\\d+)th gen/);
                       if (genMatch) {
                         const generation = genMatch[1] + 'th';
                         const releaseYear = intelGenerations[generation];
@@ -1260,7 +1260,7 @@ function DataAnalysis() {
 
                     // Check AMD processors
                     if (processor.includes('ryzen')) {
-                      const seriesMatch = processor.match(new RegExp('ryzen \\d+ (\\d+)'));
+                      const seriesMatch = processor.match(/ryzen \\d+ (\\d+)/);
                       if (seriesMatch) {
                         const series = seriesMatch[1].substring(0, 1) + '000';
                         const releaseYear = amdRyzenSeries[series];

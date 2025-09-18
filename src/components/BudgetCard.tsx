@@ -6,11 +6,8 @@ import { useBudget } from '../contexts/BudgetContext';
 function BudgetCard() {
   const {
     currentBudget,
-    budgetAlerts,
-    getBudgetChangePercentage,
     getEstimatedRepairCosts,
     getEstimatedReplacementCosts,
-    getEstimationByDeviceType,
     getEstimationByDepartment,
     loading
   } = useBudget();
@@ -38,17 +35,13 @@ function BudgetCard() {
     );
   }
 
-  const changePercentage = getBudgetChangePercentage();
-  const isIncrease = changePercentage >= 0;
-  const formattedPercentage = Math.abs(changePercentage).toFixed(1);
-
   // Get estimation totals
   const estimatedRepairCosts = getEstimatedRepairCosts();
   const estimatedReplacementCosts = getEstimatedReplacementCosts();
   const totalEstimation = estimatedRepairCosts + estimatedReplacementCosts;
 
   // Get department breakdown
-  const departmentBreakdown = getEstimationByDepartment();
+  const departmentBreakdown: Record<string, { repair: number; replacement: number; count: number }> = getEstimationByDepartment();
 
   // Format number with commas for better readability
   const formatCurrency = (amount: number): string => {
@@ -63,14 +56,14 @@ function BudgetCard() {
   return (
     <>
       <div
-        className="bg-white dark:bg-gray-700 rounded-lg shadow-md border border-gray-200 dark:border-gray-600 p-3 sm:p-4 h-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
+        className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-lg shadow-lg p-3 sm:p-4 h-full cursor-pointer hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105"
         onClick={() => setShowPopup(true)}
       >
         {/* Card Content */}
         <div className="h-full flex flex-col justify-center items-center text-center">
           <div className="mb-2 sm:mb-3">
-            <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1 sm:mb-2">Estimated Total Cost</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs font-medium text-white/90 mb-1 sm:mb-2">Estimated Total Cost</p>
+            <p className="text-xs text-white/70">
               {new Date().toLocaleDateString('en-MY', {
                 month: 'long',
                 year: 'numeric'
@@ -79,12 +72,12 @@ function BudgetCard() {
           </div>
 
           <div className="flex-1 flex flex-col justify-center">
-            <div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 leading-tight">
+            <div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-2 sm:mb-3 leading-tight drop-shadow-lg">
               {formatCurrency(totalEstimation)}
             </div>
           </div>
 
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-xs text-white/80">
             <span>Click for details</span>
           </div>
         </div>
