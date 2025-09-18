@@ -4,52 +4,130 @@ import { useNavigation } from '../contexts/NavigationContext';
 import { useEffect, useState } from 'react';
 
 export default function NavigationLoadingScreen() {
-  const { isNavigating, navigationTarget } = useNavigation();
+  const { isNavigating, navigationTarget, showLoadingScreen } = useNavigation();
   const [loadingStep, setLoadingStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
   // Progressive loading effect for data analysis
   useEffect(() => {
-    if (!isNavigating) {
+    console.log('NavigationLoadingScreen - Effect triggered:', { showLoadingScreen, navigationTarget });
+
+    if (!showLoadingScreen) {
+      console.log('NavigationLoadingScreen - Not showing loading screen, resetting state');
       setLoadingStep(0);
       setProgress(0);
       return;
     }
 
     if (navigationTarget === '/data-analysis') {
-      // Progressive loading steps for data analysis
-      // Align with page timing: 2500ms + 800ms = 3300ms total
+      console.log('NavigationLoadingScreen - Setting up data analysis loading');
+
+      // Enhanced device detection for better timing
+      const userAgent = navigator.userAgent;
+      const isPhone = /iPhone|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      const isTablet = /iPad|Android(?!.*Mobile)|tablet/i.test(userAgent);
+      const isLaptop = /Macintosh|Windows NT.*WOW64|Windows NT.*Win64/i.test(userAgent);
+      const isDesktop = !isPhone && !isTablet;
+
+      // Match the page loading times + finish time
+      let baseTime;
+      if (isPhone) {
+        baseTime = 6000; // 6 seconds for phones
+      } else if (isTablet) {
+        baseTime = 5500; // 5.5 seconds for tablets
+      } else if (isLaptop) {
+        baseTime = 5000; // 5 seconds for laptops
+      } else {
+        baseTime = 4500; // 4.5 seconds for desktop
+      }
+
+      const totalTime = baseTime + 1500; // Add finish time (1500ms)
+
+      console.log('NavigationLoadingScreen - Device type and total loading time:', { isPhone, isTablet, isLaptop, isDesktop, totalTime });
+
       const steps = [
         { delay: 0, step: 0, progress: 0 },
-        { delay: 600, step: 1, progress: 20 },
-        { delay: 1200, step: 2, progress: 40 },
-        { delay: 1800, step: 3, progress: 60 },
-        { delay: 2400, step: 4, progress: 80 },
-        { delay: 2800, step: 5, progress: 95 },
-        { delay: 3200, step: 6, progress: 100 }
+        { delay: Math.round(totalTime * 0.18), step: 1, progress: 20 },
+        { delay: Math.round(totalTime * 0.36), step: 2, progress: 40 },
+        { delay: Math.round(totalTime * 0.54), step: 3, progress: 60 },
+        { delay: Math.round(totalTime * 0.72), step: 4, progress: 80 },
+        { delay: Math.round(totalTime * 0.85), step: 5, progress: 95 },
+        { delay: Math.round(totalTime * 0.97), step: 6, progress: 100 }
       ];
 
       const timers = steps.map(({ delay, step, progress: stepProgress }) =>
         setTimeout(() => {
+          console.log('NavigationLoadingScreen - Step update:', { step, progress: stepProgress });
           setLoadingStep(step);
           setProgress(stepProgress);
         }, delay)
       );
 
-      return () => timers.forEach(timer => clearTimeout(timer));
+      return () => {
+        console.log('NavigationLoadingScreen - Cleaning up timers');
+        timers.forEach(timer => clearTimeout(timer));
+      };
     } else {
-      // Simpler loading for dashboard
-      const timer = setTimeout(() => setProgress(100), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isNavigating, navigationTarget]);
+      console.log('NavigationLoadingScreen - Setting up dashboard loading');
 
-  if (!isNavigating) return null;
+      // Enhanced device detection for dashboard too
+      const userAgent = navigator.userAgent;
+      const isPhone = /iPhone|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      const isTablet = /iPad|Android(?!.*Mobile)|tablet/i.test(userAgent);
+      const isLaptop = /Macintosh|Windows NT.*WOW64|Windows NT.*Win64/i.test(userAgent);
+      const isDesktop = !isPhone && !isTablet;
+
+      // Match the dashboard page loading times + finish time
+      let baseTime;
+      if (isPhone) {
+        baseTime = 4000; // 4 seconds for phones
+      } else if (isTablet) {
+        baseTime = 3500; // 3.5 seconds for tablets
+      } else if (isLaptop) {
+        baseTime = 3000; // 3 seconds for laptops
+      } else {
+        baseTime = 2500; // 2.5 seconds for desktop
+      }
+
+      const totalTime = baseTime + 1000; // Add finish time (1000ms)
+
+      console.log('NavigationLoadingScreen - Dashboard total loading time:', totalTime);
+
+      // Simplified progress for dashboard but with proper timing
+      const steps = [
+        { delay: 0, progress: 0 },
+        { delay: Math.round(totalTime * 0.25), progress: 25 },
+        { delay: Math.round(totalTime * 0.50), progress: 50 },
+        { delay: Math.round(totalTime * 0.75), progress: 75 },
+        { delay: Math.round(totalTime * 0.90), progress: 90 },
+        { delay: Math.round(totalTime * 0.98), progress: 100 }
+      ];
+
+      const timers = steps.map(({ delay, progress }) =>
+        setTimeout(() => {
+          console.log('NavigationLoadingScreen - Dashboard progress:', progress);
+          setProgress(progress);
+        }, delay)
+      );
+
+      return () => {
+        console.log('NavigationLoadingScreen - Cleaning up dashboard timers');
+        timers.forEach(timer => clearTimeout(timer));
+      };
+    }
+  }, [showLoadingScreen, navigationTarget]);
+
+  if (!showLoadingScreen) return null;
 
   const getLoadingMessage = () => {
+    // Detect device type for loading messages
+    const userAgent = navigator.userAgent;
+    const isPhone = /iPhone|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    const isTablet = /iPad|Android(?!.*Mobile)|tablet/i.test(userAgent);
+
     if (navigationTarget === '/data-analysis') {
       const messages = [
-        'Initializing Data Analysis...',
+        `Initializing Data Analysis${isPhone ? ' (Mobile)' : isTablet ? ' (Tablet)' : ''}...`,
         'Connecting to Database...',
         'Fetching Device Data...',
         'Processing Analytics...',
@@ -62,7 +140,7 @@ export default function NavigationLoadingScreen() {
 
     switch (navigationTarget) {
       case '/dashboard':
-        return 'Loading Dashboard...';
+        return `Loading Dashboard${isPhone ? ' (Mobile)' : isTablet ? ' (Tablet)' : ''}...`;
       default:
         return 'Loading...';
     }

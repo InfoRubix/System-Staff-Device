@@ -82,9 +82,9 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
       className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 animate-fade-in"
       onClick={onCancel}
     >
-      <div className="relative min-h-full flex items-center justify-center p-4 sm:p-6">
-        <div 
-          className="w-full max-w-4xl bg-white rounded-lg shadow-xl border border-gray-200"
+      <div className="relative min-h-full flex items-center justify-center p-2 sm:p-4 lg:p-6">
+        <div
+          className="w-full max-w-sm sm:max-w-2xl lg:max-w-4xl bg-white rounded-lg shadow-xl border border-gray-200"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-4 sm:p-6 lg:p-8">

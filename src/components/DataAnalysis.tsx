@@ -21,6 +21,7 @@ import {
   PointElement,
   LineElement,
   Title,
+  Filler,
 } from 'chart.js';
 
 // Lazy load chart components
@@ -55,7 +56,8 @@ ChartJS.register(
   BarElement,
   PointElement,
   LineElement,
-  Title
+  Title,
+  Filler
 );
 
 function DataAnalysis() {
@@ -876,7 +878,7 @@ function DataAnalysis() {
         </div>
 
         {/* KPI Cards - Responsive grid layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
           {/* Left side - KPI Cards cluster */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Upgrade Card */}
@@ -939,11 +941,11 @@ function DataAnalysis() {
         </div>
 
         {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Device Status Chart */}
           <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Device Status Distribution</h3>
-            <div className="h-64 sm:h-80">
+            <div className="h-56 sm:h-64 lg:h-80">
               <Pie
                 data={statusData}
                 options={statusPieOptions}
@@ -954,7 +956,7 @@ function DataAnalysis() {
           {/* Device Type Chart */}
           <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Device Type Distribution</h3>
-            <div className="h-64 sm:h-80">
+            <div className="h-56 sm:h-64 lg:h-80">
               <Pie
                 data={deviceTypeData}
                 options={typePieOptions}
@@ -965,7 +967,7 @@ function DataAnalysis() {
           {/* OS Age Chart */}
           <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Operating System Age Analysis</h3>
-            <div className="h-64 sm:h-80">
+            <div className="h-56 sm:h-64 lg:h-80">
               <Bar
                 data={osAgeData}
                 options={osAgeOptions}
@@ -976,7 +978,7 @@ function DataAnalysis() {
           {/* Issues Trend Chart */}
           <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Device Issues Trend (Last 12 Months)</h3>
-            <div className="h-64 sm:h-80">
+            <div className="h-56 sm:h-64 lg:h-80">
               <Line
                 data={issuesTrendData}
                 options={lineOptions}
@@ -1010,13 +1012,13 @@ function DataAnalysis() {
       {/* Popups remain unchanged for space - keeping existing popup implementations */}
       {/* Upgrade Details Popup */}
       {showUpgradePopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-2 sm:p-4">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowUpgradePopup(false)}
           ></div>
 
-          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-md mx-auto my-4 max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-sm sm:max-w-md mx-auto my-2 sm:my-4 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <button
                 onClick={() => setShowUpgradePopup(false)}
@@ -1062,13 +1064,13 @@ function DataAnalysis() {
 
       {/* OS Details Popup */}
       {showOSPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-2 sm:p-4">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowOSPopup(false)}
           ></div>
 
-          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-md mx-auto my-4 max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-sm sm:max-w-md mx-auto my-2 sm:my-4 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <button
                 onClick={() => setShowOSPopup(false)}
@@ -1128,13 +1130,13 @@ function DataAnalysis() {
 
       {/* RAM Details Popup */}
       {showRAMPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-2 sm:p-4">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowRAMPopup(false)}
           ></div>
 
-          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-md mx-auto my-4 max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-sm sm:max-w-md mx-auto my-2 sm:my-4 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <button
                 onClick={() => setShowRAMPopup(false)}
@@ -1194,13 +1196,13 @@ function DataAnalysis() {
 
       {/* Processor Details Popup */}
       {showProcessorPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-2 sm:p-4">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowProcessorPopup(false)}
           ></div>
 
-          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-md mx-auto my-4 max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-sm sm:max-w-md mx-auto my-2 sm:my-4 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <button
                 onClick={() => setShowProcessorPopup(false)}
@@ -1305,11 +1307,11 @@ function DataAnalysis() {
       {/* OS Detail Modal */}
       {showOSDetailModal && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
           onClick={() => setShowOSDetailModal(false)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-96 overflow-hidden"
+            className="bg-white rounded-lg shadow-xl max-w-xs sm:max-w-md w-full max-h-[90vh] sm:max-h-96 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
