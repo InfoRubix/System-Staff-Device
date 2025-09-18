@@ -14,11 +14,11 @@ export default function DataAnalysisPage() {
   // Mark components as ready when auth is done and we have data
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      // Add a longer delay for data analysis since it has more data to load
+      // Add a much longer delay for data analysis to simulate proper data loading
       const readyTimer = setTimeout(() => {
         setComponentsReady(true);
         setPageLoaded();
-      }, 800); // Longer wait for data analysis components and charts
+      }, 2500); // Extended loading time for better user experience
 
       return () => clearTimeout(readyTimer);
     }
@@ -27,10 +27,10 @@ export default function DataAnalysisPage() {
   // Finish navigation when page is fully loaded and components are ready
   useEffect(() => {
     if (isNavigating && isPageLoaded && componentsReady) {
-      // Add a short delay to ensure smooth transition
+      // Add a longer delay to ensure smooth transition and final loading steps
       const finishTimer = setTimeout(() => {
         finishNavigation();
-      }, 300);
+      }, 800);
 
       return () => clearTimeout(finishTimer);
     }
