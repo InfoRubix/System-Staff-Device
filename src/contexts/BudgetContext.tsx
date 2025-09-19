@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { BudgetData, BudgetContextType, Purchase, BudgetAlert } from '../types/budget';
-import { calculateEstimationTotals } from '../data/deviceEstimation';
 import { useDevices } from './DeviceContext';
 import { Device } from '../types/device';
 
@@ -12,9 +11,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   const { devices, loading: devicesLoading } = useDevices();
   const [currentBudget, setCurrentBudget] = useState<BudgetData | null>(null);
   const [previousBudget, setPreviousBudget] = useState<BudgetData | null>(null);
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [repairRecords, setRepairRecords] = useState<any[]>([]);
-  const [partsCatalog, setPartsCatalog] = useState<any[]>([]);
+  const [purchases] = useState<Purchase[]>([]);
+  const [repairRecords] = useState<any[]>([]);
+  const [partsCatalog] = useState<any[]>([]);
   const [budgetAlerts, setBudgetAlerts] = useState<BudgetAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +85,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
 
       // REPAIR COSTS: Based on actual device issues/repair status
       const needsRepair = device.status === 'Needs Repair' ||
-                         device.status === 'Needs Repair' ||
                          device.status === 'Broken';
 
       if (needsRepair) {
@@ -123,10 +121,10 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   };
 
   // Sample devices data that aligns with Operating System Distribution (fallback)
-  const sampleDevices = [
-    // Windows devices (mix of ages)
-    {
-      id: '1',
+  // const sampleDevices = [
+  //   // Windows devices (mix of ages)
+  //   {
+  /*    id: '1',
       staffName: 'John Doe',
       department: 'MARKETING',
       deviceType: 'Laptop',
@@ -286,24 +284,25 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       upgraded: false,
       createdAt: new Date(2020, 1, 20),
       status: 'Working'
-    }
-  ];
+  */
+  //   }
+  // ];
 
   // Calculate budget values based on estimated needs from device data
   const calculateBudgetValues = (
     totalBudget: number,
     estimationData: any
-  ): { totalBudgetNeeded: number; budgetUsagePercentage: number; remainingBudget: number } => {
+  ): { totalBudgetNeeded: number; remainingBudget: number } => {
     // Total Budget Needed = Estimated Repairs + Estimated Replacements
     const totalBudgetNeeded = estimationData.estimatedBudgetNeeded;
 
     // Budget Usage = (Total Budget Needed ÷ Total Budget) × 100
-    const budgetUsagePercentage = totalBudget > 0 ? (totalBudgetNeeded / totalBudget) * 100 : 0;
+    // const budgetUsagePercentage = totalBudget > 0 ? (totalBudgetNeeded / totalBudget) * 100 : 0;
 
     // Remaining Budget = Total Budget - Total Budget Needed
     const remainingBudget = totalBudget - totalBudgetNeeded;
 
-    return { totalBudgetNeeded, budgetUsagePercentage, remainingBudget };
+    return { totalBudgetNeeded, remainingBudget };
   };
 
   // Generate budget alerts based on estimated needs
@@ -376,7 +375,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       setEstimationTotals(estimationData);
 
       const totalBudget = 20000; // RM 20,000 monthly budget
-      const { totalBudgetNeeded, budgetUsagePercentage, remainingBudget } = calculateBudgetValues(
+      const { totalBudgetNeeded, remainingBudget } = calculateBudgetValues(
         totalBudget,
         estimationData
       );
@@ -445,12 +444,12 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     return estimationTotals.estimatedReplacements;
   };
 
-  const getEstimatedCostForDevice = (deviceId: string): number => {
+  const getEstimatedCostForDevice = (_deviceId: string): number => {
     return 1000; // Default estimate
   };
 
   // Legacy function - purchases are no longer tracked since we use estimated needs
-  const addPurchase = async (purchase: Omit<Purchase, 'id' | 'createdAt'>) => {
+  const addPurchase = async (_purchase: Omit<Purchase, 'id' | 'createdAt'>) => {
     console.log('Purchase tracking disabled - budget now based on device needs estimation');
   };
 
@@ -553,7 +552,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       setEstimationTotals(estimationData);
 
       // Update current budget calculations based on new device data
-      const { totalBudgetNeeded, budgetUsagePercentage, remainingBudget } = calculateBudgetValues(
+      const { totalBudgetNeeded, remainingBudget } = calculateBudgetValues(
         currentBudget.totalBudget,
         estimationData
       );

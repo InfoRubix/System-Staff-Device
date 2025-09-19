@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useBudget } from '../contexts/BudgetContext';
 import BudgetCard from './BudgetCard';
 import Navigation from './Navigation';
 

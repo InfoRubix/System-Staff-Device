@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useDevices } from '../contexts/DeviceContext';
-import { useBudget } from '../contexts/BudgetContext';
-import { useNavigation } from '../contexts/NavigationContext';
+import { useBudget as _useBudget } from '../contexts/BudgetContext';
+import { useNavigation as _useNavigation } from '../contexts/NavigationContext';
 // Remove unused imports - DEPARTMENTS and Department are not needed in this component
 import BudgetCard from './BudgetCard';
 import Navigation from './Navigation';
@@ -62,8 +62,8 @@ ChartJS.register(
 
 function DataAnalysis() {
   const { devices, loading } = useDevices();
-  const { getDevicesData } = useBudget();
-  const { isNavigating } = useNavigation();
+  // const { getDevicesData } = useBudget();
+  // const { isNavigating } = useNavigation();
   const [showUpgradePopup, setShowUpgradePopup] = useState(false);
   const [showOSPopup, setShowOSPopup] = useState(false);
   const [showRAMPopup, setShowRAMPopup] = useState(false);
@@ -73,7 +73,7 @@ function DataAnalysis() {
   const [showOSDetailModal, setShowOSDetailModal] = useState(false);
 
   // Use budget context devices for consistent OS distribution
-  const budgetDevices = getDevicesData();
+  // const budgetDevices = getDevicesData();
 
   // Handle OS bar click
   const handleOSBarClick = (osName: string) => {
@@ -683,68 +683,68 @@ function DataAnalysis() {
     },
   };
 
-  const barOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: {
-      duration: 1200,
-      easing: 'easeOutQuart' as const,
-    },
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        callbacks: {
-          title: function(context: any) {
-            return context[0]?.label || '';
-          },
-          label: function(context: any) {
-            const osName = context.label;
-            const age = context.parsed.y;
-            const deviceCount = context.dataset.data[context.dataIndex];
+  // const barOptions = {
+  //   responsive: true,
+  //   maintainAspectRatio: false,
+  //   animation: {
+  //     duration: 1200,
+  //     easing: 'easeOutQuart' as const,
+  //   },
+  //   plugins: {
+  //     legend: {
+  //       display: false,
+  //     },
+  //     tooltip: {
+  //       callbacks: {
+  //         title: function(context: any) {
+  //           return context[0]?.label || '';
+  //         },
+  //         label: function(context: any) {
+  //           const osName = context.label;
+  //           const age = context.parsed.y;
+  //           const deviceCount = context.dataset.data[context.dataIndex];
 
-            return [
-              `${osName}`,
-              `Age: ${age} year${age !== 1 ? 's' : ''} old`,
-              `Devices: ${deviceCount}`,
-              age >= 5 ? '⚠️ Outdated - Consider updating' :
-              age >= 3 ? '⚡ Getting old' :
-              age >= 1 ? '✅ Relatively current' : '🆕 Latest'
-            ];
-          },
-        },
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        title: {
-          display: true,
-          text: 'Age (Years)',
-          font: {
-            size: 14,
-            weight: 'bold' as const,
-          },
-        },
-        ticks: {
-          callback: function(value: any) {
-            return value;
-          },
-        },
-      },
-      x: {
-        title: {
-          display: true,
-          text: 'Operating Systems',
-          font: {
-            size: 14,
-            weight: 'bold' as const,
-          },
-        },
-      },
-    },
-  };
+  //           return [
+  //             `${osName}`,
+  //             `Age: ${age} year${age !== 1 ? 's' : ''} old`,
+  //             `Devices: ${deviceCount}`,
+  //             age >= 5 ? '⚠️ Outdated - Consider updating' :
+  //             age >= 3 ? '⚡ Getting old' :
+  //             age >= 1 ? '✅ Relatively current' : '🆕 Latest'
+  //           ];
+  //         },
+  //       },
+  //     },
+  //   },
+  //   scales: {
+  //     y: {
+  //       beginAtZero: true,
+  //       title: {
+  //         display: true,
+  //         text: 'Age (Years)',
+  //         font: {
+  //           size: 14,
+  //           weight: 'bold' as const,
+  //         },
+  //       },
+  //       ticks: {
+  //         callback: function(value: any) {
+  //           return value;
+  //         },
+  //       },
+  //     },
+  //     x: {
+  //       title: {
+  //         display: true,
+  //         text: 'Operating Systems',
+  //         font: {
+  //           size: 14,
+  //           weight: 'bold' as const,
+  //         },
+  //       },
+  //     },
+  //   },
+  // };
 
   // OS Age Chart specific options with dynamic Y-axis based on max age
   const osAgeOptions = {

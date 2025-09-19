@@ -4,7 +4,7 @@ import { useNavigation } from '../contexts/NavigationContext';
 import { useEffect, useState } from 'react';
 
 export default function NavigationLoadingScreen() {
-  const { isNavigating, navigationTarget, showLoadingScreen } = useNavigation();
+  const { navigationTarget, showLoadingScreen } = useNavigation();
   const [loadingStep, setLoadingStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -75,7 +75,7 @@ export default function NavigationLoadingScreen() {
       const isPhone = /iPhone|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
       const isTablet = /iPad|Android(?!.*Mobile)|tablet/i.test(userAgent);
       const isLaptop = /Macintosh|Windows NT.*WOW64|Windows NT.*Win64/i.test(userAgent);
-      const isDesktop = !isPhone && !isTablet;
+      // const isDesktop = !isPhone && !isTablet;
 
       // Match the dashboard page loading times + finish time
       let baseTime;

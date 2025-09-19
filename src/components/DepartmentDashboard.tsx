@@ -5,7 +5,6 @@ import { useDevices } from '../contexts/DeviceContext';
 import { Department, DEPARTMENTS, Device } from '../types/device';
 import DepartmentCard from './DepartmentCard';
 import DepartmentDetail from './DepartmentDetail';
-import DeviceCard from './DeviceCard';
 
 interface DepartmentDashboardProps {
   onEdit?: (device: Device) => void;
@@ -512,7 +511,7 @@ function DepartmentDashboard({ onEdit, onAdd }: DepartmentDashboardProps) {
               ) : (
                 <div className="overflow-auto max-h-96">
                   <div className="space-y-2">
-                    {issueDevices.map((device, index) => (
+                    {issueDevices.map((device) => (
                       <div key={device.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                         <div className="flex items-start justify-between">
                           <div className="space-y-1">

@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { useDevices } from '../contexts/DeviceContext';
 import { Department, Device } from '../types/device';
-import DeviceCard from './DeviceCard';
 
 interface DepartmentDetailProps {
   department: Department;

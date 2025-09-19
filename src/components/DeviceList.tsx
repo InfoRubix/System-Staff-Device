@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useDevices } from '../contexts/DeviceContext';
 import { Device } from '../types/device';
-import DeviceCard from './DeviceCard';
 
 interface DeviceListProps {
   onEdit: (device: Device) => void;
