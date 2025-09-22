@@ -472,7 +472,7 @@ class PDFService {
         ];
 
         const typeData = Object.entries(typeCounts)
-          .filter(([type, count]) => count > 0)
+          .filter(([_type, count]) => count > 0)
           .map(([type, count]) => {
             const percentage = devices.length > 0 ? ((count / devices.length) * 100).toFixed(1) : '0.0';
             let businessImpact = 'Standard productivity';
@@ -603,7 +603,7 @@ class PDFService {
   /**
    * Generates standardized filename
    */
-  generateFilename(prefix, filters = {}) {
+  generateFilename(prefix, _filters = {}) {
     const today = new Date();
     const dateStr = `${today.getDate().toString().padStart(2, '0')}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getFullYear()}`;
     return `${prefix}_${dateStr}.pdf`;
