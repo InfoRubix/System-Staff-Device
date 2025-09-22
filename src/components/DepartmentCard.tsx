@@ -122,35 +122,35 @@ function DepartmentCard({ department, stats, onClick }: DepartmentCardProps) {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-1">
           {/* Total Devices */}
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded p-1.5 border border-white/50 dark:border-gray-600/50 text-center">
-            <div className="text-sm font-bold text-gray-900 dark:text-white">{stats.totalDevices}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-300 leading-tight">Devices</div>
+          <div className="bg-white/80 dark:bg-slate-700/60 backdrop-blur-sm rounded p-1.5 border border-white/60 dark:border-slate-500/40 text-center">
+            <div className="text-sm font-bold text-gray-900 dark:text-slate-100">{stats.totalDevices}</div>
+            <div className="text-xs text-gray-600 dark:text-slate-300 leading-tight">Devices</div>
           </div>
 
           {/* Staff Count */}
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded p-1.5 border border-white/50 dark:border-gray-600/50 text-center">
-            <div className="text-sm font-bold text-gray-900 dark:text-white">{stats.staffCount}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-300 leading-tight">Staff</div>
+          <div className="bg-white/80 dark:bg-slate-700/60 backdrop-blur-sm rounded p-1.5 border border-white/60 dark:border-slate-500/40 text-center">
+            <div className="text-sm font-bold text-gray-900 dark:text-slate-100">{stats.staffCount}</div>
+            <div className="text-xs text-gray-600 dark:text-slate-300 leading-tight">Staff</div>
           </div>
 
           {/* Working Devices */}
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded p-1.5 border border-white/50 dark:border-gray-600/50 text-center">
+          <div className="bg-white/80 dark:bg-slate-700/60 backdrop-blur-sm rounded p-1.5 border border-white/60 dark:border-slate-500/40 text-center">
             <div className="flex items-center justify-center space-x-1">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-              <div className="text-sm font-bold text-gray-900 dark:text-white">{stats.workingDevices}</div>
+              <div className="w-1.5 h-1.5 bg-green-400 dark:bg-green-400 rounded-full"></div>
+              <div className="text-sm font-bold text-gray-900 dark:text-slate-100">{stats.workingDevices}</div>
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-300 leading-tight">Working</div>
+            <div className="text-xs text-gray-600 dark:text-slate-300 leading-tight">Working</div>
           </div>
 
           {/* Issues (Broken + Needs Repair) */}
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded p-1.5 border border-white/50 dark:border-gray-600/50 text-center">
+          <div className="bg-white/80 dark:bg-slate-700/60 backdrop-blur-sm rounded p-1.5 border border-white/60 dark:border-slate-500/40 text-center">
             <div className="flex items-center justify-center space-x-1">
-              <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-              <div className="text-sm font-bold text-gray-900 dark:text-white">
+              <div className="w-1.5 h-1.5 bg-red-400 dark:bg-red-400 rounded-full"></div>
+              <div className="text-sm font-bold text-gray-900 dark:text-slate-100">
                 {stats.brokenDevices + stats.underRepairDevices}
               </div>
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-300 leading-tight">Issues</div>
+            <div className="text-xs text-gray-600 dark:text-slate-300 leading-tight">Issues</div>
           </div>
         </div>
 

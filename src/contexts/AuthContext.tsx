@@ -23,16 +23,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (password: string): Promise<boolean> => {
     try {
       setError(null);
       setLoading(true);
-      const userData = await authService.signIn(email, password);
-      setUser(userData);
-      return true;
+
+      // Simple password check for admin access
+      if (password === 'admin123') {
+        const userData = {
+          uid: 'admin',
+          email: null,
+          displayName: 'Admin'
+        };
+        setUser(userData);
+        return true;
+      } else {
+        setError('Invalid password');
+        return false;
+      }
     } catch (err: unknown) {
       console.error('Login error:', err);
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError('Login failed');
       return false;
     } finally {
       setLoading(false);
