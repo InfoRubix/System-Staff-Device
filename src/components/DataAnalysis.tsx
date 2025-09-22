@@ -856,18 +856,18 @@ function DataAnalysis() {
   // Removed old LoadingScreen - using navigation loading instead
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 md:dark:bg-gray-900">
       {/* Navigation - Excluded from PDF */}
       <div className="pdf-ignore">
         <Navigation />
       </div>
 
       {/* Data Analysis Content - This will be exported to PDF */}
-      <div id="analysis-content" className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 bg-white dark:bg-gray-800">
+      <div id="analysis-content" className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 bg-white md:dark:bg-gray-800">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Data Analysis</h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">Visual insights and analytics for device management</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 md:dark:text-white mb-2">Data Analysis</h1>
+          <p className="text-sm sm:text-base text-gray-600 md:dark:text-gray-300">Visual insights and analytics for device management</p>
         </div>
 
         {/* KPI Cards - Responsive grid layout */}
@@ -876,53 +876,53 @@ function DataAnalysis() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Upgrade Card */}
             <div
-              className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
+              className="bg-white md:dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 md:dark:border-gray-600 cursor-pointer hover:bg-gray-50 md:dark:hover:bg-gray-600 transition-colors duration-200"
               onClick={() => setShowUpgradePopup(true)}
             >
               <div>
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Upgrade</p>
-                <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-1">{kpiMetrics.upgradePercentage}% upgraded</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{kpiMetrics.upgradeStats.upgraded} of {kpiMetrics.upgradeStats.total} devices upgraded</p>
+                <p className="text-xs font-medium text-gray-600 md:dark:text-gray-300 mb-1">Upgrade</p>
+                <p className="text-lg sm:text-xl font-bold text-gray-900 md:dark:text-white mb-1">{kpiMetrics.upgradePercentage}% upgraded</p>
+                <p className="text-xs text-gray-500 md:dark:text-gray-400 leading-tight">{kpiMetrics.upgradeStats.upgraded} of {kpiMetrics.upgradeStats.total} devices upgraded</p>
               </div>
             </div>
 
             {/* OS Card */}
             <div
-              className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
+              className="bg-white md:dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 md:dark:border-gray-600 cursor-pointer hover:bg-gray-50 md:dark:hover:bg-gray-600 transition-colors duration-200"
               onClick={() => setShowOSPopup(true)}
             >
               <div>
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">OS</p>
-                <p className="text-sm sm:text-lg font-bold text-gray-900 dark:text-white mb-1 leading-tight">
+                <p className="text-xs font-medium text-gray-600 md:dark:text-gray-300 mb-1">OS</p>
+                <p className="text-sm sm:text-lg font-bold text-gray-900 md:dark:text-white mb-1 leading-tight">
                   Win: {kpiMetrics.osDistribution.Windows}% | iOS: {kpiMetrics.osDistribution.iOS}% | And: {kpiMetrics.osDistribution.Android}%
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">Current OS breakdown</p>
+                <p className="text-xs text-gray-500 md:dark:text-gray-400 leading-tight">Current OS breakdown</p>
               </div>
             </div>
 
             {/* Processor Card */}
             <div
-              className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
+              className="bg-white md:dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 md:dark:border-gray-600 cursor-pointer hover:bg-gray-50 md:dark:hover:bg-gray-600 transition-colors duration-200"
               onClick={() => setShowProcessorPopup(true)}
             >
               <div>
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Processor</p>
-                <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-1">{kpiMetrics.processorBelowSpec}% below spec</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{kpiMetrics.processorStats.belowSpec} devices need CPU upgrade</p>
+                <p className="text-xs font-medium text-gray-600 md:dark:text-gray-300 mb-1">Processor</p>
+                <p className="text-lg sm:text-xl font-bold text-gray-900 md:dark:text-white mb-1">{kpiMetrics.processorBelowSpec}% below spec</p>
+                <p className="text-xs text-gray-500 md:dark:text-gray-400 leading-tight">{kpiMetrics.processorStats.belowSpec} devices need CPU upgrade</p>
               </div>
             </div>
 
             {/* RAM Card */}
             <div
-              className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
+              className="bg-white md:dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 md:dark:border-gray-600 cursor-pointer hover:bg-gray-50 md:dark:hover:bg-gray-600 transition-colors duration-200"
               onClick={() => setShowRAMPopup(true)}
             >
               <div>
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">RAM</p>
-                <p className="text-sm sm:text-lg font-bold text-gray-900 dark:text-white mb-1 leading-tight">
+                <p className="text-xs font-medium text-gray-600 md:dark:text-gray-300 mb-1">RAM</p>
+                <p className="text-sm sm:text-lg font-bold text-gray-900 md:dark:text-white mb-1 leading-tight">
                   &lt;8GB: {kpiMetrics.ramDistribution.under8GB}% | 8GB: {kpiMetrics.ramDistribution.ram8GB}% | 16GB+: {kpiMetrics.ramDistribution.ram16GBPlus}%
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">RAM availability across devices</p>
+                <p className="text-xs text-gray-500 md:dark:text-gray-400 leading-tight">RAM availability across devices</p>
               </div>
             </div>
           </div>
@@ -936,8 +936,8 @@ function DataAnalysis() {
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Device Status Chart */}
-          <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Device Status Distribution</h3>
+          <div className="bg-white md:dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 md:dark:border-gray-600">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 md:dark:text-white mb-3 sm:mb-4">Device Status Distribution</h3>
             <div className="h-56 sm:h-64 lg:h-80">
               <Pie
                 data={statusData}
@@ -948,8 +948,8 @@ function DataAnalysis() {
           </div>
 
           {/* Device Type Chart */}
-          <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Device Type Distribution</h3>
+          <div className="bg-white md:dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 md:dark:border-gray-600">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 md:dark:text-white mb-3 sm:mb-4">Device Type Distribution</h3>
             <div className="h-56 sm:h-64 lg:h-80">
               <Pie
                 data={deviceTypeData}
@@ -960,8 +960,8 @@ function DataAnalysis() {
           </div>
 
           {/* OS Age Chart */}
-          <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Operating System Age Analysis</h3>
+          <div className="bg-white md:dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 md:dark:border-gray-600">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 md:dark:text-white mb-3 sm:mb-4">Operating System Age Analysis</h3>
             <div className="h-56 sm:h-64 lg:h-80">
               <Bar
                 data={osAgeData}
@@ -971,8 +971,8 @@ function DataAnalysis() {
           </div>
 
           {/* Issues Trend Chart */}
-          <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Device Issues Trend (Last 12 Months)</h3>
+          <div className="bg-white md:dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 md:dark:border-gray-600">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 md:dark:text-white mb-3 sm:mb-4">Device Issues Trend (Last 12 Months)</h3>
             <div className="h-56 sm:h-64 lg:h-80">
               <Line
                 data={issuesTrendData}
