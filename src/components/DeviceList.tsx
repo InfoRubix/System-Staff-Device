@@ -230,8 +230,8 @@ function DeviceList({ onEdit, onAdd }: DeviceListProps) {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div 
-          className="fixed inset-0 bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 animate-fade-in flex items-center justify-center p-4"
+        <div
+          className="fixed top-0 left-0 right-0 bottom-0 bg-gradient-to-br from-purple-900/50 to-pink-900/50 backdrop-blur-sm overflow-y-auto h-screen w-screen z-50 animate-fade-in flex items-center justify-center p-4"
           onClick={() => setShowDeleteModal(null)}
         >
           <div 
@@ -273,10 +273,17 @@ function DeviceList({ onEdit, onAdd }: DeviceListProps) {
 
       {/* Combined Device Details Modal */}
       {showDeviceModal && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4"
-          onClick={() => setShowDeviceModal(null)}
-        >
+        <>
+          {/* Fixed Backdrop */}
+          <div
+            className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm h-screen w-screen z-50"
+            onClick={() => setShowDeviceModal(null)}
+          ></div>
+          {/* Scrollable Modal Container */}
+          <div
+            className="fixed top-0 left-0 right-0 bottom-0 h-screen w-screen z-50 overflow-y-auto flex items-center justify-center p-4"
+            onClick={() => setShowDeviceModal(null)}
+          >
           <div 
             className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-2xl w-full max-h-[90vh] overflow-hidden animate-modal-pop"
             onClick={(e) => e.stopPropagation()}
@@ -404,7 +411,8 @@ function DeviceList({ onEdit, onAdd }: DeviceListProps) {
               </div>
             </div>
           </div>
-        </div>
+          </div>
+        </>
       )}
 
       <style jsx>{`

@@ -78,8 +78,8 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 animate-fade-in"
+    <div
+      className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-screen w-screen z-50 animate-fade-in"
       onClick={onCancel}
     >
       <div className="relative min-h-full flex items-center justify-center p-2 sm:p-4 lg:p-6">

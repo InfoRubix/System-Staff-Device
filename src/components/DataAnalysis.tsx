@@ -23,6 +23,7 @@ import {
   Title,
   Filler,
 } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 // Lazy load chart components
 const Pie = dynamic(() => import('react-chartjs-2').then((mod) => ({ default: mod.Pie })), {
@@ -57,7 +58,8 @@ ChartJS.register(
   PointElement,
   LineElement,
   Title,
-  Filler
+  Filler,
+  ChartDataLabels
 );
 
 function DataAnalysis() {
@@ -267,8 +269,8 @@ function DataAnalysis() {
     // 4. RAM distribution
     const ramCounts = { under8GB: 0, ram8GB: 0, ram16GBPlus: 0 };
     devices.forEach(device => {
-      const ramSize = parseInt(device.ram.replace(/[^\\d]/g, ''));
-      if (ramSize <= 4) ramCounts.under8GB++;
+      const ramSize = parseInt(device.ram.replace(/[^\d]/g, ''));
+      if (ramSize < 8) ramCounts.under8GB++;
       else if (ramSize === 8) ramCounts.ram8GB++;
       else ramCounts.ram16GBPlus++;
     });
@@ -289,70 +291,45 @@ function DataAnalysis() {
     };
   }, [devices, devicesWithUpgradeStatus]);
 
-  // PDF Export Function
+  // PDF Export Function using Professional PDF Service
   const exportToPDF = async () => {
     setExporting(true);
 
     try {
-      const jsPDF = (await import('jspdf')).default;
-      const html2canvas = (await import('html2canvas')).default;
+      // Import the professional PDF service
+      const { pdfService } = await import('../services/pdfService');
 
-      const element = document.getElementById('analysis-content');
-
-      if (element) {
-        // Hide all elements with pdf-ignore class
-        const ignoreElements = document.querySelectorAll('.pdf-ignore');
-        const originalDisplays: string[] = [];
-        ignoreElements.forEach((el, index) => {
-          originalDisplays[index] = (el as HTMLElement).style.display;
-          (el as HTMLElement).style.display = 'none';
-        });
-
-        const canvas = await html2canvas(element, {
-          scale: 2, // High resolution for sharp text and charts
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff', // White background for PDF
-          scrollX: 0,
-          scrollY: 0,
-        });
-
-        // Restore hidden elements
-        ignoreElements.forEach((el, index) => {
-          (el as HTMLElement).style.display = originalDisplays[index];
-        });
-
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-
-        const imgWidth = 210; // A4 width in mm
-        const pageHeight = 295; // A4 height in mm
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let heightLeft = imgHeight;
-
-        let position = 0;
-
-        // Add first page
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-
-        // Add additional pages if needed
-        while (heightLeft >= 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
+      // Prepare analysis data for PDF export
+      const analysisData = {
+        kpiMetrics,
+        charts: {
+          statusData,
+          deviceTypeData,
+          osAgeData,
+          issuesTrendData
         }
+      };
 
-        // Generate filename with current date
-        const today = new Date().toISOString().split('T')[0];
-        const fileName = `data-analysis-${today}.pdf`;
+      // Apply any filters (add current filter state if available)
+      const filters = {
+        company: 'Device Management System',
+        generatedBy: 'Data Analysis Dashboard'
+      };
 
-        pdf.save(fileName);
+      // Generate the professional PDF report
+      const success = await pdfService.exportDataAnalysisReport(
+        analysisData,
+        devices || [],
+        filters
+      );
+
+      if (!success) {
+        throw new Error('PDF generation failed');
       }
+
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Error generating PDF: ' + error);
+      console.error('Error generating PDF report:', error);
+      alert('Error generating PDF report. Please try again.');
     } finally {
       setExporting(false);
     }
@@ -637,16 +614,24 @@ function DataAnalysis() {
           },
         },
       },
-      tooltip: {
-        callbacks: {
-          label: function(context: any) {
-            const label = context.label || '';
-            const value = context.parsed || 0;
-            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-            return `${label}: ${value} (${percentage}%)`;
-          },
+      datalabels: {
+        display: true,
+        color: 'white',
+        font: {
+          weight: 'bold' as const,
+          size: 12,
         },
+        formatter: function(value: number, context: any) {
+          // Hide labels for zero values
+          if (value === 0) return '';
+
+          const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+          return `${value}\n(${percentage}%)`;
+        },
+      },
+      tooltip: {
+        enabled: false, // Disable tooltips since we have data labels
       },
     },
   };
@@ -669,16 +654,24 @@ function DataAnalysis() {
           },
         },
       },
-      tooltip: {
-        callbacks: {
-          label: function(context: any) {
-            const label = context.label || '';
-            const value = context.parsed || 0;
-            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-            return `${label}: ${value} devices (${percentage}%)`;
-          },
+      datalabels: {
+        display: true,
+        color: 'white',
+        font: {
+          weight: 'bold' as const,
+          size: 12,
         },
+        formatter: function(value: number, context: any) {
+          // Hide labels for zero values
+          if (value === 0) return '';
+
+          const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+          return `${value}\n(${percentage}%)`;
+        },
+      },
+      tooltip: {
+        enabled: false, // Disable tooltips since we have data labels
       },
     },
   };
@@ -949,6 +942,7 @@ function DataAnalysis() {
               <Pie
                 data={statusData}
                 options={statusPieOptions}
+                plugins={[ChartDataLabels]}
               />
             </div>
           </div>
@@ -960,6 +954,7 @@ function DataAnalysis() {
               <Pie
                 data={deviceTypeData}
                 options={typePieOptions}
+                plugins={[ChartDataLabels]}
               />
             </div>
           </div>
@@ -998,12 +993,12 @@ function DataAnalysis() {
           {exporting ? (
             <>
               <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Generating PDF...
+              Generating Report...
             </>
           ) : (
             <>
-              <span className="mr-2">📄</span>
-              Export as PDF
+              <span className="mr-2">📊</span>
+              Generate Report
             </>
           )}
         </button>
@@ -1012,9 +1007,9 @@ function DataAnalysis() {
       {/* Popups remain unchanged for space - keeping existing popup implementations */}
       {/* Upgrade Details Popup */}
       {showUpgradePopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-2 sm:p-4">
+        <div className="fixed top-0 left-0 right-0 bottom-0 z-50 flex items-center justify-center overflow-y-auto h-screen w-screen p-2 sm:p-4">
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm h-screen w-screen"
             onClick={() => setShowUpgradePopup(false)}
           ></div>
 
@@ -1064,9 +1059,9 @@ function DataAnalysis() {
 
       {/* OS Details Popup */}
       {showOSPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-2 sm:p-4">
+        <div className="fixed top-0 left-0 right-0 bottom-0 z-50 flex items-center justify-center overflow-y-auto h-screen w-screen p-2 sm:p-4">
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm h-screen w-screen"
             onClick={() => setShowOSPopup(false)}
           ></div>
 
@@ -1130,9 +1125,9 @@ function DataAnalysis() {
 
       {/* RAM Details Popup */}
       {showRAMPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-2 sm:p-4">
+        <div className="fixed top-0 left-0 right-0 bottom-0 z-50 flex items-center justify-center overflow-y-auto h-screen w-screen p-2 sm:p-4">
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm h-screen w-screen"
             onClick={() => setShowRAMPopup(false)}
           ></div>
 
@@ -1157,11 +1152,11 @@ function DataAnalysis() {
 
                 <div className="space-y-4">
                   {devices && devices.length > 0 ? devices.map(device => {
-                    const ramSize = parseInt(device.ram.replace(/[^\\d]/g, ''));
+                    const ramSize = parseInt(device.ram.replace(/[^\d]/g, ''));
                     let ramCategory = 'Other';
                     let ramColor = 'bg-gray-100 text-gray-700';
 
-                    if (ramSize <= 4) {
+                    if (ramSize < 8) {
                       ramCategory = 'Under 8GB';
                       ramColor = 'bg-red-100 text-red-700';
                     } else if (ramSize === 8) {
@@ -1196,9 +1191,9 @@ function DataAnalysis() {
 
       {/* Processor Details Popup */}
       {showProcessorPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-2 sm:p-4">
+        <div className="fixed top-0 left-0 right-0 bottom-0 z-50 flex items-center justify-center overflow-y-auto h-screen w-screen p-2 sm:p-4">
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm h-screen w-screen"
             onClick={() => setShowProcessorPopup(false)}
           ></div>
 
@@ -1307,7 +1302,7 @@ function DataAnalysis() {
       {/* OS Detail Modal */}
       {showOSDetailModal && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
+          className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 h-screen w-screen p-2 sm:p-4"
           onClick={() => setShowOSDetailModal(false)}
         >
           <div
