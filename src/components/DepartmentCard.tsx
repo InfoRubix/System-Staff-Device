@@ -108,11 +108,11 @@ function DepartmentCard({ department, stats, onClick }: DepartmentCardProps) {
             </div>
           </div>
           <div className="text-center">
-            <h3 className="font-bold text-gray-900 dark:text-white text-xs leading-tight">{department}</h3>
+            <h3 className="font-bold text-gray-900  text-xs leading-tight">{department}</h3>
             <div className={`inline-flex items-center px-1 py-0.5 rounded-full text-xs font-medium mt-1 ${
-              healthPercentage >= 80 ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300' :
-              healthPercentage >= 60 ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300' :
-              'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300'
+              healthPercentage >= 80 ? 'bg-green-100  text-green-800 ' :
+              healthPercentage >= 60 ? 'bg-yellow-100  text-yellow-800 ' :
+              'bg-red-100  text-red-800 '
             }`}>
               {healthPercentage}%
             </div>
@@ -122,41 +122,41 @@ function DepartmentCard({ department, stats, onClick }: DepartmentCardProps) {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-1">
           {/* Total Devices */}
-          <div className="bg-white/80 dark:bg-slate-700/60 backdrop-blur-sm rounded p-1.5 border border-white/60 dark:border-slate-500/40 text-center">
-            <div className="text-sm font-bold text-gray-900 dark:text-slate-100">{stats.totalDevices}</div>
-            <div className="text-xs text-gray-600 dark:text-slate-300 leading-tight">Devices</div>
+          <div className="bg-white/80  backdrop-blur-sm rounded p-1.5 border border-white/60  text-center">
+            <div className="text-sm font-bold text-gray-900 ">{stats.totalDevices}</div>
+            <div className="text-xs text-gray-600  leading-tight">Devices</div>
           </div>
 
           {/* Staff Count */}
-          <div className="bg-white/80 dark:bg-slate-700/60 backdrop-blur-sm rounded p-1.5 border border-white/60 dark:border-slate-500/40 text-center">
-            <div className="text-sm font-bold text-gray-900 dark:text-slate-100">{stats.staffCount}</div>
-            <div className="text-xs text-gray-600 dark:text-slate-300 leading-tight">Staff</div>
+          <div className="bg-white/80  backdrop-blur-sm rounded p-1.5 border border-white/60  text-center">
+            <div className="text-sm font-bold text-gray-900 ">{stats.staffCount}</div>
+            <div className="text-xs text-gray-600  leading-tight">Staff</div>
           </div>
 
           {/* Working Devices */}
-          <div className="bg-white/80 dark:bg-slate-700/60 backdrop-blur-sm rounded p-1.5 border border-white/60 dark:border-slate-500/40 text-center">
+          <div className="bg-white/80  backdrop-blur-sm rounded p-1.5 border border-white/60  text-center">
             <div className="flex items-center justify-center space-x-1">
-              <div className="w-1.5 h-1.5 bg-green-400 dark:bg-green-400 rounded-full"></div>
-              <div className="text-sm font-bold text-gray-900 dark:text-slate-100">{stats.workingDevices}</div>
+              <div className="w-1.5 h-1.5 bg-green-400  rounded-full"></div>
+              <div className="text-sm font-bold text-gray-900 ">{stats.workingDevices}</div>
             </div>
-            <div className="text-xs text-gray-600 dark:text-slate-300 leading-tight">Working</div>
+            <div className="text-xs text-gray-600  leading-tight">Working</div>
           </div>
 
           {/* Issues (Broken + Needs Repair) */}
-          <div className="bg-white/80 dark:bg-slate-700/60 backdrop-blur-sm rounded p-1.5 border border-white/60 dark:border-slate-500/40 text-center">
+          <div className="bg-white/80  backdrop-blur-sm rounded p-1.5 border border-white/60  text-center">
             <div className="flex items-center justify-center space-x-1">
-              <div className="w-1.5 h-1.5 bg-red-400 dark:bg-red-400 rounded-full"></div>
-              <div className="text-sm font-bold text-gray-900 dark:text-slate-100">
+              <div className="w-1.5 h-1.5 bg-red-400  rounded-full"></div>
+              <div className="text-sm font-bold text-gray-900 ">
                 {stats.brokenDevices + stats.underRepairDevices}
               </div>
             </div>
-            <div className="text-xs text-gray-600 dark:text-slate-300 leading-tight">Issues</div>
+            <div className="text-xs text-gray-600  leading-tight">Issues</div>
           </div>
         </div>
 
         {/* Click Indicator */}
         <div className="mt-1 text-center">
-          <div className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+          <div className="text-xs text-gray-500  group-hover:text-gray-700  transition-colors">
             Click for details
           </div>
         </div>

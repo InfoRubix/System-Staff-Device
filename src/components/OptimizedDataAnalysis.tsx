@@ -233,7 +233,7 @@ function OptimizedDataAnalysis() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 ">
         <Navigation />
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6">
           <div className="text-center py-12">
@@ -252,7 +252,7 @@ function OptimizedDataAnalysis() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 ">
         <Navigation />
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6">
           <div className="text-center py-12">
@@ -271,14 +271,14 @@ function OptimizedDataAnalysis() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 ">
       <Navigation />
 
-      <div id="analysis-content" className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 bg-white dark:bg-gray-800">
+      <div id="analysis-content" className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 bg-white ">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Data Analysis</h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900  mb-2">Data Analysis</h1>
+          <p className="text-sm sm:text-base text-gray-600 ">
             Visual insights and analytics for device management
             {analyticsData?.cached && (
               <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
@@ -293,41 +293,41 @@ function OptimizedDataAnalysis() {
           {/* Left side - KPI Cards cluster */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Upgrade Card */}
-            <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 dark:border-gray-600">
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Upgrade</p>
-              <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-1">
+            <div className="bg-white  rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 ">
+              <p className="text-xs font-medium text-gray-600  mb-1">Upgrade</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900  mb-1">
                 {analyticsData?.kpiMetrics.upgradePercentage}% upgraded
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
+              <p className="text-xs text-gray-500 leading-tight">
                 {analyticsData?.kpiMetrics.upgradeStats.upgraded} of {analyticsData?.kpiMetrics.upgradeStats.total} devices upgraded
               </p>
             </div>
 
             {/* OS Card */}
-            <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 dark:border-gray-600">
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">OS</p>
-              <p className="text-sm sm:text-lg font-bold text-gray-900 dark:text-white mb-1 leading-tight">
+            <div className="bg-white  rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 ">
+              <p className="text-xs font-medium text-gray-600  mb-1">OS</p>
+              <p className="text-sm sm:text-lg font-bold text-gray-900  mb-1 leading-tight">
                 Win: {analyticsData?.kpiMetrics.osDistribution.Windows}% | iOS: {analyticsData?.kpiMetrics.osDistribution.iOS}% | And: {analyticsData?.kpiMetrics.osDistribution.Android}%
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">Current OS breakdown</p>
+              <p className="text-xs text-gray-500 leading-tight">Current OS breakdown</p>
             </div>
 
             {/* Total Devices Card */}
-            <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 dark:border-gray-600">
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Total</p>
-              <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-1">
+            <div className="bg-white  rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 ">
+              <p className="text-xs font-medium text-gray-600  mb-1">Total</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900  mb-1">
                 {analyticsData?.totalDevices} devices
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">Across all departments</p>
+              <p className="text-xs text-gray-500 leading-tight">Across all departments</p>
             </div>
 
             {/* Last Updated Card */}
-            <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 dark:border-gray-600">
-              <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Updated</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+            <div className="bg-white  rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 ">
+              <p className="text-xs font-medium text-gray-600  mb-1">Updated</p>
+              <p className="text-sm font-bold text-gray-900  mb-1">
                 {analyticsData?.lastUpdated ? new Date(analyticsData.lastUpdated).toLocaleTimeString() : 'N/A'}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">Last refresh time</p>
+              <p className="text-xs text-gray-500 leading-tight">Last refresh time</p>
             </div>
           </div>
 
@@ -338,32 +338,32 @@ function OptimizedDataAnalysis() {
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
           {/* Device Status Chart */}
-          <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Device Status Distribution</h3>
+          <div className="bg-white  p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 ">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800  mb-3 sm:mb-4">Device Status Distribution</h3>
             <div className="h-64 sm:h-80">
               <Pie data={statusData} />
             </div>
           </div>
 
           {/* Device Type Chart */}
-          <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Device Type Distribution</h3>
+          <div className="bg-white  p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 ">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800  mb-3 sm:mb-4">Device Type Distribution</h3>
             <div className="h-64 sm:h-80">
               <Pie data={deviceTypeData} />
             </div>
           </div>
 
           {/* OS Age Chart */}
-          <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Operating System Age Analysis</h3>
+          <div className="bg-white  p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 ">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800  mb-3 sm:mb-4">Operating System Age Analysis</h3>
             <div className="h-64 sm:h-80">
               <Bar data={osAgeChartData} />
             </div>
           </div>
 
           {/* Issues Trend Chart */}
-          <div className="bg-white dark:bg-gray-700 p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-600">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">Device Issues Trend (Last 12 Months)</h3>
+          <div className="bg-white  p-4 sm:p-6 rounded-lg shadow-md border border-gray-200 ">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800  mb-3 sm:mb-4">Device Issues Trend (Last 12 Months)</h3>
             <div className="h-64 sm:h-80">
               <Line data={issuesTrendData} />
             </div>

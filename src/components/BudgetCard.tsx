@@ -93,12 +93,12 @@ function BudgetCard() {
           ></div>
 
           {/* Modal Content */}
-          <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-600 w-full max-w-md sm:max-w-2xl mx-auto my-4 max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-md sm:max-w-2xl mx-auto my-4 max-h-[90vh] overflow-y-auto">
             <div className="p-4 sm:p-6">
               {/* Close Button */}
               <button
                 onClick={() => setShowPopup(false)}
-                className="absolute top-2 right-2 sm:top-4 sm:right-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl sm:text-2xl font-bold z-10"
+                className="absolute top-2 right-2 sm:top-4 sm:right-4 text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-bold z-10"
               >
                 ×
               </button>
@@ -107,10 +107,10 @@ function BudgetCard() {
               <div className="pt-6 sm:pt-8 space-y-4 sm:space-y-6">
                 {/* Title */}
                 <div className="text-center">
-                  <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-white mb-1 pr-8">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-1 pr-8">
                     Estimated Cost Breakdown by Department
                   </h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                  <p className="text-xs text-gray-600">
                     {new Date().toLocaleDateString('en-MY', {
                       month: 'long',
                       year: 'numeric'
@@ -126,21 +126,21 @@ function BudgetCard() {
                       if (subtotal === 0) return null;
 
                       return (
-                        <div key={department} className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                          <div className="font-semibold text-gray-900 dark:text-white mb-3">{department}</div>
+                        <div key={department} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <div className="font-semibold text-gray-900 mb-3">{department}</div>
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-300">Estimated Repairs:</span>
-                              <span className="font-medium text-orange-700 dark:text-orange-400">{formatCurrency(costs.repair)}</span>
+                              <span className="text-gray-600">Estimated Repairs:</span>
+                              <span className="font-medium text-orange-700">{formatCurrency(costs.repair)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-300">Estimated Replacements:</span>
-                              <span className="font-medium text-red-700 dark:text-red-400">{formatCurrency(costs.replacement)}</span>
+                              <span className="text-gray-600">Estimated Replacements:</span>
+                              <span className="font-medium text-red-700">{formatCurrency(costs.replacement)}</span>
                             </div>
-                            <div className="border-t border-gray-300 dark:border-gray-600 pt-2 mt-2">
+                            <div className="border-t border-gray-300 pt-2 mt-2">
                               <div className="flex justify-between font-semibold">
-                                <span className="text-gray-800 dark:text-gray-200">Subtotal:</span>
-                                <span className="text-gray-900 dark:text-white">{formatCurrency(subtotal)}</span>
+                                <span className="text-gray-800">Subtotal:</span>
+                                <span className="text-gray-900">{formatCurrency(subtotal)}</span>
                               </div>
                             </div>
                           </div>
@@ -149,24 +149,24 @@ function BudgetCard() {
                     })}
 
                     {/* Overall Total */}
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-600 rounded-lg p-4 mt-4">
+                    <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mt-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-gray-800 dark:text-white">Overall Estimated Total Cost:</span>
-                        <span className="text-xl font-bold text-blue-900 dark:text-blue-300">{formatCurrency(totalEstimation)}</span>
+                        <span className="text-lg font-bold text-gray-800">Overall Estimated Total Cost:</span>
+                        <span className="text-xl font-bold text-blue-900">{formatCurrency(totalEstimation)}</span>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-6 text-center">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                     <div className="mb-2">
-                      <svg className="w-8 h-8 mx-auto text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-8 h-8 mx-auto text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
-                    <div className="text-sm text-gray-800 dark:text-white font-medium">
+                    <div className="text-sm text-gray-800 font-medium">
                       No Repair or Replacement Costs
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                    <div className="text-sm text-gray-600 mt-1">
                       All devices are in good condition
                     </div>
                   </div>
