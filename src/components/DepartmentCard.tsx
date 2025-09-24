@@ -82,9 +82,23 @@ function DepartmentCard({ department, stats, onClick }: DepartmentCardProps) {
         border: 'border-violet-200',
         icon: 'AFC',
         accent: 'text-violet-600'
+      },
+      'RDHOMES': {
+        gradient: 'from-pink-500 to-rose-600',
+        bg: 'bg-gradient-to-br from-pink-50 to-rose-50',
+        border: 'border-pink-200',
+        icon: 'RD',
+        accent: 'text-pink-600'
+      },
+      'QHOMES': {
+        gradient: 'from-indigo-500 to-blue-600',
+        bg: 'bg-gradient-to-br from-indigo-50 to-blue-50',
+        border: 'border-indigo-200',
+        icon: 'QH',
+        accent: 'text-indigo-600'
       }
     };
-    
+
     return styles[dept] || styles['MARKETING'];
   };
 
