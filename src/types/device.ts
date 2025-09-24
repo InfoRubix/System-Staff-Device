@@ -1,4 +1,4 @@
-export type Department = 'MARKETING' | 'RUBIX' | 'CONVEY' | 'ACCOUNT' | 'HR' | 'LITIGATION' | 'SANCO' | 'POT/POC' | 'AFC';
+export type Department = 'MARKETING' | 'RUBIX' | 'CONVEY' | 'ACCOUNT' | 'HR' | 'LITIGATION' | 'SANCO' | 'POT/POC' | 'AFC' | 'RDHOMES' | 'QHOMES';
 
 export interface IssueLog {
   id: string;
@@ -51,5 +51,7 @@ export const DEPARTMENTS: Department[] = [
   'LITIGATION',
   'SANCO',
   'POT/POC',
-  'AFC'
+  'AFC',
+  'RDHOMES',
+  'QHOMES'
 ];
