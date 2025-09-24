@@ -75,7 +75,9 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
       'LITIGATION': { gradient: 'from-gray-600 to-slate-700', icon: 'LIT' },
       'SANCO': { gradient: 'from-emerald-500 to-green-600', icon: 'SAN' },
       'POT/POC': { gradient: 'from-cyan-500 to-blue-600', icon: 'POC' },
-      'AFC': { gradient: 'from-violet-500 to-purple-600', icon: 'AFC' }
+      'AFC': { gradient: 'from-violet-500 to-purple-600', icon: 'AFC' },
+      'RDHOMES': { gradient: 'from-pink-500 to-rose-600', icon: 'RD' },
+      'QHOMES': { gradient: 'from-indigo-500 to-blue-600', icon: 'QH' }
     };
     return styles[dept] || styles['MARKETING'];
   };
