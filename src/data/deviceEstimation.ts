@@ -107,12 +107,12 @@ export function calculateEstimationTotals(devices: Record<string, unknown>[]): {
   
   devices.forEach(device => {
     // Extract purchase year from device creation date
-    const purchaseYear = device.createdAt ? device.createdAt.getFullYear() : 2020;
+    const purchaseYear = (device.createdAt && device.createdAt instanceof Date) ? device.createdAt.getFullYear() : 2020;
     
     const estimation = calculateDeviceEstimation(
-      device.operatingSystem,
+      device.operatingSystem as string,
       purchaseYear,
-      device.deviceType
+      device.deviceType as string
     );
     
     estimatedRepairsTotal += estimation.estimatedRepair;

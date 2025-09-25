@@ -6,12 +6,15 @@ import { useDepartments } from '../contexts/DepartmentContext';
 import { Department, Device } from '../types/device';
 import DepartmentCard from './DepartmentCard';
 import DepartmentDetail from './DepartmentDetail';
+import TransferStaffForm from './TransferStaffForm';
+import SuccessToast from './SuccessToast';
 
 interface DepartmentDashboardProps {
   onEdit?: (device: Device) => void;
   onAdd?: () => void;
   onAddDepartment?: () => void;
   onDeleteDepartment?: () => void;
+  onTransferStaff?: () => void;
 }
 
 type DepartmentStats = {
@@ -22,7 +25,7 @@ type DepartmentStats = {
   underRepairDevices: number;
 };
 
-function DepartmentDashboard({ onEdit, onAdd, onAddDepartment, onDeleteDepartment }: DepartmentDashboardProps) {
+function DepartmentDashboard({ onEdit, onAdd, onAddDepartment, onDeleteDepartment, onTransferStaff: _onTransferStaff }: DepartmentDashboardProps) {
   const { devices, loading, searchDevices, deleteDevice } = useDevices();
   const { departments } = useDepartments();
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
@@ -32,6 +35,8 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment, onDeleteDepartmen
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
   const [showIssuesModal, setShowIssuesModal] = useState(false);
   const [showDeviceModal, setShowDeviceModal] = useState<Device | null>(null);
+  const [showTransferForm, setShowTransferForm] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -209,6 +214,13 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment, onDeleteDepartmen
               <span className="hidden sm:block">Add Department</span>
             </button>
           )}
+          <button
+            onClick={() => setShowTransferForm(true)}
+            className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-white rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
+          >
+            <span className="block sm:hidden">Transfer</span>
+            <span className="hidden sm:block">Transfer Staff</span>
+          </button>
           {onDeleteDepartment && (
             <button
               onClick={onDeleteDepartment}
@@ -740,6 +752,25 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment, onDeleteDepartmen
           </div>
           </div>
         </>
+      )}
+
+      {/* Transfer Staff Form */}
+      {showTransferForm && (
+        <TransferStaffForm
+          onSuccess={(fromDept: string, toDept: string, staffCount: number) => {
+            setShowTransferForm(false);
+            setSuccessMessage(`Successfully transferred ${staffCount} staff member${staffCount !== 1 ? 's' : ''} from ${fromDept} to ${toDept}`);
+          }}
+          onCancel={() => setShowTransferForm(false)}
+        />
+      )}
+
+      {/* Success Toast */}
+      {successMessage && (
+        <SuccessToast
+          message={successMessage}
+          onClose={() => setSuccessMessage(null)}
+        />
       )}
     </div>
   );

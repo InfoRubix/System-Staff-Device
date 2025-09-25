@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { BudgetData, BudgetContextType, Purchase, BudgetAlert } from '../types/budget';
+import { BudgetData, BudgetContextType, Purchase, BudgetAlert, RepairRecord, PartsCatalog } from '../types/budget';
 import { useDevices } from './DeviceContext';
 import { Device } from '../types/device';
 
@@ -12,8 +12,8 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   const [currentBudget, setCurrentBudget] = useState<BudgetData | null>(null);
   const [previousBudget, setPreviousBudget] = useState<BudgetData | null>(null);
   const [purchases] = useState<Purchase[]>([]);
-  const [repairRecords] = useState<Record<string, unknown>[]>([]);
-  const [partsCatalog] = useState<Record<string, unknown>[]>([]);
+  const [repairRecords] = useState<RepairRecord[]>([]);
+  const [partsCatalog] = useState<PartsCatalog[]>([]);
   const [budgetAlerts, setBudgetAlerts] = useState<BudgetAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -348,11 +348,11 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     }
 
     // High estimation alert
-    if (estimationData.estimatedBudgetNeeded > 5000) {
+    if ((estimationData.estimatedBudgetNeeded as number) > 5000) {
       alerts.push({
         id: `high_estimation_${currentDate.getTime()}`,
         type: 'repair_cost_high',
-        message: `High device replacement/repair costs estimated: RM ${estimationData.estimatedBudgetNeeded.toFixed(0)}`,
+        message: `High device replacement/repair costs estimated: RM ${(estimationData.estimatedBudgetNeeded as number).toFixed(0)}`,
         severity: 'medium',
         isActive: true,
         createdAt: currentDate,
@@ -428,7 +428,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     return ((currentRemaining - previousRemaining) / Math.abs(previousRemaining)) * 100;
   };
 
-  const getOpenRepairCosts = (): Record<string, unknown>[] => {
+  const getOpenRepairCosts = (): RepairRecord[] => {
     return [];
   };
 
@@ -463,8 +463,8 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   };
 
   // Function to get devices data (for OS distribution alignment)
-  const getDevicesData = () => {
-    return devices || []; // Return real devices instead of dummy sampleDevices
+  const getDevicesData = (): Record<string, unknown>[] => {
+    return (devices || []).map(device => ({ ...device })); // Return real devices as plain objects
   };
 
   // Function to get estimation breakdown by OS
@@ -478,13 +478,13 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   };
 
   // Function to get devices that need repairs
-  const getDevicesNeedingRepair = () => {
-    return estimationTotals.repairDevices;
+  const getDevicesNeedingRepair = (): Record<string, unknown>[] => {
+    return estimationTotals.repairDevices.map(device => ({ ...device }));
   };
 
   // Function to get devices that need replacement
-  const getDevicesNeedingReplacement = () => {
-    return estimationTotals.replacementDevices;
+  const getDevicesNeedingReplacement = (): Record<string, unknown>[] => {
+    return estimationTotals.replacementDevices.map(device => ({ ...device }));
   };
 
   // Function to get estimation breakdown by department
