@@ -19,7 +19,13 @@ interface DepartmentCardProps {
 function DepartmentCard({ department, stats, onClick }: DepartmentCardProps) {
   // Department colors and emojis
   const getDepartmentStyle = (dept: Department) => {
-    const styles = {
+    const styles: Record<string, {
+      gradient: string;
+      bg: string;
+      border: string;
+      icon: string;
+      accent: string;
+    }> = {
       'MARKETING': {
         gradient: 'from-purple-500 to-pink-600',
         bg: 'bg-gradient-to-br from-purple-50 to-pink-50',
