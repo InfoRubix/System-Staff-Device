@@ -7,7 +7,7 @@ interface SelectOrInputProps {
   id: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => void;
-  options: { value: string; label: string }[] | string[];
+  options?: { value: string; label: string }[] | string[];
   placeholder?: string;
   className?: string;
   hasError?: boolean;
@@ -19,7 +19,7 @@ function SelectOrInput({
   id,
   value,
   onChange,
-  options,
+  options = [],
   placeholder = "Select or enter custom value",
   className = "",
   hasError = false,
