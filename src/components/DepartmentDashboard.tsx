@@ -76,9 +76,26 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment, onDeleteDepartmen
 
     devices.forEach(device => {
       const dept = device.department;
+
+      // Ensure department exists in stats - handle devices with departments not in the departments list
+      if (!stats[dept]) {
+        stats[dept] = {
+          totalDevices: 0,
+          staffCount: 0,
+          workingDevices: 0,
+          brokenDevices: 0,
+          underRepairDevices: 0,
+        };
+      }
+
+      // Ensure department exists in staffByDepartment
+      if (!staffByDepartment[dept]) {
+        staffByDepartment[dept] = new Set();
+      }
+
       stats[dept].totalDevices++;
       staffByDepartment[dept].add(device.staffName);
-      
+
       switch (device.status) {
         case 'Working':
           stats[dept].workingDevices++;
@@ -92,9 +109,11 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment, onDeleteDepartmen
       }
     });
 
-    // Update staff counts
-    departments.forEach(dept => {
-      stats[dept].staffCount = staffByDepartment[dept].size;
+    // Update staff counts for all departments (both predefined and discovered from devices)
+    Object.keys(stats).forEach(dept => {
+      if (staffByDepartment[dept]) {
+        stats[dept].staffCount = staffByDepartment[dept].size;
+      }
     });
 
     return stats;

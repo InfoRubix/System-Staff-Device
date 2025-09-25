@@ -48,14 +48,23 @@ function SelectOrInput({
       isValueInOptions = optionValues.includes(value);
     }
 
-    if (value && !isValueInOptions) {
+    // Only switch to custom mode if there's a value that doesn't match options
+    // Don't switch to custom mode for empty values
+    if (value && value.trim() !== '' && !isValueInOptions) {
       setIsCustom(true);
       setCustomValue(value);
-    } else {
+    } else if (!value || value.trim() === '' || isValueInOptions) {
       setIsCustom(false);
       setCustomValue('');
     }
   }, [value, options, groupedOptions]);
+
+  // Auto-focus input when switching to custom mode
+  useEffect(() => {
+    if (isCustom && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isCustom]);
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedValue = e.target.value;
@@ -64,7 +73,10 @@ function SelectOrInput({
       setIsCustom(true);
       setCustomValue(value || '');
       // Focus on input after state update
-      setTimeout(() => inputRef.current?.focus(), 0);
+      setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }, 100);
     } else {
       setIsCustom(false);
       setCustomValue('');
@@ -73,12 +85,14 @@ function SelectOrInput({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomValue(e.target.value);
+    const newValue = e.target.value;
+    setCustomValue(newValue);
+
     // Create a synthetic event for the parent
     const syntheticEvent = {
       target: {
         name,
-        value: e.target.value
+        value: newValue
       }
     } as React.ChangeEvent<HTMLSelectElement>;
     onChange(syntheticEvent);
@@ -115,13 +129,16 @@ function SelectOrInput({
           id={id}
           value={customValue}
           onChange={handleInputChange}
+          onFocus={(e) => e.target.select()}
           className={baseInputClassName}
           placeholder="Enter custom value"
+          autoComplete="off"
+          style={{ paddingRight: '4rem' }}
         />
         <button
           type="button"
           onClick={handleBackToSelect}
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition-colors"
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition-colors z-10"
         >
           Select
         </button>
@@ -135,7 +152,7 @@ function SelectOrInput({
         ref={selectRef}
         name={name}
         id={id}
-        value={value}
+        value={value || ''}
         onChange={handleSelectChange}
         className={baseSelectClassName}
         style={{
@@ -146,7 +163,8 @@ function SelectOrInput({
           backgroundPosition: 'right 0.5rem center',
           backgroundRepeat: 'no-repeat',
           backgroundSize: '1.5em 1.5em',
-          paddingRight: '2.5rem'
+          paddingRight: '2.5rem',
+          pointerEvents: 'auto'
         }}
       >
         <option value="">{placeholder}</option>
@@ -181,7 +199,9 @@ function SelectOrInput({
           })
         )}
 
-        <option value="__custom__">Enter custom value</option>
+        <option value="__custom__" style={{ fontWeight: 'bold', borderTop: '1px solid #ccc' }}>
+          ✏️ Enter custom value
+        </option>
       </select>
     </div>
   );

@@ -189,14 +189,11 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   id="operatingSystem"
                   value={formData.operatingSystem}
                   onChange={handleInputChange}
-                  placeholder="Select Operating System (optional)"
+                  placeholder="Select or enter Operating System (optional)"
                   hasError={!!errors.operatingSystem}
-                  groupedOptions={{
-                    "Windows": ["Windows 7", "Windows 8.1", "Windows 10", "Windows 11"],
-                    "macOS": ["macOS Monterey", "macOS Ventura", "macOS Sonoma"],
-                    "iOS": ["iOS 16", "iOS 17", "iOS 18"],
-                    "Android": ["Android 11", "Android 12", "Android 13", "Android 14", "Android 15"]
-                  }}
+                  options={[
+                    "Windows 10", "Windows 11", "macOS", "iOS", "Android"
+                  ]}
                 />
                 {errors.operatingSystem && (
                   <p className="mt-1 text-sm text-red-600">{errors.operatingSystem}</p>
