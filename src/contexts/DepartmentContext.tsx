@@ -8,6 +8,7 @@ interface DepartmentContextType {
   loading: boolean;
   error: string | null;
   addDepartment: (name: string) => Promise<void>;
+  deleteDepartment: (name: string) => Promise<void>;
   refreshDepartments: () => Promise<void>;
 }
 
@@ -60,6 +61,20 @@ export function DepartmentProvider({ children }: DepartmentProviderProps) {
     }
   };
 
+  const deleteDepartment = async (name: string) => {
+    try {
+      setError(null);
+      await departmentService.deleteDepartment(name);
+      // Refresh the departments list
+      await loadDepartments();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete department';
+      console.error('Failed to delete department:', err);
+      setError(errorMessage);
+      throw err; // Re-throw so the UI can handle it
+    }
+  };
+
   const refreshDepartments = async () => {
     await loadDepartments();
   };
@@ -73,6 +88,7 @@ export function DepartmentProvider({ children }: DepartmentProviderProps) {
     loading,
     error,
     addDepartment,
+    deleteDepartment,
     refreshDepartments
   };
 

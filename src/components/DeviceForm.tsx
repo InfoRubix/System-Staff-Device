@@ -86,9 +86,9 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
       className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-screen w-screen z-50 animate-fade-in"
       onClick={onCancel}
     >
-      <div className="relative min-h-full flex items-center justify-center p-2 sm:p-4 lg:p-6">
+      <div className="relative min-h-full flex items-start sm:items-center justify-center p-2 sm:p-4 lg:p-6">
         <div
-          className="w-full max-w-sm sm:max-w-2xl lg:max-w-4xl bg-white rounded-lg shadow-xl border border-gray-200"
+          className="w-full max-w-sm sm:max-w-2xl lg:max-w-4xl bg-white rounded-lg shadow-xl border border-gray-200 mt-4 sm:mt-0"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-4 sm:p-6 lg:p-8">
@@ -112,7 +112,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   id="staffName"
                   value={formData.staffName}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                  className={`mt-1 block w-full border rounded-lg px-3 py-3 sm:px-4 text-sm sm:text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 touch-manipulation ${
                     errors.staffName ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Enter staff name"
@@ -130,7 +130,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   id="department"
                   value={formData.department}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                  className={`mt-1 block w-full border rounded-lg px-3 py-3 sm:px-4 text-sm sm:text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 touch-manipulation ${
                     errors.department ? 'border-red-300' : 'border-gray-300'
                   }`}
                 >

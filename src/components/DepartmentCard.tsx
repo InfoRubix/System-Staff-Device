@@ -105,7 +105,40 @@ function DepartmentCard({ department, stats, onClick }: DepartmentCardProps) {
       }
     };
 
-    return styles[dept] || styles['MARKETING'];
+    // If department not found, generate dynamic style
+    if (!styles[dept]) {
+      // Generate icon from department name
+      const words = dept.split(/[\s/_-]+/);
+      const icon = words.length >= 2
+        ? words.slice(0, 2).map(w => w[0]).join('').toUpperCase()
+        : dept.substring(0, 3).toUpperCase();
+
+      // Different color schemes for new departments
+      const colorSchemes = [
+        { gradient: 'from-teal-500 to-cyan-600', bg: 'bg-gradient-to-br from-teal-50 to-cyan-50', border: 'border-teal-200', accent: 'text-teal-600' },
+        { gradient: 'from-violet-500 to-purple-600', bg: 'bg-gradient-to-br from-violet-50 to-purple-50', border: 'border-violet-200', accent: 'text-violet-600' },
+        { gradient: 'from-amber-500 to-yellow-600', bg: 'bg-gradient-to-br from-amber-50 to-yellow-50', border: 'border-amber-200', accent: 'text-amber-600' },
+        { gradient: 'from-lime-500 to-green-600', bg: 'bg-gradient-to-br from-lime-50 to-green-50', border: 'border-lime-200', accent: 'text-lime-600' },
+        { gradient: 'from-rose-500 to-pink-600', bg: 'bg-gradient-to-br from-rose-50 to-pink-50', border: 'border-rose-200', accent: 'text-rose-600' },
+        { gradient: 'from-sky-500 to-blue-600', bg: 'bg-gradient-to-br from-sky-50 to-blue-50', border: 'border-sky-200', accent: 'text-sky-600' },
+        { gradient: 'from-orange-500 to-red-600', bg: 'bg-gradient-to-br from-orange-50 to-red-50', border: 'border-orange-200', accent: 'text-orange-600' },
+        { gradient: 'from-emerald-500 to-teal-600', bg: 'bg-gradient-to-br from-emerald-50 to-teal-50', border: 'border-emerald-200', accent: 'text-emerald-600' },
+        { gradient: 'from-fuchsia-500 to-purple-600', bg: 'bg-gradient-to-br from-fuchsia-50 to-purple-50', border: 'border-fuchsia-200', accent: 'text-fuchsia-600' },
+        { gradient: 'from-stone-500 to-gray-600', bg: 'bg-gradient-to-br from-stone-50 to-gray-50', border: 'border-stone-200', accent: 'text-stone-600' }
+      ];
+
+      // Use hash of department name to consistently pick a color
+      const hash = dept.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+      const colorIndex = hash % colorSchemes.length;
+      const selectedColor = colorSchemes[colorIndex];
+
+      return {
+        ...selectedColor,
+        icon: icon
+      };
+    }
+
+    return styles[dept];
   };
 
   const style = getDepartmentStyle(department);

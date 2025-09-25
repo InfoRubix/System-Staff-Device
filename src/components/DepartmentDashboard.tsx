@@ -11,6 +11,7 @@ interface DepartmentDashboardProps {
   onEdit?: (device: Device) => void;
   onAdd?: () => void;
   onAddDepartment?: () => void;
+  onDeleteDepartment?: () => void;
 }
 
 type DepartmentStats = {
@@ -21,7 +22,7 @@ type DepartmentStats = {
   underRepairDevices: number;
 };
 
-function DepartmentDashboard({ onEdit, onAdd, onAddDepartment }: DepartmentDashboardProps) {
+function DepartmentDashboard({ onEdit, onAdd, onAddDepartment, onDeleteDepartment }: DepartmentDashboardProps) {
   const { devices, loading, searchDevices, deleteDevice } = useDevices();
   const { departments } = useDepartments();
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
@@ -198,27 +199,32 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment }: DepartmentDashb
           </p>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+        <div className="flex flex-row gap-2 w-full sm:w-auto">
           {onAddDepartment && (
             <button
               onClick={onAddDepartment}
-              className="w-full sm:w-auto group relative bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-4 py-2.5 sm:px-6 sm:py-3 text-center text-sm font-semibold text-white rounded-lg shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl overflow-hidden touch-manipulation"
+              className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-white rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
             >
-              <span className="relative z-10 flex items-center justify-center">
-                <span>Add Department</span>
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-blue-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <span className="block sm:hidden">Add Dept</span>
+              <span className="hidden sm:block">Add Department</span>
+            </button>
+          )}
+          {onDeleteDepartment && (
+            <button
+              onClick={onDeleteDepartment}
+              className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-white rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
+            >
+              <span className="block sm:hidden">Delete Dept</span>
+              <span className="hidden sm:block">Delete Department</span>
             </button>
           )}
           {onAdd && (
             <button
               onClick={onAdd}
-              className="w-full sm:w-auto group relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 px-4 py-2.5 sm:px-6 sm:py-3 text-center text-sm font-semibold text-white rounded-lg shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl overflow-hidden touch-manipulation"
+              className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-white rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
             >
-              <span className="relative z-10 flex items-center justify-center">
-                <span>Add Device</span>
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-red-700 to-red-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <span className="block sm:hidden">Add Device</span>
+              <span className="hidden sm:block">Add Device</span>
             </button>
           )}
         </div>

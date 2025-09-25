@@ -40,20 +40,20 @@ function DepartmentForm({ onSubmit, onCancel }: DepartmentFormProps) {
       className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-screen w-screen z-50 animate-fade-in"
       onClick={onCancel}
     >
-      <div className="relative min-h-full flex items-center justify-center p-4">
+      <div className="relative min-h-full flex items-start sm:items-center justify-center p-2 sm:p-4">
         <div
-          className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-200 animate-modal-pop"
+          className="w-full max-w-md bg-white rounded-lg sm:rounded-2xl shadow-2xl border border-gray-200 animate-modal-pop mt-4 sm:mt-0"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {/* Header */}
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center mb-4 sm:mb-6">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
                 Add New Department
               </h3>
               <p className="text-sm text-gray-600">
@@ -73,10 +73,10 @@ function DepartmentForm({ onSubmit, onCancel }: DepartmentFormProps) {
                   id="departmentName"
                   value={departmentName}
                   onChange={handleInputChange}
-                  className={`w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                  className={`w-full border rounded-lg px-3 py-3 sm:px-4 text-sm sm:text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors touch-manipulation ${
                     error ? 'border-red-300 bg-red-50' : 'border-gray-300'
                   }`}
-                  placeholder="Enter department name (e.g., IT Support, Finance)"
+                  placeholder="Enter department name (e.g., IT Support)"
                   autoFocus
                 />
                 {error && (
@@ -103,13 +103,13 @@ function DepartmentForm({ onSubmit, onCancel }: DepartmentFormProps) {
                 <button
                   type="button"
                   onClick={onCancel}
-                  className="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+                  className="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors duration-200 touch-manipulation"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                  className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl touch-manipulation"
                 >
                   Add Department
                 </button>

@@ -6,14 +6,16 @@ import { useDepartments } from '../contexts/DepartmentContext';
 import DepartmentDashboard from './DepartmentDashboard';
 import DeviceForm from './DeviceForm';
 import DepartmentForm from './DepartmentForm';
+import DeleteDepartmentForm from './DeleteDepartmentForm';
 import Navigation from './Navigation';
 import { Device, DeviceFormData } from '../types/device';
 
 function Dashboard() {
   const { addDevice, updateDevice } = useDevices();
-  const { addDepartment } = useDepartments();
+  const { addDepartment, deleteDepartment } = useDepartments();
   const [showForm, setShowForm] = useState(false);
   const [showDepartmentForm, setShowDepartmentForm] = useState(false);
+  const [showDeleteDepartmentForm, setShowDeleteDepartmentForm] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | undefined>(undefined);
 
   const handleAddDevice = () => {
@@ -60,6 +62,25 @@ function Dashboard() {
     setShowDepartmentForm(false);
   };
 
+  const handleDeleteDepartment = () => {
+    setShowDeleteDepartmentForm(true);
+  };
+
+  const handleDeleteDepartmentSubmit = async (departmentName: string) => {
+    try {
+      await deleteDepartment(departmentName);
+      alert(`Department "${departmentName}" has been deleted successfully!`);
+      setShowDeleteDepartmentForm(false);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete department';
+      alert(`Error: ${errorMessage}`);
+    }
+  };
+
+  const handleDeleteDepartmentCancel = () => {
+    setShowDeleteDepartmentForm(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-red-50 to-white">
 
@@ -72,6 +93,7 @@ function Dashboard() {
           onEdit={handleEditDevice}
           onAdd={handleAddDevice}
           onAddDepartment={handleAddDepartment}
+          onDeleteDepartment={handleDeleteDepartment}
         />
       </main>
 
@@ -89,6 +111,14 @@ function Dashboard() {
         <DepartmentForm
           onSubmit={handleDepartmentSubmit}
           onCancel={handleDepartmentCancel}
+        />
+      )}
+
+      {/* Delete Department Form Modal */}
+      {showDeleteDepartmentForm && (
+        <DeleteDepartmentForm
+          onSuccess={handleDeleteDepartmentSubmit}
+          onCancel={handleDeleteDepartmentCancel}
         />
       )}
 

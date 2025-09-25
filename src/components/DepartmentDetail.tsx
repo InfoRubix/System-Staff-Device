@@ -79,7 +79,39 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
       'RDHOMES': { gradient: 'from-pink-500 to-rose-600', icon: 'RD' },
       'QHOMES': { gradient: 'from-indigo-500 to-blue-600', icon: 'QH' }
     };
-    return styles[dept] || styles['MARKETING'];
+    // If department not found, generate dynamic style
+    if (!styles[dept]) {
+      // Generate icon from department name
+      const words = dept.split(/[\s/_-]+/);
+      const icon = words.length >= 2
+        ? words.slice(0, 2).map(w => w[0]).join('').toUpperCase()
+        : dept.substring(0, 3).toUpperCase();
+
+      // Different color gradients for new departments
+      const gradients = [
+        'from-teal-500 to-cyan-600',
+        'from-violet-500 to-purple-600',
+        'from-amber-500 to-yellow-600',
+        'from-lime-500 to-green-600',
+        'from-rose-500 to-pink-600',
+        'from-sky-500 to-blue-600',
+        'from-orange-500 to-red-600',
+        'from-emerald-500 to-teal-600',
+        'from-fuchsia-500 to-purple-600',
+        'from-stone-500 to-gray-600'
+      ];
+
+      // Use hash of department name to consistently pick a color
+      const hash = dept.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+      const colorIndex = hash % gradients.length;
+
+      return {
+        gradient: gradients[colorIndex],
+        icon: icon
+      };
+    }
+
+    return styles[dept];
   };
 
   const style = getDepartmentStyle(department);

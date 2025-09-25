@@ -2,6 +2,8 @@ import {
   collection,
   addDoc,
   getDocs,
+  doc,
+  updateDoc,
   orderBy,
   query
 } from 'firebase/firestore';
@@ -81,6 +83,30 @@ export const departmentService = {
         'MARKETING', 'RUBIX', 'CONVEY', 'ACCOUNT', 'HR',
         'LITIGATION', 'SANCO', 'POT/POC', 'AFC', 'RDHOMES', 'QHOMES'
       ];
+    }
+  },
+
+  // Delete/deactivate department
+  async deleteDepartment(name: string): Promise<void> {
+    try {
+      const departments = await this.getAllDepartments();
+      const deptToDelete = departments.find(dept =>
+        dept.name.toUpperCase() === name.toUpperCase() && dept.isActive
+      );
+
+      if (!deptToDelete) {
+        throw new Error('Department not found or already inactive');
+      }
+
+      // Instead of actually deleting, mark as inactive
+      const deptRef = doc(db, DEPARTMENTS_COLLECTION, deptToDelete.id);
+      await updateDoc(deptRef, {
+        isActive: false,
+        updatedAt: new Date(),
+      });
+    } catch (error) {
+      console.error('Error deleting department:', error);
+      throw error;
     }
   },
 
