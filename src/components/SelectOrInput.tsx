@@ -97,7 +97,11 @@ function SelectOrInput({
     onChange(syntheticEvent);
   };
 
-  const baseClassName = `mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+  const baseSelectClassName = `mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 cursor-pointer ${
+    hasError ? 'border-red-300' : 'border-gray-300'
+  } ${className}`;
+
+  const baseInputClassName = `mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
     hasError ? 'border-red-300' : 'border-gray-300'
   } ${className}`;
 
@@ -111,7 +115,7 @@ function SelectOrInput({
           id={id}
           value={customValue}
           onChange={handleInputChange}
-          className={baseClassName}
+          className={baseInputClassName}
           placeholder="Enter custom value"
         />
         <button
@@ -126,48 +130,60 @@ function SelectOrInput({
   }
 
   return (
-    <select
-      ref={selectRef}
-      name={name}
-      id={id}
-      value={value}
-      onChange={handleSelectChange}
-      className={baseClassName}
-    >
-      <option value="">{placeholder}</option>
+    <div className="relative">
+      <select
+        ref={selectRef}
+        name={name}
+        id={id}
+        value={value}
+        onChange={handleSelectChange}
+        className={baseSelectClassName}
+        style={{
+          WebkitAppearance: 'none',
+          MozAppearance: 'none',
+          appearance: 'none',
+          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+          backgroundPosition: 'right 0.5rem center',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: '1.5em 1.5em',
+          paddingRight: '2.5rem'
+        }}
+      >
+        <option value="">{placeholder}</option>
 
-      {groupedOptions ? (
-        // Render grouped options
-        Object.entries(groupedOptions).map(([groupLabel, groupOptions]) => (
-          <optgroup key={groupLabel} label={groupLabel}>
-            {groupOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </optgroup>
-        ))
-      ) : (
-        // Render regular options
-        Array.isArray(options) && options.map((option) => {
-          if (typeof option === 'string') {
-            return (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            );
-          } else {
-            return (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            );
-          }
-        })
-      )}
+        {groupedOptions ? (
+          // Render grouped options
+          Object.entries(groupedOptions).map(([groupLabel, groupOptions]) => (
+            <optgroup key={groupLabel} label={groupLabel}>
+              {groupOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </optgroup>
+          ))
+        ) : (
+          // Render regular options
+          Array.isArray(options) && options.map((option) => {
+            if (typeof option === 'string') {
+              return (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              );
+            } else {
+              return (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              );
+            }
+          })
+        )}
 
-      <option value="__custom__">Enter custom value</option>
-    </select>
+        <option value="__custom__">Enter custom value</option>
+      </select>
+    </div>
   );
 }
 
