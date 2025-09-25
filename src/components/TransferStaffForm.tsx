@@ -99,8 +99,17 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
       // Update each device's department
       const updatePromises = devicesToUpdate.map(device =>
         updateDevice(device.id, {
+          staffName: device.staffName,
           department: toDepartment,
-          updatedAt: new Date()
+          deviceType: device.deviceType,
+          deviceModel: device.deviceModel,
+          operatingSystem: device.operatingSystem,
+          processor: device.processor,
+          ram: device.ram,
+          graphics: device.graphics,
+          storage: device.storage,
+          status: device.status,
+          notes: device.notes
         })
       );
 
