@@ -66,7 +66,7 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
 
   // Get department color scheme
   const getDepartmentStyle = (dept: Department) => {
-    const styles = {
+    const styles: Record<string, { gradient: string; icon: string }> = {
       'MARKETING': { gradient: 'from-purple-500 to-pink-600', icon: 'MKT' },
       'RUBIX': { gradient: 'from-blue-500 to-indigo-600', icon: 'RBX' },
       'CONVEY': { gradient: 'from-green-500 to-teal-600', icon: 'CNV' },
