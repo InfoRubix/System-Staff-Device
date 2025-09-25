@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "../contexts/AuthContext";
 import { DeviceProvider } from "../contexts/DeviceContext";
+import { DepartmentProvider } from "../contexts/DepartmentContext";
 import { BudgetProvider } from "../contexts/BudgetContext";
 import { NavigationProvider } from "../contexts/NavigationContext";
 import NavigationLoadingScreen from "../components/NavigationLoadingScreen";
@@ -33,14 +34,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <DeviceProvider>
-            <BudgetProvider>
-              <NavigationProvider>
-                <NavigationLoadingScreen />
-                {children}
-              </NavigationProvider>
-            </BudgetProvider>
-          </DeviceProvider>
+          <DepartmentProvider>
+            <DeviceProvider>
+              <BudgetProvider>
+                <NavigationProvider>
+                  <NavigationLoadingScreen />
+                  {children}
+                </NavigationProvider>
+              </BudgetProvider>
+            </DeviceProvider>
+          </DepartmentProvider>
         </AuthProvider>
       </body>
     </html>

@@ -1,4 +1,4 @@
-export type Department = 'MARKETING' | 'RUBIX' | 'CONVEY' | 'ACCOUNT' | 'HR' | 'LITIGATION' | 'SANCO' | 'POT/POC' | 'AFC' | 'RDHOMES' | 'QHOMES';
+export type Department = string; // Now dynamic instead of hardcoded
 
 export interface IssueLog {
   id: string;
@@ -42,16 +42,5 @@ export interface DeviceFormData {
   notes?: string;
 }
 
-export const DEPARTMENTS: Department[] = [
-  'MARKETING',
-  'RUBIX',
-  'CONVEY',
-  'ACCOUNT',
-  'HR',
-  'LITIGATION',
-  'SANCO',
-  'POT/POC',
-  'AFC',
-  'RDHOMES',
-  'QHOMES'
-];
+// DEPARTMENTS is now managed dynamically through DepartmentContext
+// Default departments are initialized in departmentService

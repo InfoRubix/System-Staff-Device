@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Device, DeviceFormData, DEPARTMENTS } from '../types/device';
+import { Device, DeviceFormData } from '../types/device';
+import { useDepartments } from '../contexts/DepartmentContext';
 import SelectOrInput from './SelectOrInput';
 
 interface DeviceFormProps {
@@ -11,9 +12,11 @@ interface DeviceFormProps {
 }
 
 function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
+  const { departments } = useDepartments();
+
   const [formData, setFormData] = useState<DeviceFormData>({
     staffName: '',
-    department: 'MARKETING',
+    department: departments[0] || 'MARKETING', // Use first available department
     deviceType: 'Laptop',
     deviceModel: '',
     operatingSystem: '',
@@ -131,7 +134,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                     errors.department ? 'border-red-300' : 'border-gray-300'
                   }`}
                 >
-                  {DEPARTMENTS.map((dept) => (
+                  {departments.map((dept) => (
                     <option key={dept} value={dept}>
                       {dept}
                     </option>

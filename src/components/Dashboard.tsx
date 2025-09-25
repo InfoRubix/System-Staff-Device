@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useDevices } from '../contexts/DeviceContext';
+import { useDepartments } from '../contexts/DepartmentContext';
 import DepartmentDashboard from './DepartmentDashboard';
 import DeviceForm from './DeviceForm';
 import DepartmentForm from './DepartmentForm';
@@ -10,6 +11,7 @@ import { Device, DeviceFormData } from '../types/device';
 
 function Dashboard() {
   const { addDevice, updateDevice } = useDevices();
+  const { addDepartment } = useDepartments();
   const [showForm, setShowForm] = useState(false);
   const [showDepartmentForm, setShowDepartmentForm] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | undefined>(undefined);
@@ -43,11 +45,14 @@ function Dashboard() {
     setShowDepartmentForm(true);
   };
 
-  const handleDepartmentSubmit = (departmentName: string) => {
-    // TODO: Add department to the system/database
-    console.log('New department:', departmentName);
-    alert(`Department "${departmentName}" has been created successfully!\n\nNote: This is a demo. In a real application, this would be saved to the database and the department would appear in the list.`);
-    setShowDepartmentForm(false);
+  const handleDepartmentSubmit = async (departmentName: string) => {
+    try {
+      await addDepartment(departmentName);
+      alert(`Department "${departmentName}" has been created successfully!`);
+      setShowDepartmentForm(false);
+    } catch (error: any) {
+      alert(`Error: ${error.message || 'Failed to create department'}`);
+    }
   };
 
   const handleDepartmentCancel = () => {

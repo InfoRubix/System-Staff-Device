@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useDevices } from '../contexts/DeviceContext';
-import { Department, DEPARTMENTS, Device } from '../types/device';
+import { useDepartments } from '../contexts/DepartmentContext';
+import { Department, Device } from '../types/device';
 import DepartmentCard from './DepartmentCard';
 import DepartmentDetail from './DepartmentDetail';
 
@@ -22,6 +23,7 @@ type DepartmentStats = {
 
 function DepartmentDashboard({ onEdit, onAdd, onAddDepartment }: DepartmentDashboardProps) {
   const { devices, loading, searchDevices, deleteDevice } = useDevices();
+  const { departments } = useDepartments();
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Device[]>([]);
@@ -48,7 +50,7 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment }: DepartmentDashb
     const stats: Record<Department, DepartmentStats> = {} as Record<Department, DepartmentStats>;
 
     // Initialize all departments with empty stats
-    DEPARTMENTS.forEach(dept => {
+    departments.forEach(dept => {
       stats[dept] = {
         totalDevices: 0,
         staffCount: 0,
@@ -62,7 +64,7 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment }: DepartmentDashb
     if (!devices) return stats;
 
     const staffByDepartment: Record<Department, Set<string>> = {} as Record<Department, Set<string>>;
-    DEPARTMENTS.forEach(dept => {
+    departments.forEach(dept => {
       staffByDepartment[dept] = new Set();
     });
 
@@ -85,12 +87,12 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment }: DepartmentDashb
     });
 
     // Update staff counts
-    DEPARTMENTS.forEach(dept => {
+    departments.forEach(dept => {
       stats[dept].staffCount = staffByDepartment[dept].size;
     });
 
     return stats;
-  }, [devices]);
+  }, [devices, departments]);
 
   // Calculate overall summary statistics
   const overallStats = useMemo(() => {
@@ -426,7 +428,7 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment }: DepartmentDashb
           </div>
           
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-            {DEPARTMENTS.map((department) => (
+            {departments.map((department) => (
               <DepartmentCard
                 key={department}
                 department={department}
