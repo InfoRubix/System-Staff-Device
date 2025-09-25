@@ -72,10 +72,10 @@ export interface BudgetContextType {
   updateRepairRecord: (id: string, updates: Partial<RepairRecord>) => Promise<void>;
   getEstimatedCostForDevice: (deviceId: string) => number;
   refreshBudget: () => Promise<void>;
-  getDevicesData: () => any[];
+  getDevicesData: () => Record<string, unknown>[];
   getEstimationByOS: () => Record<string, { repair: number; replacement: number; count: number }>;
   getEstimationByDeviceType: () => Record<string, { repair: number; replacement: number; count: number }>;
   getEstimationByDepartment: () => Record<string, { repair: number; replacement: number; count: number }>;
-  getDevicesNeedingRepair: () => any[];
-  getDevicesNeedingReplacement: () => any[];
+  getDevicesNeedingRepair: () => Record<string, unknown>[];
+  getDevicesNeedingReplacement: () => Record<string, unknown>[];
 }

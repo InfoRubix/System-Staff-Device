@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { BudgetData, BudgetContextType, Purchase, BudgetAlert } from '../types/budget';
 import { useDevices } from './DeviceContext';
 import { Device } from '../types/device';
@@ -8,12 +8,12 @@ import { Device } from '../types/device';
 const BudgetContext = createContext<BudgetContextType | undefined>(undefined);
 
 export function BudgetProvider({ children }: { children: ReactNode }) {
-  const { devices, loading: devicesLoading } = useDevices();
+  const { devices } = useDevices();
   const [currentBudget, setCurrentBudget] = useState<BudgetData | null>(null);
   const [previousBudget, setPreviousBudget] = useState<BudgetData | null>(null);
   const [purchases] = useState<Purchase[]>([]);
-  const [repairRecords] = useState<any[]>([]);
-  const [partsCatalog] = useState<any[]>([]);
+  const [repairRecords] = useState<Record<string, unknown>[]>([]);
+  const [partsCatalog] = useState<Record<string, unknown>[]>([]);
   const [budgetAlerts, setBudgetAlerts] = useState<BudgetAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   });
 
   // Calculate repair and replacement costs from actual device data and age analysis
-  const calculateDeviceCosts = (devices: Device[]) => {
+  const calculateDeviceCosts = useCallback((devices: Device[]) => {
     if (!devices || devices.length === 0) {
       return {
         estimatedRepairsTotal: 0,
@@ -118,7 +118,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       repairDevices,
       replacementDevices
     };
-  };
+  }, []); // Empty dependency array since this function doesn't depend on any changing values
 
   // Sample devices data that aligns with Operating System Distribution (fallback)
   // const sampleDevices = [
@@ -289,12 +289,12 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   // ];
 
   // Calculate budget values based on estimated needs from device data
-  const calculateBudgetValues = (
+  const calculateBudgetValues = useCallback((
     totalBudget: number,
-    estimationData: any
+    estimationData: Record<string, unknown>
   ): { totalBudgetNeeded: number; remainingBudget: number } => {
     // Total Budget Needed = Estimated Repairs + Estimated Replacements
-    const totalBudgetNeeded = estimationData.estimatedBudgetNeeded;
+    const totalBudgetNeeded = estimationData.estimatedBudgetNeeded as number;
 
     // Budget Usage = (Total Budget Needed ÷ Total Budget) × 100
     // const budgetUsagePercentage = totalBudget > 0 ? (totalBudgetNeeded / totalBudget) * 100 : 0;
@@ -303,14 +303,14 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     const remainingBudget = totalBudget - totalBudgetNeeded;
 
     return { totalBudgetNeeded, remainingBudget };
-  };
+  }, []); // Empty dependency array since this function doesn't depend on any changing values
 
   // Generate budget alerts based on estimated needs
-  const generateBudgetAlerts = (budget: BudgetData, estimationData: any): BudgetAlert[] => {
+  const generateBudgetAlerts = useCallback((budget: BudgetData, estimationData: Record<string, unknown>): BudgetAlert[] => {
     const alerts: BudgetAlert[] = [];
     const currentDate = new Date();
 
-    const totalBudgetNeeded = estimationData.estimatedBudgetNeeded;
+    const totalBudgetNeeded = estimationData.estimatedBudgetNeeded as number;
     const budgetUsagePercentage = budget.totalBudget > 0 ? (totalBudgetNeeded / budget.totalBudget) * 100 : 0;
 
     // Critical: Budget needed exceeds available budget
@@ -360,9 +360,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     }
 
     return alerts;
-  };
+  }, []);
 
-  const loadBudgetData = async () => {
+  const loadBudgetData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -415,7 +415,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [devices, calculateDeviceCosts, calculateBudgetValues, generateBudgetAlerts]);
 
   const getBudgetChangePercentage = (): number => {
     if (!currentBudget || !previousBudget) return 0;
@@ -428,7 +428,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     return ((currentRemaining - previousRemaining) / Math.abs(previousRemaining)) * 100;
   };
 
-  const getOpenRepairCosts = (): any[] => {
+  const getOpenRepairCosts = (): Record<string, unknown>[] => {
     return [];
   };
 
@@ -453,12 +453,12 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     console.log('Purchase tracking disabled - budget now based on device needs estimation');
   };
 
-  const addRepairRecord = async (deviceId: string, issueType: any, description?: string) => {
+  const addRepairRecord = async (deviceId: string, issueType: string, description?: string) => {
     // This would trigger a recalculation of estimations in a real system
     console.log('Add repair record:', { deviceId, issueType, description });
   };
 
-  const updateRepairRecord = async (id: string, updates: any) => {
+  const updateRepairRecord = async (id: string, updates: Record<string, unknown>) => {
     console.log('Update repair record:', { id, updates });
   };
 
@@ -543,28 +543,8 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadBudgetData();
-  }, []);
+  }, [devices, calculateDeviceCosts, calculateBudgetValues, loadBudgetData]);
 
-  // Recalculate budget when devices change (reactive to device additions/updates/status changes)
-  useEffect(() => {
-    if (!devicesLoading && devices && currentBudget) {
-      const estimationData = calculateDeviceCosts(devices);
-      setEstimationTotals(estimationData);
-
-      // Update current budget calculations based on new device data
-      const { totalBudgetNeeded, remainingBudget } = calculateBudgetValues(
-        currentBudget.totalBudget,
-        estimationData
-      );
-
-      setCurrentBudget(prev => prev ? {
-        ...prev,
-        projectedSpend: totalBudgetNeeded,
-        remainingBudget,
-        updatedAt: new Date()
-      } : null);
-    }
-  }, [devices, devicesLoading, currentBudget?.totalBudget]);
 
   // Update alerts when budget changes
   useEffect(() => {
@@ -572,7 +552,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       const alerts = generateBudgetAlerts(currentBudget, estimationTotals);
       setBudgetAlerts(alerts);
     }
-  }, [currentBudget, estimationTotals]);
+  }, [currentBudget, estimationTotals, generateBudgetAlerts]);
 
   return (
     <BudgetContext.Provider value={{

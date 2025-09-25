@@ -22,7 +22,11 @@ import {
   LineElement,
   Title,
   Filler,
+  ChartEvent,
+  ActiveElement,
+  Tick,
 } from 'chart.js';
+import type { Context } from 'chartjs-plugin-datalabels';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 // Lazy load chart components
@@ -621,13 +625,14 @@ function DataAnalysis() {
           weight: 'bold' as const,
           size: 12,
         },
-        formatter: function(value: number, context: any) {
+        formatter: function(value: unknown, context: Context) {
           // Hide labels for zero values
           if (value === 0) return '';
 
-          const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-          return `${value}\n(${percentage}%)`;
+          const numValue = typeof value === 'number' ? value : 0;
+          const total = (context.dataset.data as number[]).reduce((a: number, b: number) => a + b, 0);
+          const percentage = total > 0 ? ((numValue / total) * 100).toFixed(1) : '0.0';
+          return `${numValue}\n(${percentage}%)`;
         },
       },
       tooltip: {
@@ -661,13 +666,14 @@ function DataAnalysis() {
           weight: 'bold' as const,
           size: 12,
         },
-        formatter: function(value: number, context: any) {
+        formatter: function(value: unknown, context: Context) {
           // Hide labels for zero values
           if (value === 0) return '';
 
-          const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-          return `${value}\n(${percentage}%)`;
+          const numValue = typeof value === 'number' ? value : 0;
+          const total = (context.dataset.data as number[]).reduce((a: number, b: number) => a + b, 0);
+          const percentage = total > 0 ? ((numValue / total) * 100).toFixed(1) : '0.0';
+          return `${numValue}\n(${percentage}%)`;
         },
       },
       tooltip: {
@@ -747,7 +753,7 @@ function DataAnalysis() {
       duration: 1200,
       easing: 'easeOutQuart' as const,
     },
-    onClick: (event: any, elements: any) => {
+    onClick: (event: ChartEvent, elements: ActiveElement[]) => {
       if (elements.length > 0) {
         const elementIndex = elements[0].index;
         const osName = osAgeData.labels[elementIndex];
@@ -760,10 +766,10 @@ function DataAnalysis() {
       },
       tooltip: {
         callbacks: {
-          title: function(context: any) {
+          title: function(context: { label?: string }[]) {
             return context[0]?.label || '';
           },
-          label: function(context: any) {
+          label: function(context: { parsed: { y: number }; label?: string }) {
             const osName = context.label;
             const ageInYears = context.parsed.y;
 
@@ -781,8 +787,8 @@ function DataAnalysis() {
         max: osAgeData.maxAge || 10,
         ticks: {
           stepSize: 1,
-          callback: function(value: any) {
-            return value;
+          callback: function(tickValue: string | number, _index: number, _ticks: Tick[]) {
+            return typeof tickValue === 'number' ? tickValue : parseFloat(tickValue) || 0;
           }
         },
         title: {
@@ -824,10 +830,10 @@ function DataAnalysis() {
       },
       tooltip: {
         callbacks: {
-          title: function(context: any) {
+          title: function(context: { label?: string }[]) {
             return `${context[0]?.label || ''} Issues`;
           },
-          label: function(context: any) {
+          label: function(context: { parsed: { y: number } }) {
             const count = context.parsed.y;
             return [
               `Devices with Issues: ${count}`,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Simple in-memory cache with timestamps
 let analyticsCache: {
-  data: any;
+  data: Record<string, unknown>;
   timestamp: number;
 } | null = null;
 

@@ -21,8 +21,8 @@ export default function Navigation() {
   const handleNavigation = (href: string) => {
     if (pathname !== href) {
       // Prevent double navigation
-      if ((window as any).isNavigating) return;
-      (window as any).isNavigating = true;
+      if ((window as Window & { isNavigating?: boolean }).isNavigating) return;
+      (window as Window & { isNavigating?: boolean }).isNavigating = true;
 
       console.log('Starting navigation to:', href);
 
@@ -40,7 +40,7 @@ export default function Navigation() {
         // Reset the global navigation flag after a longer delay
         setTimeout(() => {
           console.log('Resetting global navigation flag');
-          (window as any).isNavigating = false;
+          (window as Window & { isNavigating?: boolean }).isNavigating = false;
         }, 5000); // Longer timeout to ensure page loads
       }, 100);
     }

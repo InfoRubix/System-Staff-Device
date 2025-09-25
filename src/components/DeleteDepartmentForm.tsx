@@ -30,7 +30,7 @@ function DeleteDepartmentForm({ onSuccess, onCancel }: DeleteDepartmentFormProps
 
     try {
       onSuccess(selectedDepartment);
-    } catch (err) {
+    } catch {
       setError('Failed to delete department');
     } finally {
       setIsDeleting(false);
@@ -147,7 +147,7 @@ function DeleteDepartmentForm({ onSuccess, onCancel }: DeleteDepartmentFormProps
                     <div>
                       <p className="text-sm font-medium text-red-800">Warning!</p>
                       <p className="text-sm text-red-600 mt-1">
-                        This will permanently remove "{selectedDepartment}" from the system. This action cannot be undone.
+                        This will permanently remove &ldquo;{selectedDepartment}&rdquo; from the system. This action cannot be undone.
                       </p>
                     </div>
                   </div>

@@ -95,7 +95,7 @@ export function calculateDeviceEstimation(
 }
 
 // Function to calculate totals for all devices
-export function calculateEstimationTotals(devices: any[]): {
+export function calculateEstimationTotals(devices: Record<string, unknown>[]): {
   estimatedRepairsTotal: number;
   estimatedReplacements: number;
   estimatedBudgetNeeded: number;
