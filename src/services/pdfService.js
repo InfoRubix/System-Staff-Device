@@ -123,14 +123,44 @@ class PDFService {
   }
 
   /**
+   * Calculates total table height
+   */
+  calculateTableHeight(doc, data, columns, baseRowHeight = 10) {
+    const columnWidths = this.calculateColumnWidths(columns, doc.internal.pageSize.width - 40);
+    let totalHeight = baseRowHeight; // Header height
+
+    data.forEach((row) => {
+      let maxLines = 1;
+      columns.forEach((column, colIndex) => {
+        const value = this.getColumnValue(row, column);
+        const maxWidth = columnWidths[colIndex] - 4;
+        const lines = doc.splitTextToSize(value, maxWidth);
+        maxLines = Math.max(maxLines, lines.length);
+      });
+      totalHeight += baseRowHeight * maxLines;
+    });
+
+    return totalHeight;
+  }
+
+  /**
    * Adds professional table with proper formatting
    */
-  addProfessionalTable(doc, data, columns, startY) {
+  addProfessionalTable(doc, data, columns, startY, skipPageBreakCheck = false) {
     const tableWidth = doc.internal.pageSize.width - 40; // 20mm margins on each side
     const columnWidths = this.calculateColumnWidths(columns, tableWidth);
     const baseRowHeight = 10;
 
     let yPos = startY;
+
+    // Check if entire table fits on current page (unless skipped)
+    if (!skipPageBreakCheck) {
+      const tableHeight = this.calculateTableHeight(doc, data, columns, baseRowHeight);
+      if (yPos + tableHeight > doc.internal.pageSize.height - 30) {
+        doc.addPage();
+        yPos = 20;
+      }
+    }
 
     // Draw table headers
     this.drawTableHeader(doc, columns, columnWidths, yPos, baseRowHeight);
@@ -148,15 +178,6 @@ class PDFService {
       });
 
       const rowHeight = baseRowHeight * maxLines;
-
-      // Check for page break
-      if (yPos + rowHeight > doc.internal.pageSize.height - 30) {
-        doc.addPage();
-        yPos = 20;
-        // Redraw headers on new page
-        this.drawTableHeader(doc, columns, columnWidths, yPos, baseRowHeight);
-        yPos += baseRowHeight;
-      }
 
       // Alternate row colors
       if (rowIndex % 2 === 1) {
@@ -327,11 +348,6 @@ class PDFService {
       yPos += 15;
 
       // Executive Summary Section as Table
-      doc.setFontSize(16);
-      doc.setTextColor(...this.brandColors.primary);
-      doc.text('Executive Summary', 20, yPos);
-      yPos += 12;
-
       const kpiMetrics = analysisData.kpiMetrics || {};
 
       const summaryColumns = [
@@ -358,15 +374,26 @@ class PDFService {
         }
       ];
 
-      this.addProfessionalTable(doc, summaryData, summaryColumns, yPos);
+      // Calculate space needed for title + table
+      const summaryTableHeight = this.calculateTableHeight(doc, summaryData, summaryColumns, 10);
+      const summaryTitleHeight = 16; // Title height + spacing
+      const totalSummaryHeight = summaryTitleHeight + summaryTableHeight;
+
+      // Check if title + table fits on current page
+      if (yPos + totalSummaryHeight > doc.internal.pageSize.height - 30) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setTextColor(...this.brandColors.primary);
+      doc.text('Executive Summary', 20, yPos);
+      yPos += 12;
+
+      this.addProfessionalTable(doc, summaryData, summaryColumns, yPos, true); // Skip page break check since we already calculated
       yPos += (summaryData.length + 2) * 10 + 15;
 
       // Key Performance Indicators Table
-      doc.setFontSize(16);
-      doc.setTextColor(...this.brandColors.primary);
-      doc.text('Key Performance Indicators', 20, yPos);
-      yPos += 12;
-
       const kpiColumns = [
         { key: 'metric', header: 'Metric', width: 1.8 },
         { key: 'value', header: 'Value', width: 1.2 },
@@ -396,7 +423,23 @@ class PDFService {
         }
       ];
 
-      this.addProfessionalTable(doc, kpiData, kpiColumns, yPos);
+      // Calculate space needed for title + table
+      const kpiTableHeight = this.calculateTableHeight(doc, kpiData, kpiColumns, 10);
+      const kpiTitleHeight = 16; // Title height + spacing
+      const totalKPIHeight = kpiTitleHeight + kpiTableHeight;
+
+      // Check if title + table fits on current page
+      if (yPos + totalKPIHeight > doc.internal.pageSize.height - 30) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setTextColor(...this.brandColors.primary);
+      doc.text('Key Performance Indicators', 20, yPos);
+      yPos += 12;
+
+      this.addProfessionalTable(doc, kpiData, kpiColumns, yPos, true); // Skip page break check since we already calculated
       yPos += (kpiData.length + 2) * 10 + 10;
 
       // Device Status Distribution
@@ -494,45 +537,6 @@ class PDFService {
         yPos += (typeData.length + 2) * 10 + 10;
       }
 
-      // Device Inventory Details (First 15 devices)
-      if (devices.length > 0) {
-        if (yPos > 100) {
-          doc.addPage();
-          yPos = 20;
-        }
-
-        doc.setFontSize(16);
-        doc.setTextColor(...this.brandColors.primary);
-        doc.text('Device Inventory Sample', 20, yPos);
-        yPos += 12;
-
-        const inventoryColumns = [
-          { key: 'staffName', header: 'Staff Name', width: 1.5 },
-          { key: 'deviceModel', header: 'Device Model', width: 2.5 },
-          { key: 'deviceType', header: 'Type', width: 0.8 },
-          { key: 'operatingSystem', header: 'OS', width: 1.5 },
-          { key: 'ram', header: 'RAM', width: 0.7 },
-          { key: 'status', header: 'Status', width: 1 }
-        ];
-
-        const inventoryData = devices.slice(0, 15).map(device => ({
-          staffName: device.staffName,
-          deviceModel: device.deviceModel,
-          deviceType: device.deviceType,
-          operatingSystem: device.operatingSystem,
-          ram: device.ram,
-          status: device.status
-        }));
-
-        this.addProfessionalTable(doc, inventoryData, inventoryColumns, yPos);
-
-        if (devices.length > 15) {
-          yPos += (inventoryData.length + 2) * 10 + 15;
-          doc.setFontSize(11);
-          doc.setTextColor(...this.brandColors.secondary);
-          doc.text(`... and ${devices.length - 15} more devices (see full inventory for complete list)`, 20, yPos);
-        }
-      }
 
       // Recommendations Section
       doc.addPage();

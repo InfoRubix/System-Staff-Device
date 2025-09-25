@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { useDevices } from '../contexts/DeviceContext';
 import DepartmentDashboard from './DepartmentDashboard';
 import DeviceForm from './DeviceForm';
+import DepartmentForm from './DepartmentForm';
 import Navigation from './Navigation';
 import { Device, DeviceFormData } from '../types/device';
 
 function Dashboard() {
   const { addDevice, updateDevice } = useDevices();
   const [showForm, setShowForm] = useState(false);
+  const [showDepartmentForm, setShowDepartmentForm] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | undefined>(undefined);
 
   const handleAddDevice = () => {
@@ -37,6 +39,21 @@ function Dashboard() {
     setEditingDevice(undefined);
   };
 
+  const handleAddDepartment = () => {
+    setShowDepartmentForm(true);
+  };
+
+  const handleDepartmentSubmit = (departmentName: string) => {
+    // TODO: Add department to the system/database
+    console.log('New department:', departmentName);
+    alert(`Department "${departmentName}" has been created successfully!\n\nNote: This is a demo. In a real application, this would be saved to the database and the department would appear in the list.`);
+    setShowDepartmentForm(false);
+  };
+
+  const handleDepartmentCancel = () => {
+    setShowDepartmentForm(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-red-50 to-white">
 
@@ -48,6 +65,7 @@ function Dashboard() {
         <DepartmentDashboard
           onEdit={handleEditDevice}
           onAdd={handleAddDevice}
+          onAddDepartment={handleAddDepartment}
         />
       </main>
 
@@ -57,6 +75,14 @@ function Dashboard() {
           device={editingDevice}
           onSubmit={handleFormSubmit}
           onCancel={handleFormCancel}
+        />
+      )}
+
+      {/* Department Form Modal */}
+      {showDepartmentForm && (
+        <DepartmentForm
+          onSubmit={handleDepartmentSubmit}
+          onCancel={handleDepartmentCancel}
         />
       )}
 

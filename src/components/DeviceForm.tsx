@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Device, DeviceFormData, DEPARTMENTS } from '../types/device';
+import SelectOrInput from './SelectOrInput';
 
 interface DeviceFormProps {
   device?: Device;
@@ -180,40 +181,20 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               <div>
                 <label htmlFor="operatingSystem" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
                   Operating System                </label>
-                <select
+                <SelectOrInput
                   name="operatingSystem"
                   id="operatingSystem"
                   value={formData.operatingSystem}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
-                    errors.operatingSystem ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Select Operating System (optional)</option>
-                  <optgroup label="Windows">
-                    <option value="Windows 7">Windows 7</option>
-                    <option value="Windows 8.1">Windows 8.1</option>
-                    <option value="Windows 10">Windows 10</option>
-                    <option value="Windows 11">Windows 11</option>
-                  </optgroup>
-                  <optgroup label="macOS">
-                    <option value="macOS Monterey">macOS Monterey</option>
-                    <option value="macOS Ventura">macOS Ventura</option>
-                    <option value="macOS Sonoma">macOS Sonoma</option>
-                  </optgroup>
-                  <optgroup label="iOS">
-                    <option value="iOS 16">iOS 16</option>
-                    <option value="iOS 17">iOS 17</option>
-                    <option value="iOS 18">iOS 18</option>
-                  </optgroup>
-                  <optgroup label="Android">
-                    <option value="Android 11">Android 11</option>
-                    <option value="Android 12">Android 12</option>
-                    <option value="Android 13">Android 13</option>
-                    <option value="Android 14">Android 14</option>
-                    <option value="Android 15">Android 15</option>
-                  </optgroup>
-                </select>
+                  placeholder="Select Operating System (optional)"
+                  hasError={!!errors.operatingSystem}
+                  groupedOptions={{
+                    "Windows": ["Windows 7", "Windows 8.1", "Windows 10", "Windows 11"],
+                    "macOS": ["macOS Monterey", "macOS Ventura", "macOS Sonoma"],
+                    "iOS": ["iOS 16", "iOS 17", "iOS 18"],
+                    "Android": ["Android 11", "Android 12", "Android 13", "Android 14", "Android 15"]
+                  }}
+                />
                 {errors.operatingSystem && (
                   <p className="mt-1 text-sm text-red-600">{errors.operatingSystem}</p>
                 )}
@@ -241,23 +222,15 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               <div>
                 <label htmlFor="ram" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
                   RAM                </label>
-                <select
+                <SelectOrInput
                   name="ram"
                   id="ram"
                   value={formData.ram}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
-                    errors.ram ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Select RAM (optional)</option>
-                  <option value="2 GB">2 GB</option>
-                  <option value="4 GB">4 GB</option>
-                  <option value="6 GB">6 GB</option>
-                  <option value="8 GB">8 GB</option>
-                  <option value="16 GB">16 GB</option>
-                  <option value="32 GB">32 GB</option>
-                </select>
+                  placeholder="Select RAM (optional)"
+                  hasError={!!errors.ram}
+                  options={["2 GB", "4 GB", "6 GB", "8 GB", "16 GB", "32 GB", "64 GB"]}
+                />
                 {errors.ram && (
                   <p className="mt-1 text-sm text-red-600">{errors.ram}</p>
                 )}
@@ -285,21 +258,15 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
               <div>
                 <label htmlFor="storage" className="block text-sm sm:text-base font-medium text-gray-700 mb-1">
                   Storage                </label>
-                <select
+                <SelectOrInput
                   name="storage"
                   id="storage"
                   value={formData.storage}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
-                    errors.storage ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Select storage (optional)</option>
-                  <option value="256 GB">256 GB</option>
-                  <option value="512 GB">512 GB</option>
-                  <option value="1 TB">1 TB</option>
-                  <option value="2 TB">2 TB</option>
-                </select>
+                  placeholder="Select storage (optional)"
+                  hasError={!!errors.storage}
+                  options={["128 GB", "256 GB", "512 GB", "1 TB"]}
+                />
                 {errors.storage && (
                   <p className="mt-1 text-sm text-red-600">{errors.storage}</p>
                 )}

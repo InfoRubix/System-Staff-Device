@@ -9,6 +9,7 @@ import DepartmentDetail from './DepartmentDetail';
 interface DepartmentDashboardProps {
   onEdit?: (device: Device) => void;
   onAdd?: () => void;
+  onAddDepartment?: () => void;
 }
 
 type DepartmentStats = {
@@ -19,7 +20,7 @@ type DepartmentStats = {
   underRepairDevices: number;
 };
 
-function DepartmentDashboard({ onEdit, onAdd }: DepartmentDashboardProps) {
+function DepartmentDashboard({ onEdit, onAdd, onAddDepartment }: DepartmentDashboardProps) {
   const { devices, loading, searchDevices, deleteDevice } = useDevices();
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -195,17 +196,30 @@ function DepartmentDashboard({ onEdit, onAdd }: DepartmentDashboardProps) {
           </p>
         </div>
         
-        {onAdd && (
-          <button
-            onClick={onAdd}
-            className="w-full sm:w-auto group relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 px-4 py-2.5 sm:px-6 sm:py-3 text-center text-sm font-semibold text-white rounded-lg shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl overflow-hidden touch-manipulation"
-          >
-            <span className="relative z-10 flex items-center justify-center">
-              <span>Add Device</span>
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-red-700 to-red-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          </button>
-        )}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+          {onAddDepartment && (
+            <button
+              onClick={onAddDepartment}
+              className="w-full sm:w-auto group relative bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-4 py-2.5 sm:px-6 sm:py-3 text-center text-sm font-semibold text-white rounded-lg shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl overflow-hidden touch-manipulation"
+            >
+              <span className="relative z-10 flex items-center justify-center">
+                <span>Add Department</span>
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-blue-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </button>
+          )}
+          {onAdd && (
+            <button
+              onClick={onAdd}
+              className="w-full sm:w-auto group relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 px-4 py-2.5 sm:px-6 sm:py-3 text-center text-sm font-semibold text-white rounded-lg shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl overflow-hidden touch-manipulation"
+            >
+              <span className="relative z-10 flex items-center justify-center">
+                <span>Add Device</span>
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-red-700 to-red-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Global Search Bar */}
