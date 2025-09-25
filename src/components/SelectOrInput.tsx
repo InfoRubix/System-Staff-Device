@@ -76,9 +76,7 @@ function SelectOrInput({
     setCustomValue(e.target.value);
     // Create a synthetic event for the parent
     const syntheticEvent = {
-      ...e,
       target: {
-        ...e.target,
         name,
         value: e.target.value
       }
