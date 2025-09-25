@@ -151,7 +151,7 @@ function SelectOrInput({
         ))
       ) : (
         // Render regular options
-        Array.isArray(options) && options.map((option, index) => {
+        Array.isArray(options) && options.map((option) => {
           if (typeof option === 'string') {
             return (
               <option key={option} value={option}>
@@ -168,7 +168,7 @@ function SelectOrInput({
         })
       )}
 
-      <option value="__custom__">✏️ Enter custom value</option>
+      <option value="__custom__">Enter custom value</option>
     </select>
   );
 }
