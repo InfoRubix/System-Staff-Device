@@ -50,8 +50,9 @@ function Dashboard() {
       await addDepartment(departmentName);
       alert(`Department "${departmentName}" has been created successfully!`);
       setShowDepartmentForm(false);
-    } catch (error: any) {
-      alert(`Error: ${error.message || 'Failed to create department'}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create department';
+      alert(`Error: ${errorMessage}`);
     }
   };
 

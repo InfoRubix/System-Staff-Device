@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { departmentService, DepartmentData } from '../lib/departmentService';
+import { departmentService } from '../lib/departmentService';
 
 interface DepartmentContextType {
   departments: string[];
@@ -52,9 +52,10 @@ export function DepartmentProvider({ children }: DepartmentProviderProps) {
       await departmentService.addDepartment(name);
       // Refresh the departments list
       await loadDepartments();
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add department';
       console.error('Failed to add department:', err);
-      setError(err.message || 'Failed to add department');
+      setError(errorMessage);
       throw err; // Re-throw so the UI can handle it
     }
   };
