@@ -52,7 +52,11 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Convert staff name to uppercase
+    const processedValue = name === 'staffName' ? value.toUpperCase() : value;
+
+    setFormData(prev => ({ ...prev, [name]: processedValue }));
 
     // Clear error when user starts typing
     if (errors[name as keyof DeviceFormData]) {
@@ -112,7 +116,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   id="staffName"
                   value={formData.staffName}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-lg px-3 py-3 sm:px-4 text-sm sm:text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 touch-manipulation ${
+                  className={`mt-1 block w-full border rounded-lg px-3 py-3 sm:px-4 text-sm sm:text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 touch-manipulation ${
                     errors.staffName ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Enter staff name"
@@ -130,7 +134,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   id="department"
                   value={formData.department}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-lg px-3 py-3 sm:px-4 text-sm sm:text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 touch-manipulation ${
+                  className={`mt-1 block w-full border rounded-lg px-3 py-3 sm:px-4 text-sm sm:text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 touch-manipulation ${
                     errors.department ? 'border-red-300' : 'border-gray-300'
                   }`}
                 >
@@ -153,12 +157,12 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   id="deviceType"
                   value={formData.deviceType}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 >
-                  <option value="Laptop">Laptop</option>
-                  <option value="Desktop">Desktop</option>
-                  <option value="Tablet">Tablet</option>
-                  <option value="Phone">Phone</option>
+                  <option value="Laptop">LAPTOP</option>
+                  <option value="Desktop">DESKTOP</option>
+                  <option value="Tablet">TABLET</option>
+                  <option value="Phone">PHONE</option>
                 </select>
               </div>
 
@@ -171,7 +175,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   id="deviceModel"
                   value={formData.deviceModel}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.deviceModel ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Enter device model (optional)"
@@ -209,7 +213,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   id="processor"
                   value={formData.processor}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.processor ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Enter processor (optional)"
@@ -245,7 +249,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   id="graphics"
                   value={formData.graphics}
                   onChange={handleInputChange}
-                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                  className={`mt-1 block w-full border rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.graphics ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Enter graphics card (optional)"
@@ -280,7 +284,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                   id="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 >
                   <option value="Working">Working</option>
                   <option value="Broken">Broken</option>
@@ -300,7 +304,7 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                 rows={3}
                 value={formData.notes}
                 onChange={handleInputChange}
-                className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+                className="mt-1 block w-full border border-gray-300 rounded-lg px-4 py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
                 placeholder="Enter user feedback..."
               />
             </div>
