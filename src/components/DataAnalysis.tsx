@@ -538,7 +538,6 @@ function DataAnalysis() {
     });
 
     const maxAge = Math.max(...ages);
-    const maxDeviceCount = Math.max(...deviceCounts);
 
     // Use consistent blue color for all bars
     const backgroundColor = '#3B82F6'; // Blue
@@ -789,7 +788,7 @@ function DataAnalysis() {
           weight: 'bold' as const,
           size: 14,
         },
-        formatter: function(value: number, context: any) {
+        formatter: function(value: number, context: { dataIndex: number }) {
           // Show device count instead of age value
           const deviceCount = osAgeData.deviceCounts?.[context.dataIndex];
           return deviceCount || 0;
