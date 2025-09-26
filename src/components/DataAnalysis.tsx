@@ -458,6 +458,7 @@ function DataAnalysis() {
       'windows 8': 2012,
       'windows 7': 2009,
       // macOS versions
+      'macos sequoia': 2024,
       'macos sonoma': 2023,
       'macos ventura': 2022,
       'macos monterey': 2021,
@@ -481,6 +482,15 @@ function DataAnalysis() {
       'android 11': 2020,
       'android 10': 2019,
       'android 9': 2018,
+      'android 8': 2017,
+      'android 8.1': 2017,
+      'android 8.0': 2017,
+      'android 7': 2016,
+      'android 7.1': 2016,
+      'android 7.0': 2016,
+      'android 6': 2015,
+      'android 5': 2014,
+      'android 4': 2013,
     };
 
     const currentYear = new Date().getFullYear();
@@ -520,8 +530,15 @@ function DataAnalysis() {
     }
 
     const labels = sortedOSNames;
-    const ages = sortedOSNames.map(os => osAgeMap[os]);
+    const ages = sortedOSNames.map(os => Math.max(osAgeMap[os], 0.5)); // Minimum height of 0.5 years for visibility
+
+    // Count how many people/devices use each OS
+    const deviceCounts = sortedOSNames.map(osName => {
+      return devices.filter(device => device.operatingSystem.trim() === osName).length;
+    });
+
     const maxAge = Math.max(...ages);
+    const maxDeviceCount = Math.max(...deviceCounts);
 
     // Use consistent blue color for all bars
     const backgroundColor = '#3B82F6'; // Blue
@@ -532,13 +549,14 @@ function DataAnalysis() {
       datasets: [
         {
           label: 'Age (Years)',
-          data: ages,
+          data: ages, // Show OS age for bar height
           backgroundColor: backgroundColor,
           borderColor: borderColor,
           borderWidth: 2,
         },
       ],
       maxAge, // Pass maxAge for dynamic Y-axis scaling
+      deviceCounts, // Pass device counts for data labels
     };
   }, [devices]);
 
@@ -764,6 +782,19 @@ function DataAnalysis() {
       legend: {
         display: false,
       },
+      datalabels: {
+        display: true,
+        color: 'white',
+        font: {
+          weight: 'bold' as const,
+          size: 14,
+        },
+        formatter: function(value: number, context: any) {
+          // Show device count instead of age value
+          const deviceCount = osAgeData.deviceCounts?.[context.dataIndex];
+          return deviceCount || 0;
+        },
+      },
       tooltip: {
         callbacks: {
           title: function(context: { label?: string }[]) {
@@ -784,7 +815,7 @@ function DataAnalysis() {
     scales: {
       y: {
         beginAtZero: true,
-        max: osAgeData.maxAge || 10,
+        max: Math.max(osAgeData.maxAge || 10, 14),
         ticks: {
           stepSize: 1,
           callback: function(tickValue: string | number, _index: number, _ticks: Tick[]) {
@@ -972,6 +1003,7 @@ function DataAnalysis() {
               <Bar
                 data={osAgeData}
                 options={osAgeOptions}
+                plugins={[ChartDataLabels]}
               />
             </div>
           </div>
