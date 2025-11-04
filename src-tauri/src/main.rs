@@ -180,7 +180,6 @@ fn get_system_info() -> Result<SystemInfo, String> {
 #[cfg(target_os = "windows")]
 fn detect_gpu() -> Option<GpuInfo> {
     use windows::Win32::Graphics::Dxgi::*;
-    use windows::Win32::Foundation::*;
 
     unsafe {
         // Try to create DXGI factory to enumerate GPUs
