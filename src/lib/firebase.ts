@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -24,6 +25,25 @@ if (typeof window !== 'undefined') {
   setPersistence(auth, browserLocalPersistence).catch((error) => {
     console.error('Error setting auth persistence:', error);
   });
+
+  // Initialize Firebase App Check with reCAPTCHA v3
+  // This protects your app from abuse and rate limits API calls
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+
+  if (recaptchaSiteKey && recaptchaSiteKey !== 'your_recaptcha_site_key_here') {
+    try {
+      initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(recaptchaSiteKey),
+        isTokenAutoRefreshEnabled: true // Automatically refresh tokens
+      });
+      console.log('✅ Firebase App Check initialized');
+    } catch (error) {
+      console.error('❌ Error initializing App Check:', error);
+    }
+  } else {
+    console.warn('⚠️ App Check not initialized: Missing reCAPTCHA site key');
+    console.warn('   Add NEXT_PUBLIC_RECAPTCHA_SITE_KEY to your .env file');
+  }
 }
 
 export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;

@@ -12,6 +12,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Check if user is admin based on email
+  const isAdmin = (email: string | null): boolean => {
+    if (!email) return false;
+    return email === 'admin@company.com' || email.startsWith('admin@');
+  };
+
   // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChanged((user) => {
@@ -23,27 +29,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const login = async (password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setError(null);
       setLoading(true);
 
-      // Simple password check for admin access
-      if (password === 'admin123') {
-        const userData = {
-          uid: 'admin',
-          email: null,
-          displayName: 'Admin'
-        };
-        setUser(userData);
-        return true;
-      } else {
-        setError('Invalid password');
-        return false;
-      }
+      const userData = await authService.signIn(email, password);
+      setUser(userData);
+      return true;
     } catch (err: unknown) {
       console.error('Login error:', err);
-      setError('Login failed');
+      setError(err instanceof Error ? err.message : 'Login failed');
       return false;
     } finally {
       setLoading(false);
@@ -78,10 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ 
+    <AuthContext.Provider value={{
       user,
-      isAuthenticated: !!user, 
-      login, 
+      isAuthenticated: !!user,
+      isAdmin: isAdmin(user?.email || null),
+      login,
       signUp,
       logout,
       loading: loading || !isInitialized,

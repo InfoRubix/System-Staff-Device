@@ -8,7 +8,7 @@ import { useState } from 'react';
 
 export default function Navigation() {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
   const { startNavigation } = useNavigation();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -46,10 +46,21 @@ export default function Navigation() {
     }
   };
 
-  const navItems = [
+  // Different navigation items for admin vs regular users
+  const adminNavItems = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/data-analysis', label: 'Data Analysis' },
+    { href: '/device-health', label: 'Device Health' },
+    { href: '/repair-management', label: 'Repair Management' },
+    { href: '/download', label: 'Download App' },
   ];
+
+  const userNavItems = [
+    { href: '/my-device', label: 'My Device' },
+    { href: '/download', label: 'Download App' },
+  ];
+
+  const navItems = isAdmin ? adminNavItems : userNavItems;
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200">

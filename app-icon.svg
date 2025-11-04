@@ -1,0 +1,24 @@
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="#2563eb"/>
+
+  <!-- Device/Monitor Icon -->
+  <g transform="translate(106, 106)">
+    <!-- Monitor Screen -->
+    <rect x="20" y="40" width="260" height="180" rx="10" fill="#ffffff" opacity="0.95"/>
+
+    <!-- Monitor Base -->
+    <rect x="110" y="230" width="80" height="15" rx="5" fill="#ffffff" opacity="0.95"/>
+    <rect x="90" y="245" width="120" height="35" rx="8" fill="#ffffff" opacity="0.95"/>
+
+    <!-- Screen Details - Heartbeat Line -->
+    <path d="M 40 120 L 80 120 L 95 90 L 110 150 L 125 120 L 260 120"
+          stroke="#2563eb" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+    <!-- Health Check Icon -->
+    <circle cx="150" cy="100" r="45" fill="#10b981" opacity="0.2"/>
+    <path d="M 135 100 L 145 110 L 165 85"
+          stroke="#10b981" stroke-width="8" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
