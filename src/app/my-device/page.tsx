@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import LoadingScreen from '@/components/LoadingScreen';
 import Navigation from '@/components/Navigation';
