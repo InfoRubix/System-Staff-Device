@@ -8,6 +8,7 @@ use std::fs;
 use uuid::Uuid;
 use directories::ProjectDirs;
 use chrono::{Utc, DateTime, Duration};
+use tauri::Manager;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SystemInfo {
