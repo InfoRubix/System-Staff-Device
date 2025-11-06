@@ -230,7 +230,6 @@ export default function DownloadPage() {
                         <table className="w-full">
                           <thead>
                             <tr className="border-b border-gray-200 bg-gray-50">
-                              <th className="text-left py-3 px-4 font-semibold text-gray-700">User</th>
                               <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
                               <th className="text-left py-3 px-4 font-semibold text-gray-700">Department</th>
                               <th className="text-left py-3 px-4 font-semibold text-gray-700">Download Date</th>
@@ -247,14 +246,6 @@ export default function DownloadPage() {
                                   index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                                 }`}
                               >
-                                <td className="py-3 px-4">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
-                                      {download.userName.charAt(0).toUpperCase()}
-                                    </div>
-                                    <span className="font-medium text-gray-900">{download.userName}</span>
-                                  </div>
-                                </td>
                                 <td className="py-3 px-4 text-gray-600 font-mono text-sm">{download.userEmail}</td>
                                 <td className="py-3 px-4">
                                   <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm">

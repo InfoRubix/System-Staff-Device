@@ -9,21 +9,23 @@ import { useAuth } from './AuthContext';
 const DeviceContext = createContext<DeviceContextType | undefined>(undefined);
 
 export function DeviceProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, isAdmin, loading: authLoading } = useAuth();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load devices from Firebase ONLY when authenticated
+  // Load devices from Firebase ONLY when authenticated AND is admin
   useEffect(() => {
-    if (!authLoading && isAuthenticated && !isInitialized) {
+    if (!authLoading && isAuthenticated && isAdmin && !isInitialized) {
       loadDevices();
-    } else if (!authLoading && !isAuthenticated) {
-      // If not authenticated, stop loading
+    } else if (!authLoading && (!isAuthenticated || !isAdmin)) {
+      // If not authenticated or not admin, stop loading and set empty devices
+      setDevices([]);
       setLoading(false);
+      setIsInitialized(true);
     }
-  }, [isAuthenticated, authLoading, isInitialized]);
+  }, [isAuthenticated, isAdmin, authLoading, isInitialized]);
 
   const loadDevices = async () => {
     try {

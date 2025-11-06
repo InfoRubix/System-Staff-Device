@@ -98,41 +98,6 @@ export default function MyDevicePage() {
           <p className="text-gray-600 mt-1">Monitor your device health status</p>
         </div>
 
-        {/* Download Banner - Show if app NOT installed */}
-        {!hasAppInstalled && (
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-8 mb-6 text-white">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-4xl">📥</span>
-                  <h2 className="text-2xl font-bold">Download Monitoring App</h2>
-                </div>
-                <p className="text-blue-100 mb-4">
-                  Install the Device Monitor app to enable automatic health scans every 2 weeks.
-                  The app runs silently in the background and sends your device health data here.
-                </p>
-                <ul className="text-sm text-blue-100 space-y-1 mb-4">
-                  <li>✓ Auto-scan every 2 weeks</li>
-                  <li>✓ Runs in background - no interruptions</li>
-                  <li>✓ Early problem detection</li>
-                  <li>✓ Only 8 MB size</li>
-                </ul>
-              </div>
-              <div className="flex-shrink-0">
-                <Link
-                  href="/download"
-                  className="bg-white text-blue-600 hover:bg-blue-50 font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 inline-flex items-center gap-2 text-lg"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download Now
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Device Health Data - Show if app IS installed */}
         {hasAppInstalled && myDevice ? (
           <div className="space-y-6">

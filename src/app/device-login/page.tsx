@@ -15,15 +15,31 @@ export default function DeviceLoginPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
+    console.log('🔵 Component mounted');
     // Check if running in Tauri
     if (typeof window !== 'undefined' && '__TAURI__' in window) {
+      console.log('✅ Running in Tauri');
       setIsTauri(true);
 
       // Check if already logged in
       const savedEmail = localStorage.getItem('staff_email');
-      if (savedEmail) {
+      const savedName = localStorage.getItem('staff_name');
+      const savedDept = localStorage.getItem('staff_department');
+
+      console.log('Checking localStorage:', {
+        email: savedEmail,
+        name: savedName,
+        dept: savedDept
+      });
+
+      if (savedEmail && savedName && savedDept) {
+        console.log('✅ Found saved login, setting isLoggedIn to true');
         setIsLoggedIn(true);
+      } else {
+        console.log('❌ No saved login found');
       }
+    } else {
+      console.log('❌ Not running in Tauri');
     }
   }, []);
 
@@ -67,44 +83,57 @@ export default function DeviceLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔵 Login button clicked');
+    console.log('Email:', email);
+    console.log('Is Tauri?', isTauri);
+
     setIsLoading(true);
     setMessage('Logging in...');
 
     try {
+      console.log('🔵 Attempting Firebase authentication...');
       // Sign in with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      console.log('✅ Firebase auth successful, UID:', user.uid);
 
       setMessage('Fetching your profile...');
 
       // Get user profile from Firestore
+      console.log('🔵 Fetching user profile from Firestore...');
       const userDoc = await getDoc(doc(db, 'users', user.uid));
 
       if (!userDoc.exists()) {
+        console.error('❌ User profile not found in Firestore');
         throw new Error('User profile not found. Please contact your administrator.');
       }
 
       const userData = userDoc.data();
+      console.log('✅ User profile found:', userData);
       const staffName = userData.name || userData.email?.split('@')[0] || 'Unknown';
       const department = userData.department || 'IT';
+      console.log('Staff Name:', staffName);
+      console.log('Department:', department);
 
       // Save user info to localStorage
       localStorage.setItem('staff_email', email);
       localStorage.setItem('staff_name', staffName);
       localStorage.setItem('staff_department', department);
       localStorage.setItem('user_id', user.uid);
+      console.log('✅ Saved to localStorage');
 
       setMessage('Running initial device scan...');
 
       // Run initial scan
       try {
+        console.log('🔵 Invoking Tauri scan command...');
         const result = await invoke('scan_and_submit_device_data', {
           staffEmail: email,
           staffName: staffName,
           department: department,
         });
 
-        console.log('Initial scan result:', result);
+        console.log('✅ Initial scan result:', result);
         localStorage.setItem('last_scan', new Date().toISOString());
 
         setMessage('✅ Login successful! Device scan completed. The app will now run in the background and scan automatically every 2 weeks.');
@@ -116,13 +145,13 @@ export default function DeviceLoginPage() {
         }, 3000);
 
       } catch (scanError) {
-        console.error('Scan error:', scanError);
+        console.error('❌ Scan error:', scanError);
         setMessage('⚠️ Login successful, but scan failed. You can try again later. Error: ' + scanError);
         setIsLoggedIn(true);
       }
 
     } catch (error: unknown) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       let errorMessage = 'Login failed. ';
       const firebaseError = error as { code?: string; message?: string };
 
@@ -139,6 +168,7 @@ export default function DeviceLoginPage() {
       setMessage('❌ ' + errorMessage);
     } finally {
       setIsLoading(false);
+      console.log('🔵 Login process finished');
     }
   };
 

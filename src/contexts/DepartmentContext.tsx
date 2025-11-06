@@ -20,10 +20,16 @@ interface DepartmentProviderProps {
 }
 
 export function DepartmentProvider({ children }: DepartmentProviderProps) {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, isAdmin, loading: authLoading } = useAuth();
   const [departments, setDepartments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Default departments for non-admin users
+  const defaultDepartments = [
+    'MARKETING', 'RUBIX', 'CONVEY', 'ACCOUNT', 'HR',
+    'LITIGATION', 'SANCO', 'POT/POC', 'AFC', 'RDHOMES', 'QHOMES'
+  ];
 
   const loadDepartments = async () => {
     try {
@@ -40,10 +46,7 @@ export function DepartmentProvider({ children }: DepartmentProviderProps) {
       console.error('Failed to load departments:', err);
       setError('Failed to load departments');
       // Fallback to default departments
-      setDepartments([
-        'MARKETING', 'RUBIX', 'CONVEY', 'ACCOUNT', 'HR',
-        'LITIGATION', 'SANCO', 'POT/POC', 'AFC', 'RDHOMES', 'QHOMES'
-      ]);
+      setDepartments(defaultDepartments);
     } finally {
       setLoading(false);
     }
@@ -81,19 +84,16 @@ export function DepartmentProvider({ children }: DepartmentProviderProps) {
     await loadDepartments();
   };
 
-  // Load departments ONLY when authenticated
+  // Load departments ONLY when authenticated AND is admin
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+    if (!authLoading && isAuthenticated && isAdmin) {
       loadDepartments();
-    } else if (!authLoading && !isAuthenticated) {
-      // If not authenticated, stop loading and use default departments
-      setDepartments([
-        'MARKETING', 'RUBIX', 'CONVEY', 'ACCOUNT', 'HR',
-        'LITIGATION', 'SANCO', 'POT/POC', 'AFC', 'RDHOMES', 'QHOMES'
-      ]);
+    } else if (!authLoading && (!isAuthenticated || !isAdmin)) {
+      // If not authenticated or not admin, use default departments
+      setDepartments(defaultDepartments);
       setLoading(false);
     }
-  }, [isAuthenticated, authLoading]);
+  }, [isAuthenticated, isAdmin, authLoading]);
 
   const value: DepartmentContextType = {
     departments,
