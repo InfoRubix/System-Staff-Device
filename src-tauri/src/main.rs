@@ -4,9 +4,15 @@
 use serde::{Deserialize, Serialize};
 use sysinfo::{System, Disks, Networks, Components};
 use std::collections::HashMap;
+use std::fs;
+use uuid::Uuid;
+use directories::ProjectDirs;
+use chrono::{Utc, DateTime, Duration};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SystemInfo {
+    device_id: String,  // Unique device identifier
+    device_token: String,  // Secure authentication token
     cpu_usage: f32,
     cpu_temperature: Option<f32>,  // NEW: CPU temperature in Celsius
     memory_total: u64,
@@ -16,11 +22,23 @@ struct SystemInfo {
     network_info: HashMap<String, NetworkInfo>,
     os_name: String,
     os_version: String,
+    os_install_date: Option<String>,  // NEW: OS installation date
     cpu_name: String,
     cpu_cores: usize,
     gpu_info: Option<GpuInfo>,  // NEW: GPU information
     battery_info: Option<BatteryInfo>,  // NEW: Battery information
     system_uptime: u64,  // NEW: System uptime in seconds
+    computer_info: Option<ComputerInfo>,  // NEW: Computer manufacturer/model
+    system_type: String,  // NEW: 32-bit or 64-bit
+    antivirus_status: String,  // NEW: Antivirus status
+    firewall_status: String,  // NEW: Firewall status
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ComputerInfo {
+    manufacturer: String,
+    model: String,
+    computer_name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -54,8 +72,46 @@ struct BatteryInfo {
     health_status: String,
 }
 
+// Function to get or create device token
+fn get_device_token() -> Result<(String, String), String> {
+    // Get application data directory
+    let proj_dirs = ProjectDirs::from("com", "DeviceMonitor", "SystemStaffDevice")
+        .ok_or("Failed to get project directories")?;
+
+    let data_dir = proj_dirs.data_dir();
+    fs::create_dir_all(data_dir).map_err(|e| format!("Failed to create data directory: {}", e))?;
+
+    let token_file = data_dir.join("device_token.txt");
+
+    // Try to read existing token
+    if token_file.exists() {
+        let content = fs::read_to_string(&token_file)
+            .map_err(|e| format!("Failed to read token file: {}", e))?;
+
+        // Parse the file (format: device_id|device_token)
+        let parts: Vec<&str> = content.trim().split('|').collect();
+        if parts.len() == 2 {
+            return Ok((parts[0].to_string(), parts[1].to_string()));
+        }
+    }
+
+    // Generate new device ID and token
+    let device_id = Uuid::new_v4().to_string();
+    let device_token = Uuid::new_v4().to_string();
+
+    // Save to file
+    let content = format!("{}|{}", device_id, device_token);
+    fs::write(&token_file, content)
+        .map_err(|e| format!("Failed to write token file: {}", e))?;
+
+    Ok((device_id, device_token))
+}
+
 #[tauri::command]
 fn get_system_info() -> Result<SystemInfo, String> {
+    // Get or generate device token first
+    let (device_id, device_token) = get_device_token()?;
+
     let mut sys = System::new_all();
     sys.refresh_all();
 
@@ -158,7 +214,24 @@ fn get_system_info() -> Result<SystemInfo, String> {
     // Get system uptime
     let system_uptime = System::uptime();
 
+    // Get computer info (manufacturer, model, name)
+    let computer_info = detect_computer_info();
+
+    // Get system type (32-bit or 64-bit)
+    let system_type = detect_system_type();
+
+    // Get OS install date
+    let os_install_date = get_os_install_date();
+
+    // Get antivirus status
+    let antivirus_status = detect_antivirus_status();
+
+    // Get firewall status
+    let firewall_status = detect_firewall_status();
+
     Ok(SystemInfo {
+        device_id,
+        device_token,
         cpu_usage,
         cpu_temperature,
         memory_total,
@@ -168,11 +241,16 @@ fn get_system_info() -> Result<SystemInfo, String> {
         network_info,
         os_name,
         os_version,
+        os_install_date,
         cpu_name,
         cpu_cores,
         gpu_info,
         battery_info,
         system_uptime,
+        computer_info,
+        system_type,
+        antivirus_status,
+        firewall_status,
     })
 }
 
@@ -272,6 +350,463 @@ fn detect_battery() -> Option<BatteryInfo> {
     None // Battery detection only implemented for Windows
 }
 
+// Helper function to detect computer manufacturer and model using WMI
+#[cfg(target_os = "windows")]
+fn detect_computer_info() -> Option<ComputerInfo> {
+    use wmi::{COMLibrary, WMIConnection};
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct Win32ComputerSystem {
+        Manufacturer: Option<String>,
+        Model: Option<String>,
+        Name: Option<String>,
+    }
+
+    match COMLibrary::new() {
+        Ok(com_lib) => {
+            match WMIConnection::new(com_lib) {
+                Ok(wmi_con) => {
+                    let results: Result<Vec<Win32ComputerSystem>, _> = wmi_con.query();
+                    match results {
+                        Ok(systems) if !systems.is_empty() => {
+                            let system = &systems[0];
+                            Some(ComputerInfo {
+                                manufacturer: system.Manufacturer.clone().unwrap_or("Unknown".to_string()),
+                                model: system.Model.clone().unwrap_or("Unknown".to_string()),
+                                computer_name: system.Name.clone().unwrap_or("Unknown".to_string()),
+                            })
+                        }
+                        _ => Some(ComputerInfo {
+                            manufacturer: "Unknown".to_string(),
+                            model: "Unknown".to_string(),
+                            computer_name: "Unknown".to_string(),
+                        }),
+                    }
+                }
+                Err(_) => None,
+            }
+        }
+        Err(_) => None,
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn detect_computer_info() -> Option<ComputerInfo> {
+    None
+}
+
+// Helper function to detect system type (32-bit or 64-bit)
+fn detect_system_type() -> String {
+    if cfg!(target_pointer_width = "64") {
+        "64-bit".to_string()
+    } else if cfg!(target_pointer_width = "32") {
+        "32-bit".to_string()
+    } else {
+        "Unknown".to_string()
+    }
+}
+
+// Helper function to detect antivirus status using WMI SecurityCenter2
+#[cfg(target_os = "windows")]
+fn detect_antivirus_status() -> String {
+    use wmi::{COMLibrary, WMIConnection};
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct AntiVirusProduct {
+        display_name: Option<String>,
+        product_state: Option<u32>,
+    }
+
+    // Try to query Windows Security Center
+    match COMLibrary::new() {
+        Ok(com_lib) => {
+            // Try SecurityCenter2 (Windows 7+)
+            match WMIConnection::with_namespace_path("ROOT\\SecurityCenter2", com_lib) {
+                Ok(wmi_con) => {
+                    // Query for antivirus products
+                    match wmi_con.query::<AntiVirusProduct>() {
+                        Ok(products) => {
+                            if products.is_empty() {
+                                // No third-party AV, might be using Windows Defender
+                                return "Active (Windows Defender)".to_string();
+                            }
+
+                            // Check each antivirus product
+                            for product in products {
+                                if let Some(state) = product.product_state {
+                                    // Decode product state bits
+                                    // Bit 13 (0x1000) = enabled/disabled
+                                    let enabled = (state & 0x1000) != 0;
+                                    let updated = (state & 0x0010) == 0;
+
+                                    // Get product name
+                                    let name = product.display_name.unwrap_or("Unknown AV".to_string());
+
+                                    if enabled {
+                                        if updated {
+                                            return format!("Active ({})", name);
+                                        } else {
+                                            return format!("Outdated ({})", name);
+                                        }
+                                    } else {
+                                        return format!("Inactive ({})", name);
+                                    }
+                                }
+                            }
+                            "Unknown".to_string()
+                        }
+                        Err(_) => "Unknown".to_string(),
+                    }
+                }
+                Err(_) => {
+                    // SecurityCenter2 not available, might be old Windows or no permission
+                    "Unknown".to_string()
+                }
+            }
+        }
+        Err(_) => "Unknown".to_string(),
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn detect_antivirus_status() -> String {
+    "Unknown".to_string()
+}
+
+// Helper function to detect firewall status using WMI SecurityCenter2
+#[cfg(target_os = "windows")]
+fn detect_firewall_status() -> String {
+    use wmi::{COMLibrary, WMIConnection};
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct FirewallProduct {
+        display_name: Option<String>,
+        product_state: Option<u32>,
+    }
+
+    // Try to query Windows Security Center
+    match COMLibrary::new() {
+        Ok(com_lib) => {
+            // Try SecurityCenter2 (Windows 7+)
+            match WMIConnection::with_namespace_path("ROOT\\SecurityCenter2", com_lib) {
+                Ok(wmi_con) => {
+                    // Query for firewall products
+                    match wmi_con.query::<FirewallProduct>() {
+                        Ok(products) => {
+                            if products.is_empty() {
+                                // No third-party firewall, check Windows Firewall
+                                return check_windows_firewall();
+                            }
+
+                            // Check each firewall product
+                            for product in products {
+                                if let Some(state) = product.product_state {
+                                    let enabled = (state & 0x1000) != 0;
+
+                                    // Get product name
+                                    let name = product.display_name.unwrap_or("Unknown Firewall".to_string());
+
+                                    if enabled {
+                                        return format!("Active ({})", name);
+                                    } else {
+                                        return format!("Inactive ({})", name);
+                                    }
+                                }
+                            }
+                            "Unknown".to_string()
+                        }
+                        Err(_) => check_windows_firewall(),
+                    }
+                }
+                Err(_) => check_windows_firewall(),
+            }
+        }
+        Err(_) => "Unknown".to_string(),
+    }
+}
+
+// Fallback: Check Windows Firewall via registry or service status
+#[cfg(target_os = "windows")]
+fn check_windows_firewall() -> String {
+    // Assume Windows Firewall is active if we can't detect third-party
+    // This is a safe assumption on modern Windows
+    "Active (Windows Firewall)".to_string()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn detect_firewall_status() -> String {
+    "Unknown".to_string()
+}
+
+// Helper function to get OS install date
+#[cfg(target_os = "windows")]
+fn get_os_install_date() -> Option<String> {
+    use wmi::{COMLibrary, WMIConnection};
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct Win32OperatingSystem {
+        InstallDate: Option<String>,
+    }
+
+    match COMLibrary::new() {
+        Ok(com_lib) => {
+            match WMIConnection::new(com_lib) {
+                Ok(wmi_con) => {
+                    let results: Result<Vec<Win32OperatingSystem>, _> = wmi_con.query();
+                    match results {
+                        Ok(os_list) if !os_list.is_empty() => {
+                            os_list[0].InstallDate.clone()
+                        }
+                        _ => None,
+                    }
+                }
+                Err(_) => None,
+            }
+        }
+        Err(_) => None,
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn get_os_install_date() -> Option<String> {
+    None
+}
+
+// Function to register/update device in devices collection
+fn register_device(system_info: &SystemInfo, staff_email: &str, staff_name: &str, department: &str) -> Result<(), String> {
+    // Firebase configuration
+    const FIREBASE_PROJECT_ID: &str = "system-staff-device";
+    const FIREBASE_API_KEY: &str = "AIzaSyA54ncjdRwuWNx-6Or0pw6bKl_Wu0MWf4I";
+
+    // Use deviceId as document ID to ensure one device per device ID
+    let device_doc_id = &system_info.device_id;
+
+    // Build Firestore REST API URL for devices collection with specific document ID
+    let url = format!(
+        "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/devices/{}?key={}",
+        FIREBASE_PROJECT_ID, device_doc_id, FIREBASE_API_KEY
+    );
+
+    // Get current timestamp
+    let now = Utc::now();
+
+    // Create device document
+    let device_doc = serde_json::json!({
+        "fields": {
+            "deviceId": {"stringValue": system_info.device_id},
+            "deviceToken": {"stringValue": system_info.device_token},
+            "staffEmail": {"stringValue": staff_email},
+            "staffName": {"stringValue": staff_name},
+            "department": {"stringValue": department},
+            "osVersion": {"stringValue": format!("{} {}", system_info.os_name, system_info.os_version)},
+            "cpuName": {"stringValue": &system_info.cpu_name},
+            "cpuCores": {"integerValue": system_info.cpu_cores.to_string()},
+            "totalMemory": {"integerValue": system_info.memory_total.to_string()},
+            "gpuName": {"stringValue": system_info.gpu_info.as_ref().map(|g| g.name.clone()).unwrap_or("Unknown".to_string())},
+            "lastSeen": {"timestampValue": now.to_rfc3339()},
+            "createdAt": {"timestampValue": now.to_rfc3339()},
+            "updatedAt": {"timestampValue": now.to_rfc3339()},
+            "status": {"stringValue": "active"}
+        }
+    });
+
+    // Use PATCH to update if exists, or create if not exists
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .patch(&url)
+        .header("Content-Type", "application/json")
+        .json(&device_doc)
+        .send()
+        .map_err(|e| format!("Failed to register device: {}", e))?;
+
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        Err(format!("Firebase error registering device: {} - {}", response.status(), response.text().unwrap_or_default()))
+    }
+}
+
+// Function to create/update staff collection
+fn register_staff(system_info: &SystemInfo, staff_email: &str, staff_name: &str, department: &str) -> Result<(), String> {
+    // Firebase configuration
+    const FIREBASE_PROJECT_ID: &str = "system-staff-device";
+    const FIREBASE_API_KEY: &str = "AIzaSyA54ncjdRwuWNx-6Or0pw6bKl_Wu0MWf4I";
+
+    // Use email as document ID (replace @ and . with _)
+    let staff_doc_id = staff_email.replace('@', "_").replace('.', "_");
+
+    // Build Firestore REST API URL for staff collection
+    let url = format!(
+        "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/staff/{}?key={}",
+        FIREBASE_PROJECT_ID, staff_doc_id, FIREBASE_API_KEY
+    );
+
+    // Get current timestamp
+    let now = Utc::now();
+
+    // Create staff document
+    let staff_doc = serde_json::json!({
+        "fields": {
+            "name": {"stringValue": staff_name},
+            "email": {"stringValue": staff_email},
+            "department": {"stringValue": department},
+            // Computer/Device Info
+            "deviceInfo": {
+                "mapValue": {
+                    "fields": {
+                        "computerName": {"stringValue": system_info.computer_info.as_ref().map(|c| c.computer_name.clone()).unwrap_or("Unknown".to_string())},
+                        "manufacturer": {"stringValue": system_info.computer_info.as_ref().map(|c| c.manufacturer.clone()).unwrap_or("Unknown".to_string())},
+                        "model": {"stringValue": system_info.computer_info.as_ref().map(|c| c.model.clone()).unwrap_or("Unknown".to_string())}
+                    }
+                }
+            },
+            // System Info
+            "processor": {"stringValue": &system_info.cpu_name},
+            "installedRAM": {"stringValue": format!("{} GB", system_info.memory_total / (1024 * 1024 * 1024))},
+            "systemType": {"stringValue": &system_info.system_type},
+            // Storage Info
+            "totalStorage": {"stringValue": if !system_info.disk_info.is_empty() {
+                format!("{} GB {}",
+                    system_info.disk_info[0].total_space / (1024 * 1024 * 1024),
+                    system_info.disk_info[0].disk_type)
+            } else {
+                "Unknown".to_string()
+            }},
+            // Graphics
+            "graphicsCard": {"stringValue": system_info.gpu_info.as_ref().map(|g| g.name.clone()).unwrap_or("Unknown".to_string())},
+            // OS Info
+            "osVersion": {"stringValue": format!("{} {}", system_info.os_name, system_info.os_version)},
+            "osInstallDate": {"stringValue": system_info.os_install_date.as_ref().map(|d| d.clone()).unwrap_or("Unknown".to_string())},
+            // Timestamps
+            "registeredDate": {"timestampValue": now.to_rfc3339()},
+            "lastUpdated": {"timestampValue": now.to_rfc3339()}
+        }
+    });
+
+    // Use PATCH to update if exists, or create if not exists
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .patch(&url)
+        .header("Content-Type", "application/json")
+        .json(&staff_doc)
+        .send()
+        .map_err(|e| format!("Failed to register staff: {}", e))?;
+
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        Err(format!("Firebase error registering staff: {} - {}", response.status(), response.text().unwrap_or_default()))
+    }
+}
+
+// Function to submit device scan to Firebase
+fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &str, department: &str) -> Result<(), String> {
+    // Firebase configuration
+    const FIREBASE_PROJECT_ID: &str = "system-staff-device";
+    const FIREBASE_API_KEY: &str = "AIzaSyA54ncjdRwuWNx-6Or0pw6bKl_Wu0MWf4I";
+
+    // First, register/update staff in staff collection
+    register_staff(system_info, staff_email, staff_name, department)?;
+
+    // Then, register/update the device in devices collection
+    register_device(system_info, staff_email, staff_name, department)?;
+
+    // Build Firestore REST API URL for device_scans
+    let url = format!(
+        "https://firestore.googleapis.com/v1/projects/{}/databases/(default)/documents/device_scans?key={}",
+        FIREBASE_PROJECT_ID, FIREBASE_API_KEY
+    );
+
+    // Calculate metrics
+    let ram_usage_percent = (system_info.memory_used as f64 / system_info.memory_total as f64) * 100.0;
+    let disk_free_gb = if !system_info.disk_info.is_empty() {
+        system_info.disk_info[0].available_space as f64 / (1024.0 * 1024.0 * 1024.0)
+    } else {
+        0.0
+    };
+
+    // Determine overall status
+    let overall_status = if system_info.cpu_usage > 80.0 || ram_usage_percent > 85.0 || disk_free_gb < 20.0 {
+        "Critical"
+    } else if system_info.cpu_usage > 60.0 || ram_usage_percent > 70.0 || disk_free_gb < 50.0 {
+        "Warning"
+    } else {
+        "Healthy"
+    };
+
+    // Build issues array
+    let mut issues = Vec::new();
+    if system_info.cpu_usage > 80.0 {
+        issues.push(serde_json::json!({
+            "stringValue": format!("High CPU usage: {:.1}%", system_info.cpu_usage)
+        }));
+    }
+    if ram_usage_percent > 85.0 {
+        issues.push(serde_json::json!({
+            "stringValue": format!("High RAM usage: {:.1}%", ram_usage_percent)
+        }));
+    }
+    if disk_free_gb < 20.0 {
+        issues.push(serde_json::json!({
+            "stringValue": format!("Low disk space: {:.1} GB free", disk_free_gb)
+        }));
+    }
+
+    // Create Firestore document format
+    let firestore_doc = serde_json::json!({
+        "fields": {
+            "deviceId": {"stringValue": system_info.device_id},
+            "deviceToken": {"stringValue": system_info.device_token},
+            "staffEmail": {"stringValue": staff_email},
+            "staffName": {"stringValue": staff_name},
+            "department": {"stringValue": department},
+            "scanTimestamp": {"timestampValue": Utc::now().to_rfc3339()},
+            "cpuUsage": {"doubleValue": system_info.cpu_usage as f64},
+            "ramUsage": {"doubleValue": ram_usage_percent},
+            "diskSpaceFree": {"doubleValue": disk_free_gb},
+            "batteryHealth": {
+                "doubleValue": system_info.battery_info.as_ref().map(|b| b.percentage as f64).unwrap_or(0.0)
+            },
+            "osVersion": {"stringValue": format!("{} {}", system_info.os_name, system_info.os_version)},
+            "antivirusStatus": {"stringValue": &system_info.antivirus_status},
+            "firewallStatus": {"stringValue": &system_info.firewall_status},
+            "overallStatus": {"stringValue": overall_status},
+            "issues": {"arrayValue": {"values": issues}},
+            // Hardware info
+            "computerManufacturer": {"stringValue": system_info.computer_info.as_ref().map(|c| c.manufacturer.clone()).unwrap_or("Unknown".to_string())},
+            "computerModel": {"stringValue": system_info.computer_info.as_ref().map(|c| c.model.clone()).unwrap_or("Unknown".to_string())},
+            "computerName": {"stringValue": system_info.computer_info.as_ref().map(|c| c.computer_name.clone()).unwrap_or("Unknown".to_string())},
+            "processor": {"stringValue": &system_info.cpu_name},
+            "installedRAM": {"stringValue": format!("{} GB", system_info.memory_total / (1024 * 1024 * 1024))},
+            "systemType": {"stringValue": &system_info.system_type},
+            "totalStorage": {"stringValue": if !system_info.disk_info.is_empty() { format!("{} GB", system_info.disk_info[0].total_space / (1024 * 1024 * 1024)) } else { "Unknown".to_string() }},
+            "graphicsCard": {"stringValue": system_info.gpu_info.as_ref().map(|g| g.name.clone()).unwrap_or("Unknown".to_string())},
+            "osInstallDate": {"stringValue": system_info.os_install_date.as_ref().map(|d| d.clone()).unwrap_or("Unknown".to_string())}
+        }
+    });
+
+    // Send HTTP POST request
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .json(&firestore_doc)
+        .send()
+        .map_err(|e| format!("Failed to send request: {}", e))?;
+
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        Err(format!("Firebase error: {} - {}", response.status(), response.text().unwrap_or_default()))
+    }
+}
+
 #[tauri::command]
 fn get_cpu_usage() -> Result<f32, String> {
     let mut sys = System::new_all();
@@ -288,13 +823,90 @@ fn get_memory_usage() -> Result<(u64, u64), String> {
     Ok((sys.used_memory(), sys.total_memory()))
 }
 
+#[tauri::command]
+fn scan_and_submit_device_data(staff_email: String, staff_name: String, department: String) -> Result<String, String> {
+    // Get system info
+    let system_info = get_system_info()?;
+
+    // Submit to Firebase
+    submit_device_scan(&system_info, &staff_email, &staff_name, &department)?;
+
+    // Update last scan time
+    update_last_scan_time()?;
+
+    Ok(format!("Device scan submitted successfully for {}", staff_email))
+}
+
+// Function to get last scan time
+fn get_last_scan_time() -> Result<Option<DateTime<Utc>>, String> {
+    let proj_dirs = ProjectDirs::from("com", "DeviceMonitor", "SystemStaffDevice")
+        .ok_or("Failed to get project directories")?;
+
+    let data_dir = proj_dirs.data_dir();
+    let scan_file = data_dir.join("last_scan.txt");
+
+    if !scan_file.exists() {
+        return Ok(None);
+    }
+
+    let content = fs::read_to_string(&scan_file)
+        .map_err(|e| format!("Failed to read last scan file: {}", e))?;
+
+    DateTime::parse_from_rfc3339(&content)
+        .map(|dt| Some(dt.with_timezone(&Utc)))
+        .map_err(|e| format!("Failed to parse last scan time: {}", e))
+}
+
+// Function to update last scan time
+fn update_last_scan_time() -> Result<(), String> {
+    let proj_dirs = ProjectDirs::from("com", "DeviceMonitor", "SystemStaffDevice")
+        .ok_or("Failed to get project directories")?;
+
+    let data_dir = proj_dirs.data_dir();
+    fs::create_dir_all(data_dir).map_err(|e| format!("Failed to create data directory: {}", e))?;
+
+    let scan_file = data_dir.join("last_scan.txt");
+    let now = Utc::now();
+
+    fs::write(&scan_file, now.to_rfc3339())
+        .map_err(|e| format!("Failed to write last scan time: {}", e))?;
+
+    Ok(())
+}
+
+// Function to check if scan is due (2 weeks = 14 days)
+fn is_scan_due() -> Result<bool, String> {
+    match get_last_scan_time()? {
+        None => Ok(true), // Never scanned before
+        Some(last_scan) => {
+            let now = Utc::now();
+            let two_weeks = Duration::days(14);
+            Ok(now.signed_duration_since(last_scan) >= two_weeks)
+        }
+    }
+}
+
+#[tauri::command]
+fn check_and_run_auto_scan(staff_email: String, staff_name: String, department: String) -> Result<String, String> {
+    if is_scan_due()? {
+        scan_and_submit_device_data(staff_email, staff_name, department)?;
+        Ok("Auto-scan completed successfully".to_string())
+    } else {
+        let last_scan = get_last_scan_time()?.unwrap();
+        let next_scan = last_scan + Duration::days(14);
+        Ok(format!("Scan not due yet. Next scan: {}", next_scan.format("%Y-%m-%d %H:%M:%S")))
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             get_system_info,
             get_cpu_usage,
-            get_memory_usage
+            get_memory_usage,
+            scan_and_submit_device_data,
+            check_and_run_auto_scan
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

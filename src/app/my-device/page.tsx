@@ -46,18 +46,24 @@ export default function MyDevicePage() {
     if (!user?.email) return;
 
     // Listen to device scans for this user's email
+    // Note: Removed orderBy to avoid needing composite index, will sort in-memory instead
     const q = query(
       collection(db, 'device_scans'),
-      where('staffEmail', '==', user.email),
-      orderBy('scanTimestamp', 'desc'),
-      limit(1)
+      where('staffEmail', '==', user.email)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        const data = snapshot.docs[0].data();
+        // Sort by timestamp in-memory to get the latest scan
+        const sortedDocs = snapshot.docs.sort((a, b) => {
+          const aTime = a.data().scanTimestamp?.toDate?.() || new Date(0);
+          const bTime = b.data().scanTimestamp?.toDate?.() || new Date(0);
+          return bTime.getTime() - aTime.getTime();
+        });
+
+        const data = sortedDocs[0].data();
         setMyDevice({
-          id: snapshot.docs[0].id,
+          id: sortedDocs[0].id,
           ...data,
           scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
         } as HealthScan);

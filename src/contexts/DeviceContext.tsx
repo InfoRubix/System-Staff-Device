@@ -4,21 +4,26 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { Device, DeviceFormData } from '../types/device';
 import { DeviceContextType } from '../types/context';
 import { deviceService } from '../lib/deviceService';
+import { useAuth } from './AuthContext';
 
 const DeviceContext = createContext<DeviceContextType | undefined>(undefined);
 
 export function DeviceProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load devices from Firebase on mount, but only once
+  // Load devices from Firebase ONLY when authenticated
   useEffect(() => {
-    if (!isInitialized) {
+    if (!authLoading && isAuthenticated && !isInitialized) {
       loadDevices();
+    } else if (!authLoading && !isAuthenticated) {
+      // If not authenticated, stop loading
+      setLoading(false);
     }
-  }, [isInitialized]);
+  }, [isAuthenticated, authLoading, isInitialized]);
 
   const loadDevices = async () => {
     try {

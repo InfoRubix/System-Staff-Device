@@ -123,10 +123,6 @@ export default function DeviceHealthPage() {
                 <span>📊</span>
                 Generate Report
               </button>
-              <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2">
-                <span>🔄</span>
-                Refresh Data
-              </button>
               <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2">
                 <span>📥</span>
                 Export CSV

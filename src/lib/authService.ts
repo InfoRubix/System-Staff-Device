@@ -1,4 +1,4 @@
-import { 
+import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -6,7 +6,8 @@ import {
   User,
   UserCredential
 } from 'firebase/auth';
-import { auth } from './firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
 export interface AuthUser {
   uid: string;
@@ -33,15 +34,26 @@ export const authService = {
   },
 
   // Create new user account
-  async signUp(email: string, password: string): Promise<AuthUser> {
+  async signUp(email: string, password: string, name: string, department: string): Promise<AuthUser> {
     try {
+      // Create Firebase Auth account
       const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
+
+      // Create user document in Firestore with profile data
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        name: name,
+        department: department,
+        role: 'user', // Default role
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
       return {
         uid: user.uid,
         email: user.email,
-        displayName: user.displayName
+        displayName: name
       };
     } catch (error) {
       console.error('Sign up error:', error);

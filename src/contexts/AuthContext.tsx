@@ -46,11 +46,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string): Promise<boolean> => {
+  const signUp = async (email: string, password: string, name: string, department: string): Promise<boolean> => {
     try {
       setError(null);
       setLoading(true);
-      const userData = await authService.signUp(email, password);
+      const userData = await authService.signUp(email, password, name, department);
       setUser(userData);
       return true;
     } catch (err: unknown) {

@@ -7,12 +7,63 @@ import { useRouter } from 'next/navigation';
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [department, setDepartment] = useState('');
   const [error, setError] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login, signUp } = useAuth();
   const router = useRouter();
+
+  // Auto-generate name from email
+  const extractNameFromEmail = (email: string): string => {
+    if (!email) return '';
+
+    // Get part before @
+    const username = email.split('@')[0];
+
+    // Split by dots, underscores, or hyphens
+    const parts = username.split(/[._-]+/);
+
+    // Filter out common prefixes and short parts
+    const nameParts = parts.filter(part => {
+      const lower = part.toLowerCase();
+      // Skip common prefixes and very short parts
+      return part.length > 3 && !['ahs', 'dr', 'mr', 'mrs', 'ms'].includes(lower);
+    });
+
+    // If no valid parts found, use all parts except first
+    const finalParts = nameParts.length > 0 ? nameParts : parts.slice(1);
+
+    // Capitalize each part and join
+    return finalParts
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Update name when email changes (only in signup mode)
+  const handleEmailChange = (newEmail: string) => {
+    setEmail(newEmail);
+    if (isSignUp) {
+      const autoName = extractNameFromEmail(newEmail);
+      if (autoName) {
+        setName(autoName);
+      }
+    }
+  };
+
+  const departments = [
+    'Marketing',
+    'Rubix',
+    'Convey',
+    'Account',
+    'HR',
+    'Litigation',
+    'Sanco',
+    'POT/POC',
+    'AFC'
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +73,17 @@ function LoginForm() {
     try {
       let success;
       if (isSignUp) {
-        success = await signUp(email, password);
+        // Validate signup fields
+        if (!department) {
+          setError('Please select your department');
+          setLoading(false);
+          return;
+        }
+
+        // Auto-generate name if not set
+        const finalName = name || extractNameFromEmail(email) || 'User';
+
+        success = await signUp(email, password, finalName, department);
         if (success) {
           // After signup, redirect to user device page
           router.push('/my-device');
@@ -71,10 +132,15 @@ function LoginForm() {
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => handleEmailChange(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="you@company.com"
+                placeholder="ahs.nurullaili@company.com"
               />
+              {isSignUp && name && (
+                <p className="mt-2 text-xs text-gray-600">
+                  Your name will be: <span className="font-semibold text-gray-900">{name}</span>
+                </p>
+              )}
             </div>
 
             {/* Password Input */}
@@ -116,6 +182,31 @@ function LoginForm() {
                 </p>
               )}
             </div>
+
+            {/* Name is auto-generated from email - no input needed */}
+
+            {/* Department Dropdown - Only show during signup */}
+            {isSignUp && (
+              <div>
+                <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-2">
+                  Department
+                </label>
+                <select
+                  id="department"
+                  required
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-gray-900 bg-white"
+                >
+                  <option value="">Select your department</option>
+                  {departments.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Error Message */}
             {error && (

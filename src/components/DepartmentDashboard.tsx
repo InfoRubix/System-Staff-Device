@@ -11,7 +11,6 @@ import SuccessToast from './SuccessToast';
 
 interface DepartmentDashboardProps {
   onEdit?: (device: Device) => void;
-  onAdd?: () => void;
   onAddDepartment?: () => void;
   onDeleteDepartment?: () => void;
   onTransferStaff?: () => void;
@@ -25,7 +24,7 @@ type DepartmentStats = {
   underRepairDevices: number;
 };
 
-function DepartmentDashboard({ onEdit, onAdd, onAddDepartment, onDeleteDepartment, onTransferStaff: _onTransferStaff }: DepartmentDashboardProps) {
+function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTransferStaff: _onTransferStaff }: DepartmentDashboardProps) {
   const { devices, loading, searchDevices, deleteDevice } = useDevices();
   const { departments } = useDepartments();
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
@@ -247,15 +246,6 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment, onDeleteDepartmen
             >
               <span className="block sm:hidden">Delete Dept</span>
               <span className="hidden sm:block">Delete Department</span>
-            </button>
-          )}
-          {onAdd && (
-            <button
-              onClick={onAdd}
-              className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-white rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
-            >
-              <span className="block sm:hidden">Add Device</span>
-              <span className="hidden sm:block">Add Device</span>
             </button>
           )}
         </div>
@@ -483,18 +473,7 @@ function DepartmentDashboard({ onEdit, onAdd, onAddDepartment, onDeleteDepartmen
         </div>
       )}
 
-      {/* Empty State - Only show when not searching */}
-      {!loading && !searchQuery.trim() && Object.values(departmentStats).every((stat: DepartmentStats) => stat.totalDevices === 0) && (
-        <div className="text-center py-12">
-          <div className="mb-4">
-            <svg className="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Devices Found</h3>
-          <p className="text-gray-600">Start by adding devices to see department statistics</p>
-        </div>
-      )}
+      {/* Empty State removed per user request */}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (

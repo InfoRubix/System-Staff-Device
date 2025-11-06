@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
-import { collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface DownloadRecord {
@@ -110,11 +110,28 @@ export default function DownloadPage() {
     setIsDownloading(true);
 
     try {
-      // Log download to Firebase
+      // Get user's department from their profile
+      let userDepartment = 'Unknown';
+      let userName = user?.displayName || user?.email?.split('@')[0] || 'Unknown User';
+
+      if (user?.uid) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            userDepartment = userData.department || 'Unknown';
+            userName = userData.name || userName;
+          }
+        } catch (err) {
+          console.error('Error fetching user profile:', err);
+        }
+      }
+
+      // Log download to Firebase with ACTUAL user data
       await addDoc(collection(db, 'app_downloads'), {
-        userName: user?.displayName || user?.email?.split('@')[0] || 'Unknown User',
+        userName: userName,
         userEmail: user?.email || 'unknown@company.com',
-        department: 'Unknown', // Can be enhanced with user profile
+        department: userDepartment, // ✅ Now gets real department from user profile
         downloadDate: new Date(),
         version: '1.0',
         platform: 'Windows',
@@ -128,6 +145,21 @@ export default function DownloadPage() {
       window.location.href = '/downloads/DeviceMonitorSetup.exe';
     } finally {
       setTimeout(() => setIsDownloading(false), 2000);
+    }
+  };
+
+  // Delete download record
+  const handleDeleteRecord = async (recordId: string, userEmail: string) => {
+    if (!confirm(`Delete download record for ${userEmail}?`)) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'app_downloads', recordId));
+      // Record will auto-remove from list due to onSnapshot listener
+    } catch (error) {
+      console.error('Error deleting record:', error);
+      alert('Failed to delete record. Please try again.');
     }
   };
 
@@ -204,6 +236,7 @@ export default function DownloadPage() {
                               <th className="text-left py-3 px-4 font-semibold text-gray-700">Download Date</th>
                               <th className="text-left py-3 px-4 font-semibold text-gray-700">Version</th>
                               <th className="text-left py-3 px-4 font-semibold text-gray-700">Platform</th>
+                              <th className="text-center py-3 px-4 font-semibold text-gray-700">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -250,6 +283,17 @@ export default function DownloadPage() {
                                   <span className="flex items-center gap-1 text-gray-600">
                                     💻 {download.platform}
                                   </span>
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <button
+                                    onClick={() => handleDeleteRecord(download.id, download.userEmail)}
+                                    className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors"
+                                    title="Delete this download record"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
                                 </td>
                               </tr>
                             ))}
@@ -394,13 +438,23 @@ export default function DownloadPage() {
                   <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
                     3
                   </span>
-                  <span className="text-gray-700">Click &quot;Next&quot; and follow the installation wizard</span>
+                  <span className="text-gray-700">Follow the installation wizard - Click &quot;Next&quot; to install</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
                     4
                   </span>
-                  <span className="text-gray-700">Done! App will auto-start with Windows</span>
+                  <span className="text-gray-700">
+                    <strong>Launch the app and login with your email and password</strong> (same as this dashboard)
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                    5
+                  </span>
+                  <span className="text-gray-700">
+                    Done! App will run in background and scan automatically every 2 weeks
+                  </span>
                 </li>
               </ol>
             </div>
