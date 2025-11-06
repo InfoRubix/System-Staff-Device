@@ -1,4 +1,19 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "device_scans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "staffEmail",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "scanTimestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

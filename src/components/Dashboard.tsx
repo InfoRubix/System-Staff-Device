@@ -91,7 +91,6 @@ function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-6">
         <DepartmentDashboard
           onEdit={handleEditDevice}
-          onAdd={handleAddDevice}
           onAddDepartment={handleAddDepartment}
           onDeleteDepartment={handleDeleteDepartment}
         />

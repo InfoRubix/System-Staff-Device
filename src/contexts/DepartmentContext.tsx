@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { departmentService } from '../lib/departmentService';
+import { useAuth } from './AuthContext';
 
 interface DepartmentContextType {
   departments: string[];
@@ -19,6 +20,7 @@ interface DepartmentProviderProps {
 }
 
 export function DepartmentProvider({ children }: DepartmentProviderProps) {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [departments, setDepartments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,9 +81,19 @@ export function DepartmentProvider({ children }: DepartmentProviderProps) {
     await loadDepartments();
   };
 
+  // Load departments ONLY when authenticated
   useEffect(() => {
-    loadDepartments();
-  }, []);
+    if (!authLoading && isAuthenticated) {
+      loadDepartments();
+    } else if (!authLoading && !isAuthenticated) {
+      // If not authenticated, stop loading and use default departments
+      setDepartments([
+        'MARKETING', 'RUBIX', 'CONVEY', 'ACCOUNT', 'HR',
+        'LITIGATION', 'SANCO', 'POT/POC', 'AFC', 'RDHOMES', 'QHOMES'
+      ]);
+      setLoading(false);
+    }
+  }, [isAuthenticated, authLoading]);
 
   const value: DepartmentContextType = {
     departments,

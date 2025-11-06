@@ -14,8 +14,9 @@ export interface DeviceContextType {
 export interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (password: string) => Promise<boolean>;
-  signUp: (email: string, password: string) => Promise<boolean>;
+  isAdmin: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  signUp: (email: string, password: string, name: string, department: string) => Promise<boolean>;
   logout: () => Promise<void>;
   loading: boolean;
   error: string | null;
