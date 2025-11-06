@@ -18,10 +18,7 @@ function Dashboard() {
   const [showDeleteDepartmentForm, setShowDeleteDepartmentForm] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | undefined>(undefined);
 
-  const handleAddDevice = () => {
-    setEditingDevice(undefined);
-    setShowForm(true);
-  };
+  // Removed handleAddDevice - no longer needed since "Add Device" button was removed
 
   const handleEditDevice = (device: Device) => {
     setEditingDevice(device);
