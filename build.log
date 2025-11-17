@@ -1,0 +1,87 @@
+
+> my-project@1.5.0 tauri:build
+> tauri build
+
+        Info Looking up installed tauri packages to check mismatched versions...
+        Warn The bundle identifier "com.devicemonitor.app" set in `tauri.conf.json identifier` ends with `.app`. This is not recommended because it conflicts with the application bundle extension on macOS.
+     Running beforeBuildCommand `npm run build`
+
+> my-project@1.5.0 build
+> next build
+
+ ⚠ Specified "headers" will not automatically work with "output: export". See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
+   ▲ Next.js 15.5.2
+   - Environments: .env
+
+   Creating an optimized production build ...
+ ⚠ Specified "headers" will not automatically work with "output: export". See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
+ ⚠ Specified "headers" will not automatically work with "output: export". See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
+ ⚠ Specified "headers" will not automatically work with "output: export". See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
+ ✓ Compiled successfully in 17.2s
+   Linting and checking validity of types ...
+
+./src/app/device-login/page.tsx
+38:6  Warning: React Hook useEffect has a missing dependency: 'validateSavedSession'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+198:6  Warning: React Hook useEffect has a missing dependency: 'clearSessionAndShowMessage'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+387:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+453:15  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+551:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/app/my-device/page.tsx
+27:11  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+173:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/page.tsx
+15:20  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+17:27  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/repair-history/page.tsx
+34:40  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+42:27  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+130:26  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+257:36  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/repair-management/page.tsx
+242:38  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+258:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1115:6  Warning: React Hook useEffect has a missing dependency: 'loadRemarks'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/technician-dashboard/page.tsx
+164:25  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+463:72  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+479:73  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/user-management/page.tsx
+164:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/components/LoginForm.tsx
+145:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/contexts/BudgetContext.tsx
+210:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+211:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+213:37  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+534:6  Warning: React Hook useCallback has a missing dependency: 'deviceScans'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/lib/notificationService.ts
+53:43  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/lib/preventiveRepairCosts.ts
+25:61  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+Failed to compile.
+
+./src/app/technician-dashboard/page.tsx:48:24
+Type error: Property 'role' does not exist on type 'AuthUser'.
+
+[0m [90m 46 |[39m       [36mif[39m ([33m![39misAuthenticated) {
+ [90m 47 |[39m         router[33m.[39mpush([32m'/'[39m)[33m;[39m
+[31m[1m>[22m[39m[90m 48 |[39m       } [36melse[39m [36mif[39m (user[33m?[39m[33m.[39mrole [33m!==[39m [32m'technician'[39m) {
+ [90m    |[39m                        [31m[1m^[22m[39m
+ [90m 49 |[39m         [90m// Redirect non-technicians[39m
+ [90m 50 |[39m         [36mif[39m (user[33m?[39m[33m.[39mrole [33m===[39m [32m'super_admin'[39m) {
+ [90m 51 |[39m           router[33m.[39mpush([32m'/dashboard'[39m)[33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+beforeBuildCommand `npm run build` failed with exit code 1
+       Error beforeBuildCommand `npm run build` failed with exit code 1

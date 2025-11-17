@@ -25,11 +25,7 @@ export function DepartmentProvider({ children }: DepartmentProviderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Default departments for non-admin users
-  const defaultDepartments = [
-    'MARKETING', 'RUBIX', 'CONVEY', 'ACCOUNT', 'HR',
-    'LITIGATION', 'SANCO', 'POT/POC', 'AFC', 'RDHOMES', 'QHOMES'
-  ];
+  // Removed hardcoded departments - all departments come from Firestore now
 
   const loadDepartments = async () => {
     try {
@@ -45,8 +41,8 @@ export function DepartmentProvider({ children }: DepartmentProviderProps) {
     } catch (err) {
       console.error('Failed to load departments:', err);
       setError('Failed to load departments');
-      // Fallback to default departments
-      setDepartments(defaultDepartments);
+      // No fallback - must use Firestore departments only
+      setDepartments([]);
     } finally {
       setLoading(false);
     }
@@ -89,9 +85,8 @@ export function DepartmentProvider({ children }: DepartmentProviderProps) {
     if (!authLoading && isAuthenticated && isAdmin) {
       loadDepartments();
     } else if (!authLoading && (!isAuthenticated || !isAdmin)) {
-      // If not authenticated or not admin, use default departments
-      setDepartments(defaultDepartments);
-      setLoading(false);
+      // If not authenticated or not admin, load from Firestore
+      loadDepartments();
     }
   }, [isAuthenticated, isAdmin, authLoading]);
 

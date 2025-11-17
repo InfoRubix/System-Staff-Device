@@ -6,12 +6,72 @@ import { useNavigation } from '@/contexts/NavigationContext';
 import { useRouter } from 'next/navigation';
 import DeviceHealthDashboard from '@/components/DeviceHealthDashboard';
 import Navigation from '@/components/Navigation';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface HealthScan {
+  id: string;
+  deviceId: string;
+  staffName: string;
+  department: string;
+  scanTimestamp: Date;
+  cpuUsage: number;
+  ramUsage: number;
+  diskSpaceFree: number;
+  diskHealth: 'Good' | 'Warning' | 'Critical';
+  batteryHealth?: number;
+  antivirusStatus: string;
+  firewallStatus: string;
+  overallStatus: 'Healthy' | 'Warning' | 'Critical';
+  issues: Array<{
+    type: string;
+    severity: string;
+    message: string;
+  }>;
+}
 
 export default function DeviceHealthPage() {
   const { isAuthenticated, loading } = useAuth();
   const { finishNavigation, isNavigating, setPageLoaded, isPageLoaded, setShowLoadingScreen } = useNavigation();
   const _router = useRouter();
   const [componentsReady, setComponentsReady] = useState(false);
+  const [healthScans, setHealthScans] = useState<HealthScan[]>([]);
+  const [exporting, setExporting] = useState(false);
+
+  // Fetch health scans from Firebase
+  useEffect(() => {
+    const q = query(
+      collection(db, 'device_scans'),
+      orderBy('scanTimestamp', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allScans: HealthScan[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        allScans.push({
+          id: doc.id,
+          ...data,
+          scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
+        } as HealthScan);
+      });
+
+      // Group scans by deviceId and keep only the latest scan for each device
+      const latestScansMap = new Map<string, HealthScan>();
+      allScans.forEach(scan => {
+        const existing = latestScansMap.get(scan.deviceId);
+        if (!existing || scan.scanTimestamp > existing.scanTimestamp) {
+          latestScansMap.set(scan.deviceId, scan);
+        }
+      });
+
+      // Convert map to array
+      const scans = Array.from(latestScansMap.values());
+      setHealthScans(scans);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Reset states when navigation starts
   useEffect(() => {
@@ -19,6 +79,40 @@ export default function DeviceHealthPage() {
       setComponentsReady(false);
     }
   }, [isNavigating]);
+
+  // Export to PDF function
+  const exportToPDF = async () => {
+    setExporting(true);
+
+    try {
+      // Import the professional PDF service
+      const { pdfService } = await import('@/services/pdfService');
+
+      // Calculate statistics
+      const stats = {
+        total: healthScans.length,
+        healthy: healthScans.filter((s) => s.overallStatus === 'Healthy').length,
+        warning: healthScans.filter((s) => s.overallStatus === 'Warning').length,
+        critical: healthScans.filter((s) => s.overallStatus === 'Critical').length,
+      };
+
+      // Generate the professional PDF report
+      const success = await pdfService.exportDeviceHealthReport(
+        healthScans,
+        stats
+      );
+
+      if (!success) {
+        throw new Error('PDF generation failed');
+      }
+
+    } catch (error) {
+      console.error('Error generating PDF report:', error);
+      alert('Error generating PDF report. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Mark components as ready when auth is done and we have data
   useEffect(() => {
@@ -105,27 +199,53 @@ export default function DeviceHealthPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="min-h-screen relative overflow-hidden" style={{
+        background: 'linear-gradient(135deg, #e3f2fd 0%, #f0f4ff 50%, #e8eeff 100%)',
+      }}>
+        {/* Blurred Background Elements - Large Corner Bubbles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Top Left Corner - Large Blue Bubble with visible border */}
+          <div className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full">
+            <div className="w-full h-full bg-gradient-to-br from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
+          </div>
+
+          {/* Bottom Right Corner - Large Blue Bubble with visible border */}
+          <div className="absolute -bottom-32 -right-32 w-[700px] h-[700px] rounded-full">
+            <div className="w-full h-full bg-gradient-to-tl from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
           {/* Banner Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Device Health Overview</h1>
-              <p className="mt-2 text-sm text-gray-600">
+              <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">DEVICE · HEALTH · OVERVIEW</h1>
+              <p className="mt-3 text-sm text-gray-600 font-normal">
                 Monitor real-time health status and click on any card to filter devices
               </p>
             </div>
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3">
-              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2">
-                <span>📊</span>
-                Generate Report
-              </button>
-              <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2">
-                <span>📥</span>
-                Export CSV
+              <button
+                onClick={exportToPDF}
+                disabled={exporting || healthScans.length === 0}
+                className="px-4 py-2 border-4 font-medium rounded-lg transition-colors flex items-center gap-2
+                  md:bg-blue-100 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800
+                  bg-blue-600 border-blue-700 text-white
+                  disabled:bg-gray-300 disabled:border-gray-400 disabled:text-gray-500 disabled:cursor-not-allowed"
+              >
+                {exporting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
+                    Generating...
+                  </>
+                ) : (
+                  'GENERATE REPORT'
+                )}
               </button>
             </div>
           </div>

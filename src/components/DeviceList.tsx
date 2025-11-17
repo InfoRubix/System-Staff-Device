@@ -1,8 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useDevices } from '../contexts/DeviceContext';
 import { Device } from '../types/device';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface DeviceScan {
+  id: string;
+  deviceId: string;
+  staffName: string;
+  staffEmail: string;
+  deviceType: string;
+  scanTimestamp: Date;
+  computerModel: string;
+  computerManufacturer: string;
+  osVersion: string;
+  processor: string;
+  installedRAM: string;
+  graphicsCard: string;
+  totalStorage: string;
+}
 
 interface DeviceListProps {
   onEdit: (device: Device) => void;
@@ -16,6 +34,58 @@ function DeviceList({ onEdit, onAdd }: DeviceListProps) {
   const [showDeviceModal, setShowDeviceModal] = useState<Device | null>(null);
   const [filteredDevices, setFilteredDevices] = useState<Device[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [deviceScans, setDeviceScans] = useState<DeviceScan[]>([]);
+
+  // Load device scans from Firebase
+  useEffect(() => {
+    const q = query(
+      collection(db, 'device_scans'),
+      orderBy('scanTimestamp', 'desc'),
+      limit(500)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allScans: DeviceScan[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        allScans.push({
+          id: doc.id,
+          deviceId: data.deviceId,
+          staffName: data.staffName || '',
+          staffEmail: data.staffEmail || '',
+          deviceType: data.deviceType || 'Desktop',
+          scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
+          computerModel: data.computerModel || (data.computerManufacturer ? `${data.computerManufacturer} ${data.computerName || ''}`.trim() : 'Unknown'),
+          computerManufacturer: data.computerManufacturer || 'Unknown',
+          osVersion: data.osVersion || 'N/A',
+          processor: data.processor || 'N/A',
+          installedRAM: data.installedRAM || 'N/A',
+          graphicsCard: data.graphicsCard || 'N/A',
+          totalStorage: data.totalStorage || 'N/A',
+        });
+      });
+
+      // Group by deviceId, keep latest scan
+      const latestScansMap = new Map();
+      allScans.forEach(scan => {
+        const existing = latestScansMap.get(scan.deviceId);
+        if (!existing || scan.scanTimestamp > existing.scanTimestamp) {
+          latestScansMap.set(scan.deviceId, scan);
+        }
+      });
+
+      setDeviceScans(Array.from(latestScansMap.values()));
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Get scan data for the device modal
+  const deviceScanData = useMemo(() => {
+    if (!showDeviceModal) return null;
+    // Find the latest scan for this device by matching staff name
+    return deviceScans.find(scan => scan.staffName === showDeviceModal.staffName);
+  }, [showDeviceModal, deviceScans]);
 
   // Initialize filteredDevices with all devices when devices load
   useEffect(() => {
@@ -333,7 +403,7 @@ function DeviceList({ onEdit, onAdd }: DeviceListProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-green-600">Device Model</label>
-                    <p className="text-gray-900">{showDeviceModal.deviceModel || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.computerModel || showDeviceModal.deviceModel || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-green-600">Device Type</label>
@@ -341,7 +411,7 @@ function DeviceList({ onEdit, onAdd }: DeviceListProps) {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-green-600">Operating System</label>
-                    <p className="text-gray-900">{showDeviceModal.operatingSystem || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.osVersion || showDeviceModal.operatingSystem || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-green-600">Status</label>
@@ -362,19 +432,19 @@ function DeviceList({ onEdit, onAdd }: DeviceListProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-purple-600">Processor/CPU</label>
-                    <p className="text-gray-900">{showDeviceModal.processor || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.processor || showDeviceModal.processor || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-purple-600">RAM</label>
-                    <p className="text-gray-900">{showDeviceModal.ram || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.installedRAM || showDeviceModal.ram || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-purple-600">Graphics/GPU</label>
-                    <p className="text-gray-900">{showDeviceModal.graphics || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.graphicsCard || showDeviceModal.graphics || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-purple-600">Storage</label>
-                    <p className="text-gray-900">{showDeviceModal.storage || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.totalStorage || showDeviceModal.storage || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -392,21 +462,12 @@ function DeviceList({ onEdit, onAdd }: DeviceListProps) {
 
             {/* Action Buttons */}
             <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4">
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end">
                 <button
                   onClick={() => setShowDeviceModal(null)}
                   className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
                 >
                   Close
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDeviceModal(null);
-                    onEdit(showDeviceModal);
-                  }}
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  Edit Device
                 </button>
               </div>
             </div>

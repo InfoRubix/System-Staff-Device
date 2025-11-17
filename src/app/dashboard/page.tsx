@@ -32,16 +32,16 @@ export default function DashboardPage() {
         const isLaptop = /Macintosh|Windows NT.*WOW64|Windows NT.*Win64/i.test(userAgent);
         const isDesktop = !isPhone && !isTablet;
 
-        // Longer loading times for dashboard too
+        // Faster loading times for dashboard
         let loadingTime;
         if (isPhone) {
-          loadingTime = 4000; // 4 seconds for phones
+          loadingTime = 1200; // 1.2 seconds for phones
         } else if (isTablet) {
-          loadingTime = 3500; // 3.5 seconds for tablets
+          loadingTime = 1000; // 1 second for tablets
         } else if (isLaptop) {
-          loadingTime = 3000; // 3 seconds for laptops
+          loadingTime = 800; // 0.8 seconds for laptops
         } else {
-          loadingTime = 2500; // 2.5 seconds for desktop
+          loadingTime = 600; // 0.6 seconds for desktop
         }
 
         console.log('Dashboard Page - Device type and loading time:', { isPhone, isTablet, isLaptop, isDesktop, loadingTime });
@@ -70,13 +70,13 @@ export default function DashboardPage() {
   useEffect(() => {
     if (isNavigating && isPageLoaded && componentsReady) {
       console.log('Dashboard Page - All conditions met, starting finish timer');
-      // Add a longer delay for final transition steps
+      // Quick finish transition
       const finishTimer = setTimeout(() => {
         console.log('Dashboard Page - Finishing navigation and hiding loading screen');
         finishNavigation();
         // Hide the loading screen only after everything is ready
         setShowLoadingScreen(false);
-      }, 1000); // Increased from 300ms to 1000ms for more visible completion
+      }, 300); // Fast transition
 
       return () => clearTimeout(finishTimer);
     }

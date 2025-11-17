@@ -48,4 +48,7 @@ if (typeof window !== 'undefined') {
 
 export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 
+// Export firebaseConfig for creating secondary auth instances
+export { firebaseConfig };
+
 export default app;

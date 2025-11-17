@@ -43,3 +43,69 @@ next-env.d.ts
 # Windows reserved names and dev logs
 nul
 dev.log
+
+# ====================================
+# SECURITY - DO NOT COMMIT
+# ====================================
+
+# Firebase service account keys
+*-firebase-adminsdk-*.json
+serviceAccountKey.json
+firebase-adminsdk*.json
+
+# Local device tokens and app data
+device_token.txt
+last_scan.txt
+
+# ====================================
+# TAURI DESKTOP APP
+# ====================================
+
+# Tauri build artifacts (may contain embedded secrets)
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# Desktop app installers (large binary files)
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+
+# Public downloads folder - keep installers out of git
+public/downloads/*.exe
+public/downloads/*.msi
+public/downloads/*.dmg
+
+# NSIS installer artifacts
+src-tauri/*.nsi
+src-tauri/installer.nsi
+
+# ====================================
+# IDE & SYSTEM FILES
+# ====================================
+
+# JetBrains IDEs
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory

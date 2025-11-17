@@ -1,7 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Device } from '../types/device';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface DeviceScan {
+  id: string;
+  deviceId: string;
+  staffName: string;
+  staffEmail: string;
+  deviceType: string;
+  scanTimestamp: Date;
+  computerModel: string;
+  computerManufacturer: string;
+  osVersion: string;
+  processor: string;
+  installedRAM: string;
+  graphicsCard: string;
+  totalStorage: string;
+}
 
 interface DeviceCardProps {
   device: Device;
@@ -9,10 +27,61 @@ interface DeviceCardProps {
   onDelete: (id: string) => void;
 }
 
-function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
+function DeviceCard({ device, onEdit: _onEdit, onDelete }: DeviceCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showDeviceInfoModal, setShowDeviceInfoModal] = useState(false);
   const [showHardwareModal, setShowHardwareModal] = useState(false);
+  const [deviceScans, setDeviceScans] = useState<DeviceScan[]>([]);
+
+  // Load device scans from Firebase
+  useEffect(() => {
+    const q = query(
+      collection(db, 'device_scans'),
+      orderBy('scanTimestamp', 'desc'),
+      limit(500)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allScans: DeviceScan[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        allScans.push({
+          id: doc.id,
+          deviceId: data.deviceId,
+          staffName: data.staffName || '',
+          staffEmail: data.staffEmail || '',
+          deviceType: data.deviceType || 'Desktop',
+          scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
+          computerModel: data.computerModel || (data.computerManufacturer ? `${data.computerManufacturer} ${data.computerName || ''}`.trim() : 'Unknown'),
+          computerManufacturer: data.computerManufacturer || 'Unknown',
+          osVersion: data.osVersion || 'N/A',
+          processor: data.processor || 'N/A',
+          installedRAM: data.installedRAM || 'N/A',
+          graphicsCard: data.graphicsCard || 'N/A',
+          totalStorage: data.totalStorage || 'N/A',
+        });
+      });
+
+      // Group by deviceId, keep latest scan
+      const latestScansMap = new Map();
+      allScans.forEach(scan => {
+        const existing = latestScansMap.get(scan.deviceId);
+        if (!existing || scan.scanTimestamp > existing.scanTimestamp) {
+          latestScansMap.set(scan.deviceId, scan);
+        }
+      });
+
+      setDeviceScans(Array.from(latestScansMap.values()));
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Get scan data for this device
+  const deviceScanData = useMemo(() => {
+    // Find the latest scan for this device by matching staff name
+    return deviceScans.find(scan => scan.staffName === device.staffName);
+  }, [device.staffName, deviceScans]);
 
   const getStatusBadge = (status: string) => {
     const baseClasses = 'px-2 py-1 text-xs font-semibold rounded-full';
@@ -128,18 +197,9 @@ function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEdit(device);
-                }}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 active:from-blue-700 active:to-blue-800 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 touch-manipulation"
-              >
-                Edit Device
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
                   onDelete(device.id);
                 }}
-                className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 active:from-red-700 active:to-red-800 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 touch-manipulation"
+                className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 active:from-red-700 active:to-red-800 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 touch-manipulation"
               >
                 Delete Device
               </button>
@@ -181,9 +241,9 @@ function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
                   <div className="w-6 h-6 bg-blue-500 rounded-full flex-shrink-0"></div>
                   <span className="text-sm font-semibold text-gray-700">Model</span>
                 </div>
-                <span className="text-base font-bold text-gray-900 break-words ml-9">{device.deviceModel}</span>
+                <span className="text-base font-bold text-gray-900 break-words ml-9">{deviceScanData?.computerModel || device.deviceModel || 'N/A'}</span>
               </div>
-              
+
               <div className="flex flex-col space-y-3 bg-gradient-to-r from-gray-50 to-green-50 rounded-lg border border-gray-200 p-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-6 h-6 bg-green-500 rounded-full flex-shrink-0"></div>
@@ -191,15 +251,15 @@ function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
                 </div>
                 <span className="text-base font-bold text-gray-900 ml-9">{device.deviceType}</span>
               </div>
-              
+
               <div className="flex flex-col space-y-3 bg-gradient-to-r from-gray-50 to-purple-50 rounded-lg border border-gray-200 p-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-6 h-6 bg-purple-500 rounded-full flex-shrink-0"></div>
                   <span className="text-sm font-semibold text-gray-700">Operating System</span>
                 </div>
-                <span className="text-base font-bold text-gray-900 break-words ml-9">{device.operatingSystem}</span>
+                <span className="text-base font-bold text-gray-900 break-words ml-9">{deviceScanData?.osVersion || device.operatingSystem || 'N/A'}</span>
               </div>
-              
+
             </div>
           </div>
         </div>
@@ -240,9 +300,9 @@ function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
                   </div>
                   <span className="text-sm font-semibold text-blue-700">Processor</span>
                 </div>
-                <span className="text-base font-bold text-gray-900 break-words ml-11">{device.processor}</span>
+                <span className="text-base font-bold text-gray-900 break-words ml-11">{deviceScanData?.processor || device.processor || 'N/A'}</span>
               </div>
-              
+
               <div className="flex flex-col space-y-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 p-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -250,9 +310,9 @@ function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
                   </div>
                   <span className="text-sm font-semibold text-green-700">Memory</span>
                 </div>
-                <span className="text-base font-bold text-gray-900 ml-11">{device.ram}</span>
+                <span className="text-base font-bold text-gray-900 ml-11">{deviceScanData?.installedRAM || device.ram || 'N/A'}</span>
               </div>
-              
+
               <div className="flex flex-col space-y-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg border border-orange-200 p-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -260,9 +320,9 @@ function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
                   </div>
                   <span className="text-sm font-semibold text-orange-700">Graphics</span>
                 </div>
-                <span className="text-base font-bold text-gray-900 break-words ml-11">{device.graphics}</span>
+                <span className="text-base font-bold text-gray-900 break-words ml-11">{deviceScanData?.graphicsCard || device.graphics || 'N/A'}</span>
               </div>
-              
+
               <div className="flex flex-col space-y-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200 p-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -270,7 +330,7 @@ function DeviceCard({ device, onEdit, onDelete }: DeviceCardProps) {
                   </div>
                   <span className="text-sm font-semibold text-purple-700">Storage</span>
                 </div>
-                <span className="text-base font-bold text-gray-900 ml-11">{device.storage}</span>
+                <span className="text-base font-bold text-gray-900 ml-11">{deviceScanData?.totalStorage || device.storage || 'N/A'}</span>
               </div>
             </div>
           </div>

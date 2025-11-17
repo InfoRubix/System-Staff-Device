@@ -605,6 +605,258 @@ class PDFService {
   }
 
   /**
+   * Creates device health report PDF
+   * @param {Array} healthScans - Array of device health scan objects
+   * @param {Object} stats - Statistics (total, healthy, warning, critical)
+   */
+  async exportDeviceHealthReport(healthScans = [], stats = {}) {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF('l', 'mm', 'a4'); // Landscape for better table display
+
+      let yPos = 25;
+
+      // Title and Header
+      doc.setFontSize(24);
+      doc.setTextColor(...this.brandColors.primary);
+      doc.text('Device Health Overview Report', 20, yPos);
+      yPos += 18;
+
+      // Subtitle
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Real-time Device Health Monitoring', 20, yPos);
+      yPos += 12;
+
+      // Date and info
+      doc.setFontSize(11);
+      doc.setTextColor(...this.brandColors.secondary);
+      doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')} at ${new Date().toLocaleTimeString('en-GB')}`, 20, yPos);
+      yPos += 6;
+      doc.text(`Total Devices Monitored: ${stats.total || 0}`, 20, yPos);
+      yPos += 15;
+
+      // Executive Summary Section
+      const summaryColumns = [
+        { key: 'metric', header: 'Health Metric', width: 1.5 },
+        { key: 'count', header: 'Count', width: 1 },
+        { key: 'percentage', header: 'Percentage', width: 1 },
+        { key: 'status', header: 'Status Assessment', width: 2.5 }
+      ];
+
+      const total = stats.total || 1; // Prevent division by zero
+      const summaryData = [
+        {
+          metric: 'Healthy Devices',
+          count: `${stats.healthy || 0}`,
+          percentage: `${((stats.healthy || 0) / total * 100).toFixed(1)}%`,
+          status: 'Devices are operating within normal parameters'
+        },
+        {
+          metric: 'Warning Devices',
+          count: `${stats.warning || 0}`,
+          percentage: `${((stats.warning || 0) / total * 100).toFixed(1)}%`,
+          status: 'Devices require attention and monitoring'
+        },
+        {
+          metric: 'Critical Devices',
+          count: `${stats.critical || 0}`,
+          percentage: `${((stats.critical || 0) / total * 100).toFixed(1)}%`,
+          status: 'Devices need immediate intervention'
+        }
+      ];
+
+      // Calculate space needed for title + table
+      const summaryTableHeight = this.calculateTableHeight(doc, summaryData, summaryColumns, 10);
+      const summaryTitleHeight = 16;
+      const totalSummaryHeight = summaryTitleHeight + summaryTableHeight;
+
+      if (yPos + totalSummaryHeight > doc.internal.pageSize.height - 30) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setTextColor(...this.brandColors.primary);
+      doc.text('Health Summary', 20, yPos);
+      yPos += 12;
+
+      this.addProfessionalTable(doc, summaryData, summaryColumns, yPos, true);
+      yPos += (summaryData.length + 2) * 10 + 15;
+
+      // Detailed Device Health Table
+      if (healthScans.length > 0) {
+        // Start new page for device details
+        doc.addPage();
+        yPos = 20;
+
+        doc.setFontSize(16);
+        doc.setTextColor(...this.brandColors.primary);
+        doc.text('Detailed Device Health Information', 20, yPos);
+        yPos += 12;
+
+        const deviceColumns = [
+          { key: 'staffName', header: 'Staff Name', width: 1.5 },
+          { key: 'department', header: 'Department', width: 1.2 },
+          {
+            key: 'overallStatus',
+            header: 'Status',
+            width: 1,
+            formatter: (row) => row.overallStatus || 'Unknown'
+          },
+          {
+            key: 'cpuUsage',
+            header: 'CPU %',
+            width: 0.8,
+            formatter: (row) => `${(row.cpuUsage || 0).toFixed(1)}%`
+          },
+          {
+            key: 'ramUsage',
+            header: 'RAM %',
+            width: 0.8,
+            formatter: (row) => `${(row.ramUsage || 0).toFixed(1)}%`
+          },
+          {
+            key: 'diskSpaceFree',
+            header: 'Disk Free',
+            width: 1,
+            formatter: (row) => `${(row.diskSpaceFree || 0).toFixed(1)} GB`
+          },
+          {
+            key: 'diskHealth',
+            header: 'Disk Health',
+            width: 1,
+            formatter: (row) => row.diskHealth || 'Unknown'
+          },
+          {
+            key: 'lastScan',
+            header: 'Last Scan',
+            width: 1.7,
+            formatter: (row) => {
+              if (row.scanTimestamp) {
+                const date = row.scanTimestamp instanceof Date
+                  ? row.scanTimestamp
+                  : new Date(row.scanTimestamp);
+                return date.toLocaleString('en-GB');
+              }
+              return 'N/A';
+            }
+          }
+        ];
+
+        this.addProfessionalTable(doc, healthScans, deviceColumns, yPos);
+      }
+
+      // Issues Summary (if any devices have issues)
+      const devicesWithIssues = healthScans.filter(scan =>
+        scan.issues && scan.issues.length > 0
+      );
+
+      if (devicesWithIssues.length > 0) {
+        doc.addPage();
+        yPos = 20;
+
+        doc.setFontSize(16);
+        doc.setTextColor(...this.brandColors.error);
+        doc.text('Devices Requiring Attention', 20, yPos);
+        yPos += 12;
+
+        const issuesData = [];
+        devicesWithIssues.forEach(scan => {
+          scan.issues.forEach(issue => {
+            issuesData.push({
+              staffName: scan.staffName,
+              department: scan.department,
+              severity: issue.severity || 'unknown',
+              message: issue.message || 'No details'
+            });
+          });
+        });
+
+        const issuesColumns = [
+          { key: 'staffName', header: 'Staff Name', width: 1.5 },
+          { key: 'department', header: 'Department', width: 1.2 },
+          { key: 'severity', header: 'Severity', width: 1 },
+          { key: 'message', header: 'Issue Description', width: 3.3 }
+        ];
+
+        this.addProfessionalTable(doc, issuesData, issuesColumns, yPos);
+      }
+
+      // Recommendations Section
+      doc.addPage();
+      yPos = 20;
+
+      doc.setFontSize(18);
+      doc.setTextColor(...this.brandColors.primary);
+      doc.text('Recommendations & Action Items', 20, yPos);
+      yPos += 15;
+
+      const recommendations = [];
+
+      if (stats.critical > 0) {
+        recommendations.push({
+          priority: 'Critical',
+          action: 'Immediate Device Intervention',
+          description: `${stats.critical} device(s) in critical state requiring immediate attention`,
+          timeline: 'Within 24 hours'
+        });
+      }
+
+      if (stats.warning > 0) {
+        recommendations.push({
+          priority: 'High',
+          action: 'Device Maintenance',
+          description: `${stats.warning} device(s) showing warning signs and need preventive maintenance`,
+          timeline: 'Within 1 week'
+        });
+      }
+
+      recommendations.push({
+        priority: 'Medium',
+        action: 'Regular Health Monitoring',
+        description: 'Continue bi-weekly health scans for all devices to detect issues early',
+        timeline: 'Ongoing'
+      });
+
+      recommendations.push({
+        priority: 'Low',
+        action: 'Performance Optimization',
+        description: 'Review devices with high CPU/RAM usage for optimization opportunities',
+        timeline: 'Next month'
+      });
+
+      const recColumns = [
+        { key: 'priority', header: 'Priority', width: 1 },
+        { key: 'action', header: 'Action Required', width: 1.8 },
+        { key: 'description', header: 'Description', width: 3.2 },
+        { key: 'timeline', header: 'Timeline', width: 1 }
+      ];
+
+      this.addProfessionalTable(doc, recommendations, recColumns, yPos);
+
+      // Footer on all pages
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(9);
+        doc.setTextColor(...this.brandColors.secondary);
+        doc.text(`Page ${i} of ${totalPages}`, 250, 200);
+        doc.text('Device Management System - Device Health Report - Confidential', 20, 200);
+      }
+
+      // Save the PDF
+      const filename = this.generateFilename('device_health_report', {});
+      doc.save(filename);
+
+      return true;
+    } catch (error) {
+      console.error('Device health PDF generation failed:', error);
+      return false;
+    }
+  }
+
+  /**
    * Generates standardized filename
    */
   generateFilename(prefix, _filters = {}) {

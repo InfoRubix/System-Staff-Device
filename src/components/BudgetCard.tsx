@@ -9,10 +9,14 @@ function BudgetCard() {
     getEstimatedRepairCosts,
     getEstimatedReplacementCosts,
     getEstimationByDepartment,
+    getDevicesWithRepairDetails,
     loading
   } = useBudget();
-  
+
   const [showPopup, setShowPopup] = useState(false);
+
+  // Get devices with repair details from BudgetContext
+  const devicesWithIssues = getDevicesWithRepairDetails();
 
   if (loading) {
     return (
@@ -62,9 +66,9 @@ function BudgetCard() {
         {/* Card Content */}
         <div className="h-full flex flex-col justify-center items-center text-center">
           <div className="mb-2 sm:mb-3">
-            <p className="text-xs font-medium text-white/90 mb-1 sm:mb-2">Estimated Total Cost</p>
+            <p className="text-xs font-medium text-white/90 mb-1 sm:mb-2">Estimated Repair Cost</p>
             <p className="text-xs text-white/70">
-              {new Date().toLocaleDateString('en-MY', {
+              {new Date().toLocaleDateString('en-US', {
                 month: 'long',
                 year: 'numeric'
               })}
@@ -83,99 +87,188 @@ function BudgetCard() {
         </div>
       </div>
 
-      {/* Department Breakdown Popup Modal */}
+      {/* Detailed Repair Cost Report Popup */}
       {showPopup && (
-        <div className="fixed top-0 left-0 right-0 bottom-0 z-50 flex items-center justify-center overflow-y-auto h-screen w-screen p-4">
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-2 sm:p-4">
+          {/* Backdrop - Cover entire screen */}
           <div
-            className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm h-screen w-screen"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => setShowPopup(false)}
           ></div>
 
-          {/* Modal Content */}
-          <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-md sm:max-w-2xl mx-auto my-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-4 sm:p-6">
+          {/* Modal Content - Made wider and taller to cover full screen */}
+          <div className="relative bg-white rounded-xl shadow-2xl border-2 border-gray-300 w-full max-w-7xl mx-auto my-2 sm:my-4 min-h-[92vh] max-h-[95vh] overflow-y-auto">
+            <div className="p-6">
               {/* Close Button */}
               <button
                 onClick={() => setShowPopup(false)}
-                className="absolute top-2 right-2 sm:top-4 sm:right-4 text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-bold z-10"
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold z-10"
               >
                 ×
               </button>
 
-              {/* Modal Content */}
-              <div className="pt-6 sm:pt-8 space-y-4 sm:space-y-6">
-                {/* Title */}
-                <div className="text-center">
-                  <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-1 pr-8">
-                    Estimated Cost Breakdown by Department
-                  </h3>
-                  <p className="text-xs text-gray-600">
-                    {new Date().toLocaleDateString('en-MY', {
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </p>
-                </div>
+              {/* Report Header */}
+              <div className="text-center mb-6 border-b-2 border-gray-300 pb-4">
+                <h2 className="text-2xl font-bold text-gray-800 uppercase tracking-wide">
+                  Estimated Repair Cost Report
+                </h2>
+                <p className="text-sm text-gray-600 mt-2">
+                  {new Date().toLocaleDateString('en-MY', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </p>
+              </div>
 
-                {/* Department Breakdown */}
-                {Object.keys(departmentBreakdown).length > 0 ? (
-                  <div className="space-y-3">
+              {Object.keys(departmentBreakdown).length > 0 ? (
+                <>
+                  {/* Department Cost Summary Table */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-bold text-gray-800 mb-3 uppercase">Department Cost Summary</h3>
+                    <div className="border-2 border-gray-300 rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            <th className="text-left px-4 py-3 font-bold text-gray-700 border-b-2 border-gray-300">Department</th>
+                            <th className="text-right px-4 py-3 font-bold text-gray-700 border-b-2 border-gray-300">Total Cost (RM)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(departmentBreakdown).map(([department, costs], index) => {
+                            const subtotal = costs.repair + costs.replacement;
+                            if (subtotal === 0) return null;
+
+                            return (
+                              <tr key={department} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                <td className="px-4 py-3 text-gray-800 border-b border-gray-200">{department}</td>
+                                <td className="px-4 py-3 text-right font-semibold text-gray-900 border-b border-gray-200">
+                                  {formatCurrency(subtotal)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Detailed Breakdown by Staff */}
+                  <div className="mb-8">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4 uppercase border-t-2 border-gray-300 pt-6">
+                      Detailed Breakdown by Staff
+                    </h3>
+
                     {Object.entries(departmentBreakdown).map(([department, costs]) => {
                       const subtotal = costs.repair + costs.replacement;
                       if (subtotal === 0) return null;
 
+                      const departmentDevices = devicesWithIssues.filter(
+                        device => device.department === department
+                      );
+
+                      if (departmentDevices.length === 0) return null;
+
                       return (
-                        <div key={department} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                          <div className="font-semibold text-gray-900 mb-3">{department}</div>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Estimated Repairs:</span>
-                              <span className="font-medium text-orange-700">{formatCurrency(costs.repair)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Estimated Replacements:</span>
-                              <span className="font-medium text-red-700">{formatCurrency(costs.replacement)}</span>
-                            </div>
-                            <div className="border-t border-gray-300 pt-2 mt-2">
-                              <div className="flex justify-between font-semibold">
-                                <span className="text-gray-800">Subtotal:</span>
-                                <span className="text-gray-900">{formatCurrency(subtotal)}</span>
+                        <div key={department} className="mb-6">
+                          {/* Department Header */}
+                          <div className="bg-blue-50 border-2 border-blue-200 rounded-t-lg px-4 py-3">
+                            <h4 className="font-bold text-gray-800 uppercase">{department} Department</h4>
+                          </div>
+
+                          {/* Staff List */}
+                          <div className="border-2 border-blue-200 border-t-0 rounded-b-lg overflow-hidden">
+                            {departmentDevices.map((device, index) => (
+                              <div key={device.id} className={`p-4 ${index !== departmentDevices.length - 1 ? 'border-b border-gray-200' : ''}`}>
+                                {/* Staff Info */}
+                                <div className="mb-3">
+                                  <div className="font-semibold text-gray-900">Staff: {device.staffName}</div>
+                                  <div className="text-sm text-gray-600">Email: {device.staffEmail}</div>
+                                </div>
+
+                                {/* Issues Table */}
+                                <div className="border border-gray-300 rounded-lg overflow-hidden">
+                                  <table className="w-full">
+                                    <thead className="bg-gray-50">
+                                      <tr>
+                                        <th className="text-left px-3 py-2 text-sm font-semibold text-gray-700 border-b border-gray-300">
+                                          Issue Detected
+                                        </th>
+                                        <th className="text-right px-3 py-2 text-sm font-semibold text-gray-700 border-b border-gray-300">
+                                          Repair Cost (RM)
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {device.issues.map((issue, idx) => (
+                                        <tr key={idx} className="border-b border-gray-200 last:border-b-0">
+                                          <td className="px-3 py-2 text-sm text-gray-700">{issue.name}</td>
+                                          <td className="px-3 py-2 text-sm text-right font-medium text-gray-900">
+                                            {formatCurrency(issue.cost)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                      <tr className="bg-gray-100">
+                                        <td className="px-3 py-2 text-sm font-bold text-gray-800">SUBTOTAL</td>
+                                        <td className="px-3 py-2 text-sm text-right font-bold text-gray-900">
+                                          {formatCurrency(device.repairCost)}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Department Total */}
+                            <div className="bg-blue-100 px-4 py-3 border-t-2 border-blue-300">
+                              <div className="flex justify-between items-center">
+                                <span className="font-bold text-gray-800">
+                                  {department} Department Total:
+                                </span>
+                                <span className="text-lg font-bold text-blue-900">
+                                  {formatCurrency(subtotal)}
+                                </span>
                               </div>
                             </div>
                           </div>
                         </div>
                       );
                     })}
+                  </div>
 
-                    {/* Overall Total */}
-                    <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mt-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-gray-800">Overall Estimated Total Cost:</span>
-                        <span className="text-xl font-bold text-blue-900">{formatCurrency(totalEstimation)}</span>
+                  {/* Grand Total */}
+                  <div className="border-4 border-blue-500 bg-blue-50 rounded-lg p-6">
+                    <div className="text-center">
+                      <h3 className="text-xl font-bold text-gray-800 mb-3 uppercase">
+                        Total Estimated Repair Cost
+                      </h3>
+                      <div className="text-4xl font-bold text-blue-900">
+                        {formatCurrency(totalEstimation)}
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                    <div className="mb-2">
-                      <svg className="w-8 h-8 mx-auto text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div className="text-sm text-gray-800 font-medium">
-                      No Repair or Replacement Costs
-                    </div>
-                    <div className="text-sm text-gray-600 mt-1">
-                      All devices are in good condition
-                    </div>
+                </>
+              ) : (
+                <div className="bg-green-50 border-2 border-green-200 rounded-lg p-8 text-center">
+                  <div className="mb-3">
+                    <svg className="w-12 h-12 mx-auto text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
-                )}
-              </div>
+                  <div className="text-lg text-gray-800 font-bold mb-2">
+                    No Repair or Replacement Costs
+                  </div>
+                  <div className="text-gray-600">
+                    All devices are in good condition
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
+
     </>
   );
 }

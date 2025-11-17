@@ -10,6 +10,9 @@ use directories::ProjectDirs;
 use chrono::{Utc, DateTime, Duration};
 use tauri::Manager;
 
+#[cfg(target_os = "windows")]
+use std::env;
+
 #[derive(Debug, Serialize, Deserialize)]
 struct SystemInfo {
     device_id: String,  // Unique device identifier
@@ -356,40 +359,107 @@ fn detect_battery() -> Option<BatteryInfo> {
 fn detect_computer_info() -> Option<ComputerInfo> {
     use wmi::{COMLibrary, WMIConnection};
     use serde::Deserialize;
+    use std::process::Command;
 
     #[derive(Deserialize)]
+    #[serde(rename_all = "PascalCase")]
     struct Win32ComputerSystem {
-        Manufacturer: Option<String>,
-        Model: Option<String>,
-        Name: Option<String>,
+        manufacturer: Option<String>,
+        model: Option<String>,
+        name: Option<String>,
     }
 
-    match COMLibrary::new() {
-        Ok(com_lib) => {
-            match WMIConnection::new(com_lib) {
-                Ok(wmi_con) => {
-                    let results: Result<Vec<Win32ComputerSystem>, _> = wmi_con.query();
-                    match results {
-                        Ok(systems) if !systems.is_empty() => {
-                            let system = &systems[0];
-                            Some(ComputerInfo {
-                                manufacturer: system.Manufacturer.clone().unwrap_or("Unknown".to_string()),
-                                model: system.Model.clone().unwrap_or("Unknown".to_string()),
-                                computer_name: system.Name.clone().unwrap_or("Unknown".to_string()),
-                            })
+    #[derive(Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct Win32BaseBoard {
+        manufacturer: Option<String>,
+        product: Option<String>,
+    }
+
+    // Try Win32_ComputerSystem first
+    let mut manufacturer = String::from("Unknown");
+    let mut model = String::from("Unknown");
+    let mut computer_name = String::from("Unknown");
+
+    if let Ok(com_lib) = COMLibrary::new() {
+        if let Ok(wmi_con) = WMIConnection::new(com_lib.clone()) {
+            // Try Win32_ComputerSystem
+            if let Ok(systems) = wmi_con.query::<Win32ComputerSystem>() {
+                if let Some(system) = systems.first() {
+                    if let Some(m) = &system.manufacturer {
+                        if !m.is_empty() && m != "To Be Filled By O.E.M." {
+                            manufacturer = m.clone();
                         }
-                        _ => Some(ComputerInfo {
-                            manufacturer: "Unknown".to_string(),
-                            model: "Unknown".to_string(),
-                            computer_name: "Unknown".to_string(),
-                        }),
+                    }
+                    if let Some(m) = &system.model {
+                        if !m.is_empty() && m != "To Be Filled By O.E.M." {
+                            model = m.clone();
+                        }
+                    }
+                    if let Some(n) = &system.name {
+                        if !n.is_empty() {
+                            computer_name = n.clone();
+                        }
                     }
                 }
-                Err(_) => None,
+            }
+
+            // If model is still Unknown, try Win32_BaseBoard
+            if model == "Unknown" {
+                if let Ok(com_lib2) = COMLibrary::new() {
+                    if let Ok(wmi_con2) = WMIConnection::new(com_lib2) {
+                        if let Ok(boards) = wmi_con2.query::<Win32BaseBoard>() {
+                            if let Some(board) = boards.first() {
+                                if manufacturer == "Unknown" {
+                                    if let Some(m) = &board.manufacturer {
+                                        if !m.is_empty() && m != "To Be Filled By O.E.M." {
+                                            manufacturer = m.clone();
+                                        }
+                                    }
+                                }
+                                if let Some(p) = &board.product {
+                                    if !p.is_empty() && p != "To Be Filled By O.E.M." {
+                                        model = p.clone();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-        Err(_) => None,
     }
+
+    // If still Unknown, try using WMIC command as fallback
+    if model == "Unknown" || manufacturer == "Unknown" {
+        if let Ok(output) = Command::new("wmic")
+            .args(&["computersystem", "get", "manufacturer,model", "/format:list"])
+            .output()
+        {
+            if let Ok(text) = String::from_utf8(output.stdout) {
+                for line in text.lines() {
+                    if manufacturer == "Unknown" && line.starts_with("Manufacturer=") {
+                        let value = line.replace("Manufacturer=", "").trim().to_string();
+                        if !value.is_empty() && value != "To Be Filled By O.E.M." {
+                            manufacturer = value;
+                        }
+                    }
+                    if model == "Unknown" && line.starts_with("Model=") {
+                        let value = line.replace("Model=", "").trim().to_string();
+                        if !value.is_empty() && value != "To Be Filled By O.E.M." {
+                            model = value;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Some(ComputerInfo {
+        manufacturer,
+        model,
+        computer_name,
+    })
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -581,9 +651,10 @@ fn get_os_install_date() -> Option<String> {
 
 // Function to register/update device in devices collection
 fn register_device(system_info: &SystemInfo, staff_email: &str, staff_name: &str, department: &str) -> Result<(), String> {
-    // Firebase configuration
-    const FIREBASE_PROJECT_ID: &str = "system-staff-device";
-    const FIREBASE_API_KEY: &str = "AIzaSyA54ncjdRwuWNx-6Or0pw6bKl_Wu0MWf4I";
+    // Firebase configuration - loaded from environment variables at BUILD TIME
+    // Set these in your .env file before building
+    const FIREBASE_PROJECT_ID: &str = env!("TAURI_FIREBASE_PROJECT_ID");
+    const FIREBASE_API_KEY: &str = env!("TAURI_FIREBASE_API_KEY");
 
     // Use deviceId as document ID to ensure one device per device ID
     let device_doc_id = &system_info.device_id;
@@ -635,9 +706,9 @@ fn register_device(system_info: &SystemInfo, staff_email: &str, staff_name: &str
 
 // Function to create/update staff collection
 fn register_staff(system_info: &SystemInfo, staff_email: &str, staff_name: &str, department: &str) -> Result<(), String> {
-    // Firebase configuration
-    const FIREBASE_PROJECT_ID: &str = "system-staff-device";
-    const FIREBASE_API_KEY: &str = "AIzaSyA54ncjdRwuWNx-6Or0pw6bKl_Wu0MWf4I";
+    // Firebase configuration - loaded from environment variables at BUILD TIME
+    const FIREBASE_PROJECT_ID: &str = env!("TAURI_FIREBASE_PROJECT_ID");
+    const FIREBASE_API_KEY: &str = env!("TAURI_FIREBASE_API_KEY");
 
     // Use email as document ID (replace @ and . with _)
     let staff_doc_id = staff_email.replace('@', "_").replace('.', "_");
@@ -708,9 +779,9 @@ fn register_staff(system_info: &SystemInfo, staff_email: &str, staff_name: &str,
 
 // Function to submit device scan to Firebase
 fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &str, department: &str) -> Result<(), String> {
-    // Firebase configuration
-    const FIREBASE_PROJECT_ID: &str = "system-staff-device";
-    const FIREBASE_API_KEY: &str = "AIzaSyA54ncjdRwuWNx-6Or0pw6bKl_Wu0MWf4I";
+    // Firebase configuration - loaded from environment variables at BUILD TIME
+    const FIREBASE_PROJECT_ID: &str = env!("TAURI_FIREBASE_PROJECT_ID");
+    const FIREBASE_API_KEY: &str = env!("TAURI_FIREBASE_API_KEY");
 
     // First, register/update staff in staff collection
     register_staff(system_info, staff_email, staff_name, department)?;
@@ -732,6 +803,15 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
         0.0
     };
 
+    // Get disk health status from first disk
+    let disk_health = if !system_info.disk_info.is_empty() {
+        let health = &system_info.disk_info[0].health_status;
+        // Convert "Healthy" to "Good" to match React component expectations
+        if health == "Healthy" { "Good" } else { health.as_str() }
+    } else {
+        "Good"
+    };
+
     // Determine overall status
     let overall_status = if system_info.cpu_usage > 80.0 || ram_usage_percent > 85.0 || disk_free_gb < 20.0 {
         "Critical"
@@ -741,21 +821,71 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
         "Healthy"
     };
 
-    // Build issues array
+    // Build issues array with proper structure (type, message, severity)
     let mut issues = Vec::new();
+
+    // CPU check
     if system_info.cpu_usage > 80.0 {
         issues.push(serde_json::json!({
-            "stringValue": format!("High CPU usage: {:.1}%", system_info.cpu_usage)
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "High CPU Usage"},
+                    "message": {"stringValue": format!("CPU usage is at {:.1}%", system_info.cpu_usage)},
+                    "severity": {"stringValue": "high"}
+                }
+            }
         }));
     }
+
+    // RAM check
     if ram_usage_percent > 85.0 {
         issues.push(serde_json::json!({
-            "stringValue": format!("High RAM usage: {:.1}%", ram_usage_percent)
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "High RAM Usage"},
+                    "message": {"stringValue": format!("RAM usage is at {:.1}%", ram_usage_percent)},
+                    "severity": {"stringValue": "high"}
+                }
+            }
         }));
     }
+
+    // Disk space check
     if disk_free_gb < 20.0 {
         issues.push(serde_json::json!({
-            "stringValue": format!("Low disk space: {:.1} GB free", disk_free_gb)
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Low Disk Space"},
+                    "message": {"stringValue": format!("Only {:.1} GB free", disk_free_gb)},
+                    "severity": {"stringValue": "medium"}
+                }
+            }
+        }));
+    }
+
+    // Antivirus check
+    if system_info.antivirus_status == "Unknown" || system_info.antivirus_status == "Inactive" {
+        issues.push(serde_json::json!({
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Antivirus Issue"},
+                    "message": {"stringValue": format!("Antivirus status: {}", system_info.antivirus_status)},
+                    "severity": {"stringValue": if system_info.antivirus_status == "Unknown" { "medium" } else { "high" }}
+                }
+            }
+        }));
+    }
+
+    // Firewall check
+    if system_info.firewall_status == "Unknown" || system_info.firewall_status == "Inactive" {
+        issues.push(serde_json::json!({
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Firewall Issue"},
+                    "message": {"stringValue": format!("Firewall status: {}", system_info.firewall_status)},
+                    "severity": {"stringValue": if system_info.firewall_status == "Unknown" { "medium" } else { "high" }}
+                }
+            }
         }));
     }
 
@@ -767,10 +897,12 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
             "staffEmail": {"stringValue": staff_email},
             "staffName": {"stringValue": staff_name},
             "department": {"stringValue": department},
+            "deviceType": {"stringValue": if system_info.battery_info.is_some() { "Laptop" } else { "Desktop" }},
             "scanTimestamp": {"timestampValue": Utc::now().to_rfc3339()},
             "cpuUsage": {"doubleValue": system_info.cpu_usage as f64},
             "ramUsage": {"doubleValue": ram_usage_percent},
             "diskSpaceFree": {"doubleValue": disk_free_gb},
+            "diskHealth": {"stringValue": disk_health},
             "batteryHealth": {
                 "doubleValue": system_info.battery_info.as_ref().map(|b| b.percentage as f64).unwrap_or(0.0)
             },
@@ -826,11 +958,14 @@ fn get_memory_usage() -> Result<(u64, u64), String> {
 
 #[tauri::command]
 fn scan_and_submit_device_data(staff_email: String, staff_name: String, department: String) -> Result<String, String> {
+    // Convert department to uppercase for consistency
+    let department_upper = department.to_uppercase();
+
     // Get system info
     let system_info = get_system_info()?;
 
     // Submit to Firebase
-    submit_device_scan(&system_info, &staff_email, &staff_name, &department)?;
+    submit_device_scan(&system_info, &staff_email, &staff_name, &department_upper)?;
 
     // Update last scan time
     update_last_scan_time()?;
@@ -899,9 +1034,125 @@ fn check_and_run_auto_scan(staff_email: String, staff_name: String, department: 
     }
 }
 
+// Register app to start automatically on Windows boot
+#[cfg(target_os = "windows")]
+fn register_auto_start() -> Result<(), Box<dyn std::error::Error>> {
+    use std::process::Command;
+
+    let exe_path = env::current_exe()?;
+    let exe_path_str = exe_path.to_str().ok_or("Invalid path")?;
+
+    // Add --minimized flag so app starts in tray on boot
+    let startup_command = format!("\"{}\" --minimized", exe_path_str);
+
+    // Use reg.exe to add to Windows startup
+    Command::new("reg")
+        .args(&[
+            "add",
+            "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+            "/v",
+            "DeviceMonitor",
+            "/t",
+            "REG_SZ",
+            "/d",
+            &startup_command,
+            "/f"  // Force overwrite if exists
+        ])
+        .output()?;
+
+    println!("✅ Registered app for auto-start on boot (minimized to tray)");
+    Ok(())
+}
+
 fn main() {
+    use tauri::{Manager, menu::{Menu, MenuItem}, tray::{TrayIconBuilder, MouseButton, MouseButtonState}};
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .setup(|app| {
+            // Auto-open DevTools in debug builds with devtools_build feature
+            #[cfg(feature = "devtools_build")]
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                    println!("🔧 DevTools opened automatically (debug build)");
+                }
+            }
+
+            // Register for auto-start on Windows
+            #[cfg(target_os = "windows")]
+            {
+                if let Err(e) = register_auto_start() {
+                    eprintln!("⚠️ Failed to register auto-start: {}", e);
+                }
+            }
+
+            // Check if started from boot (minimized start)
+            let args: Vec<String> = std::env::args().collect();
+            let start_minimized = args.contains(&"--minimized".to_string());
+
+            // Create system tray menu
+            let show_item = MenuItem::with_id(app, "show", "Open Device Monitor", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+
+            // Build system tray icon - MUST keep it alive, not drop it!
+            let tray = TrayIconBuilder::new()
+                .menu(&menu)
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("Device Monitor - Running")
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let tauri::tray::TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            // IMPORTANT: Store tray in app state to prevent it from being dropped!
+            app.manage(tray);
+
+            // Handle window close event - minimize to tray instead of exit
+            if let Some(window) = app.get_webview_window("main") {
+                // Start hidden if launched from boot
+                if start_minimized {
+                    let _ = window.hide();
+                    println!("🚀 Device Monitor started minimized to tray (auto-start)");
+                } else {
+                    println!("🚀 Device Monitor started with window visible");
+                }
+
+                let window_clone = window.clone();
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = window_clone.hide();
+                        println!("✅ Window hidden to tray");
+                    }
+                });
+            }
+
+            println!("🚀 Device Monitor started with system tray");
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             get_system_info,
             get_cpu_usage,

@@ -78,4 +78,13 @@ export interface BudgetContextType {
   getEstimationByDepartment: () => Record<string, { repair: number; replacement: number; count: number }>;
   getDevicesNeedingRepair: () => Record<string, unknown>[];
   getDevicesNeedingReplacement: () => Record<string, unknown>[];
+  getDevicesWithRepairDetails: () => Array<{
+    id: string;
+    deviceId: string;
+    staffName: string;
+    staffEmail: string;
+    department: string;
+    repairCost: number;
+    issues: { name: string; cost: number }[];
+  }>;
 }
