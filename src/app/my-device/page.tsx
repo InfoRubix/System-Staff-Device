@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase';
 import LoadingScreen from '@/components/LoadingScreen';
 import Navigation from '@/components/Navigation';
 import Link from 'next/link';
+import { formatDateTime } from '@/lib/dateFormat';
 
 interface HealthScan {
   id: string;
@@ -88,30 +89,47 @@ export default function MyDevicePage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8" style={{
+        background: 'linear-gradient(135deg, #e3f2fd 0%, #f0f4ff 50%, #e8eeff 100%)',
+      }}>
+        {/* Blurred Background Elements - Large Corner Bubbles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Top Left Corner - Large Blue Bubble with visible border */}
+          <div className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full">
+            <div className="w-full h-full bg-gradient-to-br from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
+          </div>
+
+          {/* Bottom Right Corner - Large Blue Bubble with visible border */}
+          <div className="absolute -bottom-32 -right-32 w-[700px] h-[700px] rounded-full">
+            <div className="w-full h-full bg-gradient-to-tl from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto relative z-10">
         {/* Welcome Header */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Welcome, {user?.email?.split('@')[0]}! 👋
+        <div className="backdrop-blur-2xl bg-green-300/60 border-4 border-white rounded-lg shadow-lg p-8 mb-6">
+          <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">
+            WELCOME · {user?.email?.split('@')[0].toUpperCase()}! 👋
           </h1>
-          <p className="text-gray-600 mt-1">Monitor your device health status</p>
+          <p className="text-gray-600 mt-3 text-sm font-normal">Monitor your device health status</p>
         </div>
 
         {/* Device Health Data - Show if app IS installed */}
         {hasAppInstalled && myDevice ? (
           <div className="space-y-6">
             {/* Status Card */}
-            <div className={`bg-white rounded-lg shadow-md overflow-hidden border-l-4 ${
-              myDevice.overallStatus === 'Healthy' ? 'border-green-500' :
-              myDevice.overallStatus === 'Warning' ? 'border-yellow-500' : 'border-red-500'
+            <div className={`backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg overflow-hidden border-l-8 ${
+              myDevice.overallStatus === 'Healthy' ? 'border-l-green-500' :
+              myDevice.overallStatus === 'Warning' ? 'border-l-yellow-500' : 'border-l-red-500'
             }`}>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">Device Health Status</h2>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Last scan: {myDevice.scanTimestamp.toLocaleString()}
+                    <h2 className="text-3xl font-semibold text-gray-800 tracking-wide uppercase">DEVICE · HEALTH · STATUS</h2>
+                    <p className="text-sm text-gray-600 mt-3 font-normal">
+                      Last scan: {formatDateTime(myDevice.scanTimestamp)}
                     </p>
                   </div>
                   <div className="text-5xl">
@@ -140,8 +158,8 @@ export default function MyDevicePage() {
             </div>
 
             {/* Security Status */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Security Status</h3>
+            <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg p-6">
+              <h3 className="text-2xl font-semibold text-gray-800 tracking-wide uppercase mb-4">SECURITY · STATUS</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-center justify-between">
@@ -164,9 +182,9 @@ export default function MyDevicePage() {
 
             {/* Issues */}
             {myDevice.issues && myDevice.issues.length > 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Issues Detected ({myDevice.issues.length})
+              <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg p-6">
+                <h3 className="text-2xl font-semibold text-gray-800 tracking-wide uppercase mb-4">
+                  ISSUES · DETECTED ({myDevice.issues.length})
                 </h3>
                 <div className="space-y-3">
                   {myDevice.issues.map((issue: any, index: number) => (
@@ -185,8 +203,8 @@ export default function MyDevicePage() {
             )}
 
             {/* System Info */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">System Information</h3>
+            <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg p-6">
+              <h3 className="text-2xl font-semibold text-gray-800 tracking-wide uppercase mb-4">SYSTEM · INFORMATION</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">OS Version</p>
@@ -200,10 +218,10 @@ export default function MyDevicePage() {
             </div>
           </div>
         ) : !hasAppInstalled && (
-          <div className="bg-white rounded-lg shadow-md p-12 text-center">
+          <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg p-12 text-center">
             <div className="text-6xl mb-4">💻</div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">No Scan Data Yet</h2>
-            <p className="text-gray-600 mb-6">
+            <h2 className="text-3xl font-semibold text-gray-800 tracking-wide uppercase mb-4">NO · SCAN · DATA · YET</h2>
+            <p className="text-gray-600 mb-6 font-normal">
               Download and install the monitoring app to start tracking your device health.
             </p>
             <Link

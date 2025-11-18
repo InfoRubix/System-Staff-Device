@@ -149,8 +149,10 @@ function DepartmentCard({ department, stats, onClick }: DepartmentCardProps) {
   return (
     <div
       onClick={onClick}
-      className={`${style.bg} ${style.border} border-2 rounded-lg p-2 sm:p-3 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-md touch-manipulation group relative overflow-hidden`}
+      className={`backdrop-blur-2xl bg-white/30 border-4 ${style.border} rounded-lg p-2 sm:p-3 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-md touch-manipulation group relative overflow-hidden`}
     >
+      {/* Department Color Accent Overlay */}
+      <div className={`absolute inset-0 ${style.bg} opacity-50 rounded-lg`}></div>
 
       <div className="relative z-10">
         {/* Header */}

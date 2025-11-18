@@ -1,12 +1,31 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useDevices } from '../contexts/DeviceContext';
 import { useBudget as _useBudget } from '../contexts/BudgetContext';
 import { useNavigation as _useNavigation } from '../contexts/NavigationContext';
 // Remove unused imports - DEPARTMENTS and Department are not needed in this component
 import BudgetCard from './BudgetCard';
 import Navigation from './Navigation';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface DeviceScan {
+  id: string;
+  deviceId: string;
+  staffName: string;
+  staffEmail: string;
+  department: string;
+  deviceType: string;
+  scanTimestamp: Date;
+  overallStatus: 'Healthy' | 'Warning' | 'Critical';
+  processor: string;
+  installedRAM: string;
+  osVersion: string;
+  systemType: string;
+  graphicsCard: string;
+  totalStorage: string;
+  computerModel: string;
+}
 
 // Dynamic Chart.js imports for better performance
 import dynamic from 'next/dynamic';
@@ -67,7 +86,8 @@ ChartJS.register(
 );
 
 function DataAnalysis() {
-  const { devices, loading } = useDevices();
+  const [deviceScans, setDeviceScans] = useState<DeviceScan[]>([]);
+  const [scansLoading, setScansLoading] = useState(true);
   // const { getDevicesData } = useBudget();
   // const { isNavigating } = useNavigation();
   const [showUpgradePopup, setShowUpgradePopup] = useState(false);
@@ -78,6 +98,54 @@ function DataAnalysis() {
   const [selectedOS, setSelectedOS] = useState<string | null>(null);
   const [showOSDetailModal, setShowOSDetailModal] = useState(false);
 
+  // Fetch device scans from Firebase
+  useEffect(() => {
+    const q = query(
+      collection(db, 'device_scans'),
+      orderBy('scanTimestamp', 'desc'),
+      limit(500) // Limit to 500 most recent scans for better performance
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allScans: DeviceScan[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        allScans.push({
+          id: doc.id,
+          deviceId: data.deviceId,
+          staffName: data.staffName,
+          staffEmail: data.staffEmail || '',
+          department: data.department,
+          deviceType: data.deviceType || 'Desktop',
+          scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
+          overallStatus: data.overallStatus || 'Healthy',
+          processor: data.processor || 'Unknown',
+          installedRAM: data.installedRAM || '0 GB',
+          osVersion: data.osVersion || 'Unknown',
+          systemType: data.systemType || 'Unknown',
+          graphicsCard: data.graphicsCard || 'Unknown',
+          totalStorage: data.totalStorage || '0 GB',
+          computerModel: data.computerModel || 'Unknown'
+        });
+      });
+
+      // Group scans by deviceId and keep only the latest scan for each device
+      const latestScansMap = new Map<string, DeviceScan>();
+      allScans.forEach(scan => {
+        const existing = latestScansMap.get(scan.deviceId);
+        if (!existing || scan.scanTimestamp > existing.scanTimestamp) {
+          latestScansMap.set(scan.deviceId, scan);
+        }
+      });
+
+      const scans = Array.from(latestScansMap.values());
+      setDeviceScans(scans);
+      setScansLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Use budget context devices for consistent OS distribution
   // const budgetDevices = getDevicesData();
 
@@ -87,23 +155,30 @@ function DataAnalysis() {
     setShowOSDetailModal(true);
   };
 
-  // Get devices for selected OS
+  // Get devices for selected OS (using cleaned OS names)
   const selectedOSDevices = useMemo(() => {
-    if (!selectedOS || !devices) return [];
-    return devices.filter(device => device.operatingSystem.trim() === selectedOS);
-  }, [selectedOS, devices]);
+    if (!selectedOS || !deviceScans) return [];
+    // Clean OS name helper (same logic as in osAgeData)
+    const cleanOSName = (osName: string): string => {
+      if (!osName) return 'Unknown';
+      let cleaned = osName.replace(/\s*\([^)]*\)/g, '');
+      cleaned = cleaned.replace(/\s+(Pro|Home|Enterprise|Professional|Education|Ultimate)$/i, '');
+      return cleaned.trim() || 'Unknown';
+    };
+    return deviceScans.filter(scan => cleanOSName(scan.osVersion) === selectedOS);
+  }, [selectedOS, deviceScans]);
 
   // Calculate upgrade status for each device based on real specifications
   const devicesWithUpgradeStatus = useMemo(() => {
-    if (!devices) return [];
+    if (!deviceScans || deviceScans.length === 0) return [];
 
     const currentYear = new Date().getFullYear();
     const cutoffYear = currentYear - 8; // Devices older than 8 years need upgrade
 
-    return devices.map(device => {
+    return deviceScans.map(scan => {
       let needsUpgrade = false;
-      const processor = device.processor.toLowerCase();
-      const ramSize = parseInt(device.ram.replace(/[^\d]/g, ''));
+      const processor = scan.processor.toLowerCase();
+      const ramSize = parseInt(scan.installedRAM.replace(/[^\d]/g, ''));
 
       // Intel generation to year mapping
       const intelGenerations: Record<string, number> = {
@@ -161,20 +236,20 @@ function DataAnalysis() {
       }
 
       // Check device status (broken devices need upgrade/replacement)
-      if (device.status === 'Broken' || device.status === 'Needs Repair') {
+      if (scan.overallStatus === 'Critical' || scan.overallStatus === 'Warning') {
         needsUpgrade = true;
       }
 
       return {
-        ...device,
+        ...scan,
         needsUpgrade
       };
     });
-  }, [devices]);
+  }, [deviceScans]);
 
   // Calculate KPI metrics
   const kpiMetrics = useMemo(() => {
-    if (!devices || devices.length === 0) {
+    if (!deviceScans || deviceScans.length === 0) {
       return {
         upgradePercentage: 0,
         upgradeStats: { upgraded: 0, total: 0 },
@@ -185,7 +260,7 @@ function DataAnalysis() {
       };
     }
 
-    const totalDevices = devices.length;
+    const totalDevices = deviceScans.length;
 
     // 1. Upgrade calculation (using real device specifications)
     const devicesNeedingUpgrade = devicesWithUpgradeStatus.filter(device => device.needsUpgrade).length;
@@ -194,8 +269,8 @@ function DataAnalysis() {
 
     // 2. OS distribution
     const osCounts = { Windows: 0, Android: 0, iOS: 0 };
-    devices.forEach(device => {
-      const os = device.operatingSystem.toLowerCase();
+    deviceScans.forEach(scan => {
+      const os = scan.osVersion.toLowerCase();
       if (os.includes('windows')) osCounts.Windows++;
       else if (os.includes('android')) osCounts.Android++;
       else if (os.includes('macos') || os.includes('ios')) osCounts.iOS++;
@@ -211,8 +286,8 @@ function DataAnalysis() {
     const currentYear = new Date().getFullYear();
     const cutoffYear = currentYear - 8; // CPUs older than 8 years need upgrade
 
-    const devicesNeedingCPUUpgrade = devices.filter(device => {
-      const processor = device.processor.toLowerCase();
+    const devicesNeedingCPUUpgrade = deviceScans.filter(scan => {
+      const processor = scan.processor.toLowerCase();
 
       // Intel generation to year mapping (approximate release years)
       const intelGenerations: Record<string, number> = {
@@ -272,8 +347,8 @@ function DataAnalysis() {
 
     // 4. RAM distribution
     const ramCounts = { under8GB: 0, ram8GB: 0, ram16GBPlus: 0 };
-    devices.forEach(device => {
-      const ramSize = parseInt(device.ram.replace(/[^\d]/g, ''));
+    deviceScans.forEach(scan => {
+      const ramSize = parseInt(scan.installedRAM.replace(/[^\d]/g, ''));
       if (ramSize < 8) ramCounts.under8GB++;
       else if (ramSize === 8) ramCounts.ram8GB++;
       else ramCounts.ram16GBPlus++;
@@ -293,7 +368,7 @@ function DataAnalysis() {
       processorStats: { belowSpec: devicesNeedingCPUUpgrade, total: totalDevices },
       ramDistribution
     };
-  }, [devices, devicesWithUpgradeStatus]);
+  }, [deviceScans, devicesWithUpgradeStatus]);
 
   // PDF Export Function using Professional PDF Service
   const exportToPDF = async () => {
@@ -323,7 +398,7 @@ function DataAnalysis() {
       // Generate the professional PDF report
       const success = await pdfService.exportDataAnalysisReport(
         analysisData,
-        devices || [],
+        deviceScans || [],
         filters
       );
 
@@ -339,11 +414,11 @@ function DataAnalysis() {
     }
   };
 
-  // Monitor devices data changes to ensure chart updates
+  // Monitor device scans data changes to ensure chart updates
   useEffect(() => {
-    // This effect ensures the chart data recalculates when devices change
-    // The deviceTypeData useMemo will automatically trigger when devices updates
-  }, [devices, loading]);
+    // This effect ensures the chart data recalculates when deviceScans change
+    // The deviceTypeData useMemo will automatically trigger when deviceScans updates
+  }, [deviceScans, scansLoading]);
 
   // Removed pageLoading effect - using navigation loading instead
 
@@ -364,33 +439,33 @@ function DataAnalysis() {
 
   // Calculate device status data for pie chart
   const statusData = useMemo(() => {
-    if (!devices) return { labels: [], datasets: [] };
+    if (!deviceScans || deviceScans.length === 0) return { labels: [], datasets: [] };
 
     const statusCounts = {
-      Working: 0,
-      'Needs Repair': 0,
-      'Broken': 0,
+      Healthy: 0,
+      Warning: 0,
+      Critical: 0,
     };
 
-    devices.forEach(device => {
-      if (device.status === 'Working') {
-        statusCounts.Working++;
-      } else if (device.status === 'Needs Repair') {
-        statusCounts['Needs Repair']++;
-      } else if (device.status === 'Broken') {
-        statusCounts['Broken']++;
+    deviceScans.forEach(scan => {
+      if (scan.overallStatus === 'Healthy') {
+        statusCounts.Healthy++;
+      } else if (scan.overallStatus === 'Warning') {
+        statusCounts.Warning++;
+      } else if (scan.overallStatus === 'Critical') {
+        statusCounts.Critical++;
       }
     });
 
     return {
-      labels: ['Working', 'Needs Repair', 'Broken'],
+      labels: ['Healthy', 'Warning', 'Critical'],
       datasets: [
         {
-          data: [statusCounts.Working, statusCounts['Needs Repair'], statusCounts['Broken']],
+          data: [statusCounts.Healthy, statusCounts.Warning, statusCounts.Critical],
           backgroundColor: [
-            '#10B981', // Green for Working
-            '#F59E0B', // Yellow for Needs Repair
-            '#EF4444', // Red for Broken
+            '#10B981', // Green for Healthy
+            '#F59E0B', // Yellow for Warning
+            '#EF4444', // Red for Critical
           ],
           borderColor: [
             '#059669',
@@ -401,11 +476,11 @@ function DataAnalysis() {
         },
       ],
     };
-  }, [devices]);
+  }, [deviceScans]);
 
   // Calculate device type data for pie chart
   const deviceTypeData = useMemo(() => {
-    if (!devices) return { labels: [], datasets: [] };
+    if (!deviceScans || deviceScans.length === 0) return { labels: [], datasets: [] };
 
     const typeCounts = {
       Laptop: 0,
@@ -414,12 +489,11 @@ function DataAnalysis() {
       Phone: 0,
     };
 
-    devices.forEach(device => {
-      if (device.deviceType === 'Laptop') typeCounts.Laptop++;
-      else if (device.deviceType === 'Desktop') typeCounts.Desktop++;
-      else if (device.deviceType === 'Tablet') typeCounts.Tablet++;
-      else if (device.deviceType === 'Phone') typeCounts.Phone++;
-      // 'Both' type devices are handled differently in other contexts
+    deviceScans.forEach(scan => {
+      if (scan.deviceType === 'Laptop') typeCounts.Laptop++;
+      else if (scan.deviceType === 'Desktop') typeCounts.Desktop++;
+      else if (scan.deviceType === 'Tablet') typeCounts.Tablet++;
+      else if (scan.deviceType === 'Phone') typeCounts.Phone++;
     });
 
     return {
@@ -443,11 +517,11 @@ function DataAnalysis() {
         },
       ],
     };
-  }, [devices]);
+  }, [deviceScans]);
 
   // Calculate OS age data for bar chart based on actual device data
   const osAgeData = useMemo(() => {
-    if (!devices || devices.length === 0) return { labels: [], datasets: [] };
+    if (!deviceScans || deviceScans.length === 0) return { labels: [], datasets: [] };
 
     // OS release year mapping for automatic age calculation
     const osReleaseYears: Record<string, number> = {
@@ -496,11 +570,25 @@ function DataAnalysis() {
     const currentYear = new Date().getFullYear();
     const osAgeMap: Record<string, number> = {};
 
-    // Get unique OS names from devices and calculate their ages
-    const uniqueOSNames = [...new Set(devices.map(device => device.operatingSystem.trim()))];
+    // Clean OS names - remove build numbers and version details
+    const cleanOSName = (osName: string): string => {
+      if (!osName) return 'Unknown';
+
+      // Remove anything in parentheses (build numbers like "(26100)")
+      let cleaned = osName.replace(/\s*\([^)]*\)/g, '');
+
+      // Remove "Pro", "Home", "Enterprise" suffixes for consistency
+      cleaned = cleaned.replace(/\s+(Pro|Home|Enterprise|Professional|Education|Ultimate)$/i, '');
+
+      // Trim and return
+      return cleaned.trim() || 'Unknown';
+    };
+
+    // Get unique CLEANED OS names from device scans
+    const uniqueOSNames = [...new Set(deviceScans.map(scan => cleanOSName(scan.osVersion)))];
 
     uniqueOSNames.forEach(osName => {
-      if (osName) {
+      if (osName && osName !== 'Unknown') {
         const osKey = osName.toLowerCase();
         const releaseYear = osReleaseYears[osKey];
 
@@ -508,14 +596,15 @@ function DataAnalysis() {
           const age = Math.max(0, currentYear - releaseYear);
           osAgeMap[osName] = age; // Keep actual age for processing
         } else {
-          // If OS not in mapping, estimate age based on device creation date
-          const devicesWithThisOS = devices.filter(d => d.operatingSystem.trim() === osName);
-          if (devicesWithThisOS.length > 0) {
-            // Use oldest device creation date as estimate
-            const oldestDevice = devicesWithThisOS.reduce((oldest, current) =>
-              current.createdAt < oldest.createdAt ? current : oldest
+          // If OS not in mapping, estimate age based on scan timestamp
+          // Match by CLEANED OS name
+          const scansWithThisOS = deviceScans.filter(s => cleanOSName(s.osVersion) === osName);
+          if (scansWithThisOS.length > 0) {
+            // Use oldest scan timestamp as estimate
+            const oldestScan = scansWithThisOS.reduce((oldest, current) =>
+              current.scanTimestamp < oldest.scanTimestamp ? current : oldest
             );
-            const estimatedAge = Math.floor((Date.now() - oldestDevice.createdAt.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+            const estimatedAge = Math.floor((Date.now() - oldestScan.scanTimestamp.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
             osAgeMap[osName] = estimatedAge;
           }
         }
@@ -532,9 +621,9 @@ function DataAnalysis() {
     const labels = sortedOSNames;
     const ages = sortedOSNames.map(os => Math.max(osAgeMap[os], 0.5)); // Minimum height of 0.5 years for visibility
 
-    // Count how many people/devices use each OS
+    // Count how many devices use each OS (using cleaned names)
     const deviceCounts = sortedOSNames.map(osName => {
-      return devices.filter(device => device.operatingSystem.trim() === osName).length;
+      return deviceScans.filter(scan => cleanOSName(scan.osVersion) === osName).length;
     });
 
     const maxAge = Math.max(...ages);
@@ -557,11 +646,11 @@ function DataAnalysis() {
       maxAge, // Pass maxAge for dynamic Y-axis scaling
       deviceCounts, // Pass device counts for data labels
     };
-  }, [devices]);
+  }, [deviceScans]);
 
   // Calculate issues trend data for line chart based on device status and dates
   const issuesTrendData = useMemo(() => {
-    if (!devices) return { labels: [], datasets: [] };
+    if (!deviceScans || deviceScans.length === 0) return { labels: [], datasets: [] };
 
     // Get the last 12 months
     const currentDate = new Date();
@@ -573,19 +662,19 @@ function DataAnalysis() {
       const monthKey = date.toLocaleDateString('en-US', { month: 'short' });
       monthLabels.push(monthKey);
 
-      // Count devices with issues (Broken, Needs Repair)
-      // that were created or last updated in this month
+      // Count device scans with issues (Warning, Critical)
+      // that were scanned in this month
       let issueCount = 0;
-      devices.forEach(device => {
-        const problemStatuses = ['Broken', 'Needs Repair'];
+      deviceScans.forEach(scan => {
+        const problemStatuses = ['Warning', 'Critical'];
 
-        if (problemStatuses.includes(device.status)) {
-          // Use the most recent date (creation or update) to determine when the issue occurred
-          const relevantDate = device.updatedAt > device.createdAt ? device.updatedAt : device.createdAt;
+        if (problemStatuses.includes(scan.overallStatus)) {
+          // Use scan timestamp to determine when the issue was detected
+          const scanDate = new Date(scan.scanTimestamp);
 
           if (
-            relevantDate.getFullYear() === date.getFullYear() &&
-            relevantDate.getMonth() === date.getMonth()
+            scanDate.getFullYear() === date.getFullYear() &&
+            scanDate.getMonth() === date.getMonth()
           ) {
             issueCount++;
           }
@@ -614,7 +703,7 @@ function DataAnalysis() {
         },
       ],
     };
-  }, [devices]);
+  }, [deviceScans]);
 
   // Chart options
   const statusPieOptions = {
@@ -892,18 +981,35 @@ function DataAnalysis() {
   // Removed old LoadingScreen - using navigation loading instead
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen relative overflow-hidden" style={{
+      background: 'linear-gradient(135deg, #e3f2fd 0%, #f0f4ff 50%, #e8eeff 100%)',
+    }}>
+      {/* Blurred Background Elements - Large Corner Bubbles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Top Left Corner - Large Blue Bubble with visible border */}
+        <div className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full">
+          <div className="w-full h-full bg-gradient-to-br from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+          <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
+        </div>
+
+        {/* Bottom Right Corner - Large Blue Bubble with visible border */}
+        <div className="absolute -bottom-32 -right-32 w-[700px] h-[700px] rounded-full">
+          <div className="w-full h-full bg-gradient-to-tl from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+          <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
+        </div>
+      </div>
+
       {/* Navigation - Excluded from PDF */}
       <div className="pdf-ignore">
         <Navigation />
       </div>
 
       {/* Data Analysis Content - This will be exported to PDF */}
-      <div id="analysis-content" className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 bg-white">
+      <div id="analysis-content" className="w-full px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 backdrop-blur-2xl bg-white/30 border-4 border-white relative z-10">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Data Analysis</h1>
-          <p className="text-sm sm:text-base text-gray-600">Visual insights and analytics for device management</p>
+          <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">DATA · ANALYSIS</h1>
+          <p className="mt-3 text-sm text-gray-600 font-normal">Visual insights and analytics for device management</p>
         </div>
 
         {/* KPI Cards - Responsive grid layout */}
@@ -912,7 +1018,7 @@ function DataAnalysis() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Upgrade Card */}
             <div
-              className="bg-white  rounded-lg shadow-md p-3 sm:p-4 border border-gray-200  cursor-pointer hover:bg-gray-50  transition-colors duration-200"
+              className="backdrop-blur-2xl bg-white/30 rounded-lg shadow-md p-3 sm:p-4 border-4 border-white cursor-pointer hover:bg-white/40 transition-colors duration-200"
               onClick={() => setShowUpgradePopup(true)}
             >
               <div>
@@ -924,7 +1030,7 @@ function DataAnalysis() {
 
             {/* OS Card */}
             <div
-              className="bg-white  rounded-lg shadow-md p-3 sm:p-4 border border-gray-200  cursor-pointer hover:bg-gray-50  transition-colors duration-200"
+              className="backdrop-blur-2xl bg-white/30 rounded-lg shadow-md p-3 sm:p-4 border-4 border-white cursor-pointer hover:bg-white/40 transition-colors duration-200"
               onClick={() => setShowOSPopup(true)}
             >
               <div>
@@ -938,7 +1044,7 @@ function DataAnalysis() {
 
             {/* Processor Card */}
             <div
-              className="bg-white  rounded-lg shadow-md p-3 sm:p-4 border border-gray-200  cursor-pointer hover:bg-gray-50  transition-colors duration-200"
+              className="backdrop-blur-2xl bg-white/30 rounded-lg shadow-md p-3 sm:p-4 border-4 border-white cursor-pointer hover:bg-white/40 transition-colors duration-200"
               onClick={() => setShowProcessorPopup(true)}
             >
               <div>
@@ -950,7 +1056,7 @@ function DataAnalysis() {
 
             {/* RAM Card */}
             <div
-              className="bg-white  rounded-lg shadow-md p-3 sm:p-4 border border-gray-200  cursor-pointer hover:bg-gray-50  transition-colors duration-200"
+              className="backdrop-blur-2xl bg-white/30 rounded-lg shadow-md p-3 sm:p-4 border-4 border-white cursor-pointer hover:bg-white/40 transition-colors duration-200"
               onClick={() => setShowRAMPopup(true)}
             >
               <div>
@@ -972,7 +1078,7 @@ function DataAnalysis() {
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Device Status Chart */}
-          <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-200">
+          <div className="backdrop-blur-2xl bg-white/30 border-4 border-white p-4 sm:p-6 rounded-lg shadow-md">
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Device Status Distribution</h3>
             <div className="h-56 sm:h-64 lg:h-80">
               <Pie
@@ -984,7 +1090,7 @@ function DataAnalysis() {
           </div>
 
           {/* Device Type Chart */}
-          <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-200">
+          <div className="backdrop-blur-2xl bg-white/30 border-4 border-white p-4 sm:p-6 rounded-lg shadow-md">
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Device Type Distribution</h3>
             <div className="h-56 sm:h-64 lg:h-80">
               <Pie
@@ -996,7 +1102,7 @@ function DataAnalysis() {
           </div>
 
           {/* OS Age Chart */}
-          <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-200">
+          <div className="backdrop-blur-2xl bg-white/30 border-4 border-white p-4 sm:p-6 rounded-lg shadow-md">
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Operating System Age Analysis</h3>
             <div className="h-56 sm:h-64 lg:h-80">
               <Bar
@@ -1008,7 +1114,7 @@ function DataAnalysis() {
           </div>
 
           {/* Issues Trend Chart */}
-          <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-200">
+          <div className="backdrop-blur-2xl bg-white/30 border-4 border-white p-4 sm:p-6 rounded-lg shadow-md">
             <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">Device Issues Trend (Last 12 Months)</h3>
             <div className="h-56 sm:h-64 lg:h-80">
               <Line
@@ -1024,8 +1130,11 @@ function DataAnalysis() {
       <div className="mt-8 text-center pdf-ignore">
         <button
           onClick={exportToPDF}
-          disabled={exporting || loading}
-          className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg shadow-sm transition-colors duration-200 disabled:cursor-not-allowed"
+          disabled={exporting || scansLoading}
+          className="inline-flex items-center px-6 py-3
+            md:bg-blue-100 md:border-4 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800
+            bg-blue-600 border-4 border-blue-700 hover:bg-blue-700 hover:border-blue-800 text-white hover:text-white
+            disabled:bg-gray-300 disabled:border-gray-400 disabled:text-gray-500 font-medium rounded-lg shadow-sm transition-colors duration-200 disabled:cursor-not-allowed"
         >
           {exporting ? (
             <>
@@ -1034,8 +1143,7 @@ function DataAnalysis() {
             </>
           ) : (
             <>
-              <span className="mr-2">📊</span>
-              Generate Report
+              GENERATE REPORT
             </>
           )}
         </button>
@@ -1074,7 +1182,7 @@ function DataAnalysis() {
                     <div key={device.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
                         <div className="font-medium text-gray-900">{device.staffName}</div>
-                        <div className="text-sm text-gray-600">{device.deviceModel}</div>
+                        <div className="text-sm text-gray-600">{device.computerModel}</div>
                       </div>
                       <div className={`px-3 py-1 rounded-full text-sm font-medium ${
                         !device.needsUpgrade
@@ -1122,8 +1230,8 @@ function DataAnalysis() {
                 </div>
 
                 <div className="space-y-4">
-                  {devices && devices.length > 0 ? devices.map(device => {
-                    const os = device.operatingSystem.toLowerCase();
+                  {deviceScans && deviceScans.length > 0 ? deviceScans.map(scan => {
+                    const os = scan.osVersion.toLowerCase();
                     let osCategory = 'Other';
                     let osColor = 'bg-gray-100 text-gray-700';
 
@@ -1138,12 +1246,15 @@ function DataAnalysis() {
                       osColor = 'bg-purple-100 text-purple-700';
                     }
 
+                    // Clean OS name for display
+                    const cleanedOS = scan.osVersion.replace(/\s*\([^)]*\)/g, '').replace(/\s+(Pro|Home|Enterprise|Professional|Education|Ultimate)$/i, '').trim();
+
                     return (
-                      <div key={device.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={scan.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <div className="font-medium text-gray-900">{device.staffName}</div>
-                          <div className="text-sm text-gray-600">{device.deviceModel}</div>
-                          <div className="text-xs text-gray-500">{device.operatingSystem}</div>
+                          <div className="font-medium text-gray-900">{scan.staffName}</div>
+                          <div className="text-sm text-gray-600">{scan.computerModel}</div>
+                          <div className="text-xs text-gray-500">{cleanedOS}</div>
                         </div>
                         <div className={`px-3 py-1 rounded-full text-sm font-medium ${osColor}`}>
                           {osCategory}
@@ -1188,8 +1299,8 @@ function DataAnalysis() {
                 </div>
 
                 <div className="space-y-4">
-                  {devices && devices.length > 0 ? devices.map(device => {
-                    const ramSize = parseInt(device.ram.replace(/[^\d]/g, ''));
+                  {deviceScans && deviceScans.length > 0 ? deviceScans.map(scan => {
+                    const ramSize = parseInt(scan.installedRAM.replace(/[^\d]/g, ''));
                     let ramCategory = 'Other';
                     let ramColor = 'bg-gray-100 text-gray-700';
 
@@ -1205,11 +1316,11 @@ function DataAnalysis() {
                     }
 
                     return (
-                      <div key={device.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={scan.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <div className="font-medium text-gray-900">{device.staffName}</div>
-                          <div className="text-sm text-gray-600">{device.deviceModel}</div>
-                          <div className="text-xs text-gray-500">{device.ram}</div>
+                          <div className="font-medium text-gray-900">{scan.staffName}</div>
+                          <div className="text-sm text-gray-600">{scan.computerModel}</div>
+                          <div className="text-xs text-gray-500">{scan.installedRAM}</div>
                         </div>
                         <div className={`px-3 py-1 rounded-full text-sm font-medium ${ramColor}`}>
                           {ramCategory}
@@ -1254,8 +1365,8 @@ function DataAnalysis() {
                 </div>
 
                 <div className="space-y-4">
-                  {devices && devices.length > 0 ? devices.map(device => {
-                    const processor = device.processor.toLowerCase();
+                  {deviceScans && deviceScans.length > 0 ? deviceScans.map(scan => {
+                    const processor = scan.processor.toLowerCase();
                     const currentYear = new Date().getFullYear();
                     const cutoffYear = currentYear - 8;
 
@@ -1311,11 +1422,11 @@ function DataAnalysis() {
                     }
 
                     return (
-                      <div key={device.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={scan.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <div className="font-medium text-gray-900">{device.staffName}</div>
-                          <div className="text-sm text-gray-600">{device.deviceModel}</div>
-                          <div className="text-xs text-gray-500">{device.processor}</div>
+                          <div className="font-medium text-gray-900">{scan.staffName}</div>
+                          <div className="text-sm text-gray-600">{scan.computerModel}</div>
+                          <div className="text-xs text-gray-500">{scan.processor}</div>
                         </div>
                         <div className={`px-3 py-1 rounded-full text-sm font-medium ${
                           needsUpgrade

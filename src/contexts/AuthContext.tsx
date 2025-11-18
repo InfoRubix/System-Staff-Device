@@ -12,10 +12,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Check if user is admin based on email
-  const isAdmin = (email: string | null): boolean => {
-    if (!email) return false;
-    return email === 'admin@company.com' || email.startsWith('admin@');
+  // Check if user is super admin based on role
+  const isAdmin = (user: AuthUser | null): boolean => {
+    if (!user) return false;
+    return user.role === 'super_admin'; // Only super_admin, NOT technician
   };
 
   // Listen for auth state changes
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user,
       isAuthenticated: !!user,
-      isAdmin: isAdmin(user?.email || null),
+      isAdmin: isAdmin(user),
       login,
       signUp,
       logout,

@@ -78,11 +78,8 @@ export const departmentService = {
         .map(dept => dept.name);
     } catch (error) {
       console.error('Error getting active departments:', error);
-      // Fallback to default departments if Firebase fails
-      return [
-        'MARKETING', 'RUBIX', 'CONVEY', 'ACCOUNT', 'HR',
-        'LITIGATION', 'SANCO', 'POT/POC', 'AFC', 'RDHOMES', 'QHOMES'
-      ];
+      // No fallback - must use Firestore departments only
+      return [];
     }
   },
 

@@ -1,88 +1,113 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useDevices } from '../contexts/DeviceContext';
+import { useState, useEffect, useMemo } from 'react';
 import { useDepartments } from '../contexts/DepartmentContext';
+import { staffService, StaffMember } from '../lib/staffService';
 
 interface TransferStaffFormProps {
   onSuccess: (fromDept: string, toDept: string, staffCount: number) => void;
   onCancel: () => void;
 }
 
-interface StaffInfo {
+interface StaffTransfer {
+  staffId: string;
   staffName: string;
-  deviceCount: number;
-  devices: string[]; // device IDs
+  currentDept: string;
+  newDept: string;
+  selected: boolean;
 }
 
 function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
-  const { devices, updateDevice } = useDevices();
   const { departments } = useDepartments();
   const [fromDepartment, setFromDepartment] = useState('');
-  const [toDepartment, setToDepartment] = useState('');
-  const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [staffTransfers, setStaffTransfers] = useState<StaffTransfer[]>([]);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const [isTransferring, setIsTransferring] = useState(false);
 
-  // Get staff grouped by department
-  const staffByDepartment = useMemo(() => {
-    const grouped: Record<string, StaffInfo[]> = {};
-
-    devices.forEach(device => {
-      if (!grouped[device.department]) {
-        grouped[device.department] = [];
+  // Load all staff members
+  useEffect(() => {
+    const loadStaff = async () => {
+      try {
+        setIsLoading(true);
+        const allStaff = await staffService.getAllStaff();
+        setStaffList(allStaff);
+      } catch (err) {
+        console.error('Failed to load staff:', err);
+        setError('Failed to load staff members');
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      const existingStaff = grouped[device.department].find(s => s.staffName === device.staffName);
-      if (existingStaff) {
-        existingStaff.deviceCount++;
-        existingStaff.devices.push(device.id);
-      } else {
-        grouped[device.department].push({
-          staffName: device.staffName,
-          deviceCount: 1,
-          devices: [device.id]
-        });
-      }
+    loadStaff();
+  }, []);
+
+  // Get staff for selected department
+  const departmentStaff = useMemo(() => {
+    if (!fromDepartment) return [];
+    return staffList.filter(staff => staff.department === fromDepartment);
+  }, [staffList, fromDepartment]);
+
+  // Initialize transfer list when department changes
+  useEffect(() => {
+    const transfers: StaffTransfer[] = departmentStaff.map(staff => ({
+      staffId: staff.id,
+      staffName: staff.name,
+      currentDept: staff.department,
+      newDept: staff.department, // Initially same as current
+      selected: false
+    }));
+    setStaffTransfers(transfers);
+  }, [departmentStaff]);
+
+  // Get staff count per department
+  const departmentCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    departments.forEach(dept => {
+      counts[dept] = staffList.filter(s => s.department === dept).length;
     });
+    return counts;
+  }, [staffList, departments]);
 
-    return grouped;
-  }, [devices]);
-
-  const availableStaff = fromDepartment ? (staffByDepartment[fromDepartment] || []) : [];
-  const availableToDepartments = departments.filter(dept => dept !== fromDepartment);
+  const selectedCount = staffTransfers.filter(t => t.selected).length;
 
   const handleSelectAll = () => {
-    if (selectedStaff.length === availableStaff.length) {
-      setSelectedStaff([]);
-    } else {
-      setSelectedStaff(availableStaff.map(staff => staff.staffName));
-    }
+    const allSelected = selectedCount === staffTransfers.length;
+    setStaffTransfers(prev => prev.map(t => ({
+      ...t,
+      selected: !allSelected
+    })));
   };
 
-  const handleStaffToggle = (staffName: string) => {
-    setSelectedStaff(prev =>
-      prev.includes(staffName)
-        ? prev.filter(name => name !== staffName)
-        : [...prev, staffName]
-    );
+  const handleStaffToggle = (staffId: string) => {
+    setStaffTransfers(prev => prev.map(t =>
+      t.staffId === staffId ? { ...t, selected: !t.selected } : t
+    ));
+  };
+
+  const handleDepartmentChange = (staffId: string, newDept: string) => {
+    setStaffTransfers(prev => prev.map(t =>
+      t.staffId === staffId ? { ...t, newDept } : t
+    ));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!fromDepartment.trim()) {
-      setError('Please select source department');
-      return;
-    }
-
-    if (!toDepartment.trim()) {
-      setError('Please select destination department');
-      return;
-    }
+    const selectedStaff = staffTransfers.filter(t => t.selected);
 
     if (selectedStaff.length === 0) {
       setError('Please select at least one staff member to transfer');
+      return;
+    }
+
+    // Check if any selected staff has actually changed department
+    const staffToTransfer = selectedStaff.filter(t => t.newDept !== t.currentDept);
+
+    if (staffToTransfer.length === 0) {
+      setError('Selected staff members are already in their target departments');
       return;
     }
 
@@ -90,33 +115,27 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
     setError('');
 
     try {
-      // Get all devices for selected staff
-      const devicesToUpdate = devices.filter(device =>
-        device.department === fromDepartment &&
-        selectedStaff.includes(device.staffName)
-      );
+      // Group transfers by destination department
+      const transfersByDept = new Map<string, string[]>();
 
-      // Update each device's department
-      const updatePromises = devicesToUpdate.map(device =>
-        updateDevice(device.id, {
-          staffName: device.staffName,
-          department: toDepartment,
-          deviceType: device.deviceType,
-          deviceModel: device.deviceModel,
-          operatingSystem: device.operatingSystem,
-          processor: device.processor,
-          ram: device.ram,
-          graphics: device.graphics,
-          storage: device.storage,
-          status: device.status,
-          notes: device.notes
-        })
-      );
+      staffToTransfer.forEach(transfer => {
+        if (!transfersByDept.has(transfer.newDept)) {
+          transfersByDept.set(transfer.newDept, []);
+        }
+        transfersByDept.get(transfer.newDept)!.push(transfer.staffId);
+      });
 
-      await Promise.all(updatePromises);
+      // Execute transfers for each destination department
+      for (const [newDept, staffIds] of transfersByDept.entries()) {
+        await staffService.transferStaff(staffIds, newDept);
+      }
 
-      onSuccess(fromDepartment, toDepartment, selectedStaff.length);
-    } catch {
+      // Get destination departments for success message
+      const destDepts = Array.from(new Set(staffToTransfer.map(t => t.newDept))).join(', ');
+
+      onSuccess(fromDepartment, destDepts, staffToTransfer.length);
+    } catch (err) {
+      console.error('Transfer failed:', err);
       setError('Failed to transfer staff. Please try again.');
     } finally {
       setIsTransferring(false);
@@ -135,7 +154,6 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 sm:p-6">
-              {/* Header */}
               <div className="text-center mb-4 sm:mb-6">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                   <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,7 +168,6 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
                 </p>
               </div>
 
-              {/* Button */}
               <div className="flex justify-center">
                 <button
                   onClick={onCancel}
@@ -173,136 +190,141 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
     >
       <div className="relative min-h-full flex items-start sm:items-center justify-center p-2 sm:p-4">
         <div
-          className="w-full max-w-2xl bg-white rounded-lg sm:rounded-2xl shadow-2xl border border-gray-200 animate-modal-pop mt-4 sm:mt-0"
+          className="w-full max-w-3xl bg-white rounded-lg sm:rounded-2xl shadow-2xl border border-gray-200 animate-modal-pop mt-4 sm:mt-0"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-4 sm:p-6">
             {/* Header */}
             <div className="text-center mb-4 sm:mb-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-                Transfer Staff Between Departments
+                Transfer Staff
               </h3>
               <p className="text-sm text-gray-600">
-                Move staff members and their devices from one department to another
+                Transfer staff members to different departments
               </p>
             </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Department Selection */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="fromDept" className="block text-sm font-medium text-gray-700 mb-2">
-                    From Department
-                  </label>
-                  <select
-                    id="fromDept"
-                    value={fromDepartment}
-                    onChange={(e) => {
-                      setFromDepartment(e.target.value);
-                      setSelectedStaff([]); // Reset selected staff
-                    }}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="">Select source department</option>
-                    {departments.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept} ({staffByDepartment[dept]?.length || 0} staff)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="toDept" className="block text-sm font-medium text-gray-700 mb-2">
-                    To Department
-                  </label>
-                  <select
-                    id="toDept"
-                    value={toDepartment}
-                    onChange={(e) => setToDepartment(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="">Select destination department</option>
-                    {availableToDepartments.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label htmlFor="fromDept" className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Source Department
+                </label>
+                <select
+                  id="fromDept"
+                  value={fromDepartment}
+                  onChange={(e) => {
+                    setFromDepartment(e.target.value);
+                    setError('');
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  disabled={isLoading}
+                >
+                  <option value="">Choose a department</option>
+                  {departments.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept} ({departmentCounts[dept] || 0} staff)
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Staff Selection */}
-              {fromDepartment && availableStaff.length > 0 && (
+              {/* Staff List */}
+              {fromDepartment && (
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <label className="text-sm font-medium text-gray-700">
-                      Select Staff to Transfer ({availableStaff.length} available)
+                    <label className="text-sm font-semibold text-gray-700">
+                      {fromDepartment} - {departmentStaff.length} Staff Members
                     </label>
-                    <button
-                      type="button"
-                      onClick={handleSelectAll}
-                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      {selectedStaff.length === availableStaff.length ? 'Deselect All' : 'Select All'}
-                    </button>
+                    {departmentStaff.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleSelectAll}
+                        className="text-sm text-green-600 hover:text-green-800 font-medium"
+                      >
+                        {selectedCount === staffTransfers.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                    )}
                   </div>
 
-                  <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
-                    {availableStaff.map((staff) => (
-                      <div
-                        key={staff.staffName}
-                        className="flex items-center justify-between p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                      >
-                        <div className="flex items-center">
+                  {isLoading ? (
+                    <div className="text-center py-8">
+                      <div className="w-8 h-8 border-4 border-gray-300 border-t-green-600 rounded-full animate-spin mx-auto"></div>
+                      <p className="text-sm text-gray-500 mt-2">Loading staff...</p>
+                    </div>
+                  ) : departmentStaff.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                      <p className="text-sm text-gray-500">No staff found in this department</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg bg-gray-50">
+                      {staffTransfers.map((transfer) => (
+                        <div
+                          key={transfer.staffId}
+                          className="flex items-center gap-3 p-3 bg-white border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+                        >
                           <input
                             type="checkbox"
-                            id={`staff-${staff.staffName}`}
-                            checked={selectedStaff.includes(staff.staffName)}
-                            onChange={() => handleStaffToggle(staff.staffName)}
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                            id={`staff-${transfer.staffId}`}
+                            checked={transfer.selected}
+                            onChange={() => handleStaffToggle(transfer.staffId)}
+                            className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
                           />
-                          <div className="ml-3">
-                            <label
-                              htmlFor={`staff-${staff.staffName}`}
-                              className="text-sm font-medium text-gray-900 cursor-pointer"
+
+                          <label
+                            htmlFor={`staff-${transfer.staffId}`}
+                            className="flex-1 text-sm font-medium text-gray-900 cursor-pointer"
+                          >
+                            {transfer.staffName}
+                          </label>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">→</span>
+                            <select
+                              value={transfer.newDept}
+                              onChange={(e) => handleDepartmentChange(transfer.staffId, e.target.value)}
+                              disabled={!transfer.selected}
+                              className={`text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${
+                                transfer.selected
+                                  ? 'bg-white text-gray-900'
+                                  : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                              }`}
                             >
-                              {staff.staffName}
-                            </label>
-                            <p className="text-xs text-gray-500">
-                              {staff.deviceCount} device{staff.deviceCount !== 1 ? 's' : ''}
-                            </p>
+                              {departments.map((dept) => (
+                                <option key={dept} value={dept}>
+                                  {dept}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {fromDepartment && availableStaff.length === 0 && (
-                <div className="text-center py-4">
-                  <p className="text-sm text-gray-500">No staff found in the selected department</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Transfer Summary */}
-              {selectedStaff.length > 0 && fromDepartment && toDepartment && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              {selectedCount > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-start">
-                    <svg className="w-5 h-5 text-blue-500 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-green-500 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>
-                      <p className="text-sm font-medium text-blue-800">Transfer Summary</p>
-                      <p className="text-sm text-blue-600 mt-1">
-                        {selectedStaff.length} staff member{selectedStaff.length !== 1 ? 's' : ''} and their devices will be moved from <strong>{fromDepartment}</strong> to <strong>{toDepartment}</strong>.
+                      <p className="text-sm font-medium text-green-800">Transfer Summary</p>
+                      <p className="text-sm text-green-600 mt-1">
+                        {selectedCount} staff member{selectedCount !== 1 ? 's' : ''} selected for transfer.
+                        <br />
+                        <span className="text-xs text-green-500 italic">
+                          Note: Historical scan data will be preserved with original department.
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -310,8 +332,8 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
               )}
 
               {error && (
-                <p className="text-sm text-red-600 flex items-center">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <p className="text-sm text-red-600 flex items-center bg-red-50 border border-red-200 rounded-lg p-3">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   {error}
@@ -319,7 +341,7 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
               )}
 
               {/* Buttons */}
-              <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4 pt-4">
+              <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
                 <button
                   type="button"
                   onClick={onCancel}
@@ -330,10 +352,10 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
                 </button>
                 <button
                   type="submit"
-                  className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none touch-manipulation"
-                  disabled={isTransferring || !fromDepartment || !toDepartment || selectedStaff.length === 0}
+                  className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none touch-manipulation"
+                  disabled={isTransferring || selectedCount === 0}
                 >
-                  {isTransferring ? 'Transferring...' : `Transfer ${selectedStaff.length || 0} Staff`}
+                  {isTransferring ? 'Transferring...' : `Transfer ${selectedCount} Staff`}
                 </button>
               </div>
             </form>

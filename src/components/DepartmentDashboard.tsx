@@ -8,6 +8,33 @@ import DepartmentCard from './DepartmentCard';
 import DepartmentDetail from './DepartmentDetail';
 import TransferStaffForm from './TransferStaffForm';
 import SuccessToast from './SuccessToast';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { formatDate } from '@/lib/dateFormat';
+
+interface DeviceScan {
+  id: string;
+  deviceId: string;
+  staffName: string;
+  staffEmail: string;
+  department: string;
+  deviceType: string;
+  scanTimestamp: Date;
+  overallStatus: 'Healthy' | 'Warning' | 'Critical';
+  cpuUsage: number;
+  ramUsage: number;
+  diskSpaceFree: number;
+  osVersion: string;
+  antivirusStatus: string;
+  firewallStatus: string;
+  // Hardware specifications from scan
+  processor: string;
+  installedRAM: string;
+  graphicsCard: string;
+  totalStorage: string;
+  computerModel: string;
+  systemType: string;
+}
 
 interface DepartmentDashboardProps {
   onEdit?: (device: Device) => void;
@@ -25,8 +52,10 @@ type DepartmentStats = {
 };
 
 function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTransferStaff: _onTransferStaff }: DepartmentDashboardProps) {
-  const { devices, loading, searchDevices, deleteDevice } = useDevices();
+  const { devices, loading, searchDevices, deleteDevice, refreshDevices } = useDevices();
   const { departments } = useDepartments();
+  const [deviceScans, setDeviceScans] = useState<DeviceScan[]>([]);
+  const [_scansLoading, setScansLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Device[]>([]);
@@ -36,6 +65,67 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
   const [showDeviceModal, setShowDeviceModal] = useState<Device | null>(null);
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Get scan data for the currently displayed device
+  const deviceScanData = useMemo(() => {
+    if (!showDeviceModal) return null;
+    // Find the latest scan for this device by matching staff name
+    return deviceScans.find(scan => scan.staffName === showDeviceModal.staffName);
+  }, [showDeviceModal, deviceScans]);
+
+  // Fetch device scans from Firebase
+  useEffect(() => {
+    const q = query(
+      collection(db, 'device_scans'),
+      orderBy('scanTimestamp', 'desc'),
+      limit(500) // Limit to 500 most recent scans for better performance
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allScans: DeviceScan[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        allScans.push({
+          id: doc.id,
+          deviceId: data.deviceId,
+          staffName: data.staffName,
+          staffEmail: data.staffEmail || '',
+          department: data.department,
+          deviceType: data.deviceType || 'Desktop',
+          scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
+          overallStatus: data.overallStatus || 'Healthy',
+          cpuUsage: data.cpuUsage || 0,
+          ramUsage: data.ramUsage || 0,
+          diskSpaceFree: data.diskSpaceFree || 0,
+          osVersion: data.osVersion || '',
+          antivirusStatus: data.antivirusStatus || '',
+          firewallStatus: data.firewallStatus || '',
+          // Hardware specifications
+          processor: data.processor || 'Unknown',
+          installedRAM: data.installedRAM || '0 GB',
+          graphicsCard: data.graphicsCard || 'Unknown',
+          totalStorage: data.totalStorage || '0 GB',
+          computerModel: data.computerModel || 'Unknown',
+          systemType: data.systemType || 'Unknown'
+        });
+      });
+
+      // Group scans by deviceId and keep only the latest scan for each device
+      const latestScansMap = new Map<string, DeviceScan>();
+      allScans.forEach(scan => {
+        const existing = latestScansMap.get(scan.deviceId);
+        if (!existing || scan.scanTimestamp > existing.scanTimestamp) {
+          latestScansMap.set(scan.deviceId, scan);
+        }
+      });
+
+      const scans = Array.from(latestScansMap.values());
+      setDeviceScans(scans);
+      setScansLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -50,7 +140,7 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
     };
   }, [showDeviceModal]);
 
-  // Group devices by department and calculate stats
+  // Group device scans by department and calculate stats
   const departmentStats = useMemo(() => {
     const stats: Record<Department, DepartmentStats> = {} as Record<Department, DepartmentStats>;
 
@@ -65,18 +155,18 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
       };
     });
 
-    // If no devices, return initialized stats
-    if (!devices) return stats;
+    // If no device scans, return initialized stats
+    if (!deviceScans || deviceScans.length === 0) return stats;
 
     const staffByDepartment: Record<Department, Set<string>> = {} as Record<Department, Set<string>>;
     departments.forEach(dept => {
       staffByDepartment[dept] = new Set();
     });
 
-    devices.forEach(device => {
-      const dept = device.department;
+    deviceScans.forEach(scan => {
+      const dept = scan.department as Department;
 
-      // Ensure department exists in stats - handle devices with departments not in the departments list
+      // Ensure department exists in stats - handle scans with departments not in the departments list
       if (!stats[dept]) {
         stats[dept] = {
           totalDevices: 0,
@@ -93,22 +183,23 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
       }
 
       stats[dept].totalDevices++;
-      staffByDepartment[dept].add(device.staffName);
+      staffByDepartment[dept].add(scan.staffName);
 
-      switch (device.status) {
-        case 'Working':
+      // Map overallStatus to device status
+      switch (scan.overallStatus) {
+        case 'Healthy':
           stats[dept].workingDevices++;
           break;
-        case 'Broken':
-          stats[dept].brokenDevices++;
-          break;
-        case 'Needs Repair':
+        case 'Warning':
           stats[dept].underRepairDevices++;
+          break;
+        case 'Critical':
+          stats[dept].brokenDevices++;
           break;
       }
     });
 
-    // Update staff counts for all departments (both predefined and discovered from devices)
+    // Update staff counts for all departments (both predefined and discovered from scans)
     Object.keys(stats).forEach(dept => {
       if (staffByDepartment[dept]) {
         stats[dept].staffCount = staffByDepartment[dept].size;
@@ -116,28 +207,28 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
     });
 
     return stats;
-  }, [devices, departments]);
+  }, [deviceScans, departments]);
 
-  // Calculate overall summary statistics
+  // Calculate overall summary statistics from device scans
   const overallStats = useMemo(() => {
-    if (!devices) return {
+    if (!deviceScans || deviceScans.length === 0) return {
       totalDevices: 0,
       totalStaff: 0,
       workingDevices: 0,
       issueDevices: 0
     };
 
-    const uniqueStaff = new Set(devices.map(device => device.staffName));
-    const workingDevices = devices.filter(device => device.status === 'Working').length;
-    const issueDevices = devices.filter(device => device.status === 'Broken' || device.status === 'Needs Repair').length;
+    const uniqueStaff = new Set(deviceScans.map(scan => scan.staffName));
+    const workingDevices = deviceScans.filter(scan => scan.overallStatus === 'Healthy').length;
+    const issueDevices = deviceScans.filter(scan => scan.overallStatus === 'Warning' || scan.overallStatus === 'Critical').length;
 
     return {
-      totalDevices: devices.length,
+      totalDevices: deviceScans.length,
       totalStaff: uniqueStaff.size,
       workingDevices,
       issueDevices
     };
-  }, [devices]);
+  }, [deviceScans]);
 
   // Get all devices with issues for the modal
   const issueDevices = useMemo(() => {
@@ -145,7 +236,7 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
     return devices.filter(device => device.status === 'Broken' || device.status === 'Needs Repair')
       .map(device => ({
         ...device,
-        reportedDate: new Date().toLocaleDateString() // Since we don't have actual reported dates
+        reportedDate: formatDate(new Date()) // Since we don't have actual reported dates
       }));
   }, [devices]);
 
@@ -214,10 +305,10 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div className="text-center sm:text-left space-y-2">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-red-800 to-black bg-clip-text text-transparent">
-            Department Overview
+          <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">
+            DEPARTMENT · OVERVIEW
           </h1>
-          <p className="text-sm sm:text-base text-gray-600">
+          <p className="mt-3 text-sm text-gray-600 font-normal">
             Search for staff or click on a department to view details
           </p>
         </div>
@@ -226,7 +317,7 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
           {onAddDepartment && (
             <button
               onClick={onAddDepartment}
-              className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-white rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
+              className="flex-1 sm:flex-none sm:w-auto bg-blue-100 border-4 border-blue-300 hover:bg-blue-200 hover:border-blue-400 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-blue-700 hover:text-blue-800 rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
             >
               <span className="block sm:hidden">Add Dept</span>
               <span className="hidden sm:block">Add Department</span>
@@ -234,7 +325,7 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
           )}
           <button
             onClick={() => setShowTransferForm(true)}
-            className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-white rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
+            className="flex-1 sm:flex-none sm:w-auto bg-green-100 border-4 border-green-300 hover:bg-green-200 hover:border-green-400 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-green-700 hover:text-green-800 rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
           >
             <span className="block sm:hidden">Transfer</span>
             <span className="hidden sm:block">Transfer Staff</span>
@@ -242,7 +333,7 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
           {onDeleteDepartment && (
             <button
               onClick={onDeleteDepartment}
-              className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-white rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
+              className="flex-1 sm:flex-none sm:w-auto bg-red-100 border-4 border-red-300 hover:bg-red-200 hover:border-red-400 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-red-700 hover:text-red-800 rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
             >
               <span className="block sm:hidden">Delete Dept</span>
               <span className="hidden sm:block">Delete Department</span>
@@ -252,7 +343,7 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
       </div>
 
       {/* Global Search Bar */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6">
+      <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-xl shadow-lg p-4 sm:p-6">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,8 +412,8 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
           )}
 
           {!searchLoading && searchResults.length > 0 && (
-            <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 px-4 py-3">
+            <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-md overflow-hidden">
+              <div className="backdrop-blur-xl bg-blue-100/40 border-b border-white/50 px-4 py-3">
                 <div className="flex items-center text-sm text-blue-700 font-medium">
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -481,8 +572,8 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
           className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-screen w-screen z-50 flex items-center justify-center p-4"
           onClick={() => setShowDeleteModal(null)}
         >
-          <div 
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-sm w-full animate-modal-pop"
+          <div
+            className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-2xl max-w-sm w-full animate-modal-pop"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 text-center">
@@ -520,8 +611,8 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
           className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-screen w-screen z-50 flex items-center justify-center p-4"
           onClick={() => setShowIssuesModal(false)}
         >
-          <div 
-            className="bg-white rounded-xl shadow-lg border border-gray-200 max-w-4xl w-full max-h-[80vh] overflow-hidden animate-modal-pop"
+          <div
+            className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-xl shadow-lg max-w-4xl w-full max-h-[80vh] overflow-hidden animate-modal-pop"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="bg-gradient-to-r from-red-50 to-red-100 px-4 py-3 border-b border-red-200">
@@ -621,11 +712,11 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
             className="fixed top-0 left-0 right-0 bottom-0 h-screen w-screen z-50 overflow-y-auto flex items-center justify-center p-4"
             onClick={() => setShowDeviceModal(null)}
           >
-          <div 
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-2xl w-full max-h-[90vh] overflow-hidden animate-modal-pop"
+          <div
+            className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-modal-pop"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
+            <div className="sticky top-0 backdrop-blur-xl bg-white/40 border-b border-white/50 px-6 py-4 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
@@ -670,15 +761,15 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-green-600">Device Model</label>
-                    <p className="text-gray-900">{showDeviceModal.deviceModel || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.computerModel || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-green-600">Device Type</label>
-                    <p className="text-gray-900">{showDeviceModal.deviceType}</p>
+                    <p className="text-gray-900">{deviceScanData?.deviceType || showDeviceModal.deviceType}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-green-600">Operating System</label>
-                    <p className="text-gray-900">{showDeviceModal.operatingSystem || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.osVersion || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-green-600">Status</label>
@@ -699,19 +790,19 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-purple-600">Processor/CPU</label>
-                    <p className="text-gray-900">{showDeviceModal.processor || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.processor || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-purple-600">RAM</label>
-                    <p className="text-gray-900">{showDeviceModal.ram || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.installedRAM || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-purple-600">Graphics/GPU</label>
-                    <p className="text-gray-900">{showDeviceModal.graphics || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.graphicsCard || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-purple-600">Storage</label>
-                    <p className="text-gray-900">{showDeviceModal.storage || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.totalStorage || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -728,22 +819,13 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
             </div>
 
             {/* Action Buttons */}
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4">
-              <div className="flex justify-end space-x-3">
+            <div className="sticky bottom-0 backdrop-blur-xl bg-white/40 border-t border-white/50 px-6 py-4">
+              <div className="flex justify-end">
                 <button
                   onClick={() => setShowDeviceModal(null)}
                   className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
                 >
                   Close
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDeviceModal(null);
-                    handleEdit(showDeviceModal);
-                  }}
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  Edit Device
                 </button>
               </div>
             </div>
@@ -758,6 +840,8 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
           onSuccess={(fromDept: string, toDept: string, staffCount: number) => {
             setShowTransferForm(false);
             setSuccessMessage(`Successfully transferred ${staffCount} staff member${staffCount !== 1 ? 's' : ''} from ${fromDept} to ${toDept}`);
+            // Refresh devices to show updated department assignments
+            refreshDevices();
           }}
           onCancel={() => setShowTransferForm(false)}
         />

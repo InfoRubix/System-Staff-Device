@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { formatDate, formatDateTime, formatTime } from '@/lib/dateFormat';
 
 interface HealthScan {
   id: string;
@@ -50,16 +51,28 @@ export default function DeviceHealthDashboard() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const scans: HealthScan[] = [];
+      const allScans: HealthScan[] = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
-        scans.push({
+        allScans.push({
           id: doc.id,
           ...data,
           scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
           lastUpdate: data.lastUpdate?.toDate(),
         } as HealthScan);
       });
+
+      // Group scans by deviceId and keep only the latest scan for each device
+      const latestScansMap = new Map<string, HealthScan>();
+      allScans.forEach(scan => {
+        const existing = latestScansMap.get(scan.deviceId);
+        if (!existing || scan.scanTimestamp > existing.scanTimestamp) {
+          latestScansMap.set(scan.deviceId, scan);
+        }
+      });
+
+      // Convert map to array
+      const scans = Array.from(latestScansMap.values());
       setHealthScans(scans);
       setLoading(false);
     });
@@ -106,7 +119,7 @@ export default function DeviceHealthDashboard() {
         <StatCard
           title="Total Devices"
           value={stats.total}
-          icon="💻"
+          icon=""
           color="bg-blue-500"
           onClick={() => setFilter('all')}
           active={filter === 'all'}
@@ -114,7 +127,7 @@ export default function DeviceHealthDashboard() {
         <StatCard
           title="Healthy"
           value={stats.healthy}
-          icon="✅"
+          icon=""
           color="bg-green-500"
           onClick={() => setFilter('healthy')}
           active={filter === 'healthy'}
@@ -122,7 +135,7 @@ export default function DeviceHealthDashboard() {
         <StatCard
           title="Warnings"
           value={stats.warning}
-          icon="⚠️"
+          icon=""
           color="bg-yellow-500"
           onClick={() => setFilter('warning')}
           active={filter === 'warning'}
@@ -130,7 +143,7 @@ export default function DeviceHealthDashboard() {
         <StatCard
           title="Critical"
           value={stats.critical}
-          icon="🔴"
+          icon=""
           color="bg-red-500"
           onClick={() => setFilter('critical')}
           active={filter === 'critical'}
@@ -138,7 +151,7 @@ export default function DeviceHealthDashboard() {
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
@@ -180,10 +193,10 @@ export default function DeviceHealthDashboard() {
         </div>
       </div>
 
-      {/* Device Health Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Device Health Cards - Compact List */}
+      <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow">
         {filteredScans.length === 0 ? (
-          <div className="col-span-2 bg-white rounded-lg shadow p-8 text-center">
+          <div className="p-8 text-center">
             <p className="text-gray-500">
               {searchTerm || filter !== 'all'
                 ? 'No devices match your filters'
@@ -191,9 +204,11 @@ export default function DeviceHealthDashboard() {
             </p>
           </div>
         ) : (
-          filteredScans.map((scan) => (
-            <HealthCard key={scan.id} scan={scan} />
-          ))
+          <div className="divide-y divide-gray-200">
+            {filteredScans.map((scan) => (
+              <HealthCard key={scan.id} scan={scan} />
+            ))}
+          </div>
         )}
       </div>
     </div>
@@ -219,7 +234,7 @@ function StatCard({
   return (
     <button
       onClick={onClick}
-      className={`bg-white rounded-lg shadow p-6 transition-all duration-200 cursor-pointer hover:shadow-lg hover:scale-105 text-left w-full ${
+      className={`backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-6 transition-all duration-200 cursor-pointer hover:shadow-lg hover:scale-105 text-left w-full ${
         active ? 'ring-4 ring-blue-300 shadow-xl' : ''
       }`}
     >
@@ -254,166 +269,212 @@ function FilterButton({
   color?: 'blue' | 'green' | 'yellow' | 'red';
 }) {
   const colors = {
-    blue: 'bg-blue-500 hover:bg-blue-600',
-    green: 'bg-green-500 hover:bg-green-600',
-    yellow: 'bg-yellow-500 hover:bg-yellow-600',
-    red: 'bg-red-500 hover:bg-red-600',
+    blue: active ? 'bg-blue-100 border-4 border-blue-300 hover:bg-blue-200 hover:border-blue-400 text-blue-700 hover:text-blue-800' : 'bg-gray-100 border-4 border-gray-300 hover:bg-gray-200 hover:border-gray-400 text-gray-700 hover:text-gray-800',
+    green: active ? 'bg-green-100 border-4 border-green-300 hover:bg-green-200 hover:border-green-400 text-green-700 hover:text-green-800' : 'bg-gray-100 border-4 border-gray-300 hover:bg-gray-200 hover:border-gray-400 text-gray-700 hover:text-gray-800',
+    yellow: active ? 'bg-yellow-100 border-4 border-yellow-300 hover:bg-yellow-200 hover:border-yellow-400 text-yellow-700 hover:text-yellow-800' : 'bg-gray-100 border-4 border-gray-300 hover:bg-gray-200 hover:border-gray-400 text-gray-700 hover:text-gray-800',
+    red: active ? 'bg-red-100 border-4 border-red-300 hover:bg-red-200 hover:border-red-400 text-red-700 hover:text-red-800' : 'bg-gray-100 border-4 border-gray-300 hover:bg-gray-200 hover:border-gray-400 text-gray-700 hover:text-gray-800',
   };
 
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-        active
-          ? `${colors[color]} text-white`
-          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-      }`}
+      className={`px-4 py-2 rounded-lg font-medium transition-colors ${colors[color]}`}
     >
       {label}
     </button>
   );
 }
 
-// Health Card Component
+// Health Card Component - Compact Design
 function HealthCard({ scan }: { scan: HealthScan }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const statusColors = {
-    Healthy: 'bg-green-100 text-green-800 border-green-200',
-    Warning: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    Critical: 'bg-red-100 text-red-800 border-red-200',
+    Healthy: 'bg-green-100 text-green-800',
+    Warning: 'bg-yellow-100 text-yellow-800',
+    Critical: 'bg-red-100 text-red-800',
   };
 
-  const statusIcons = {
-    Healthy: '✅',
-    Warning: '⚠️',
-    Critical: '🔴',
+  const _statusIcons = {
+    Healthy: '',
+    Warning: '',
+    Critical: '',
   };
 
   return (
-    <div
-      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-[1.02]"
-      onClick={() => setIsExpanded(!isExpanded)}
-    >
-      {/* Header */}
-      <div className={`p-4 border-l-4 ${statusColors[scan.overallStatus]}`}>
+    <div className="hover:bg-gray-50 transition-colors">
+      {/* Compact Header - Always Visible */}
+      <div
+        className="p-4 cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
         <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">{scan.staffName}</h3>
-            <p className="text-sm text-gray-600">{scan.department}</p>
+          {/* Left: Staff Name and Department */}
+          <div className="flex items-center gap-3 flex-1">
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">{scan.staffName}</h3>
+              <span className="inline-flex mt-1 px-2 py-0.5 text-xs font-medium text-red-700 bg-red-100 rounded-full">
+                {scan.department}
+              </span>
+            </div>
           </div>
+
+          {/* Right: Status Badge and Arrow */}
           <div className="flex items-center gap-3">
-            <div className="text-3xl">{statusIcons[scan.overallStatus]}</div>
-            <div className="text-gray-400">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${statusColors[scan.overallStatus]}`}>
+              <span className="text-sm font-semibold">{scan.overallStatus}</span>
+            </div>
+            <div className="text-gray-400 text-xl">
               {isExpanded ? '▼' : '▶'}
             </div>
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
-          Last scan: {scan.scanTimestamp.toLocaleString()}
-        </p>
+
+        {!isExpanded && (
+          <p className="text-xs text-gray-500 mt-2">
+            Click for details • Last scan: {formatDate(scan.scanTimestamp)} at {formatTime(scan.scanTimestamp)}
+          </p>
+        )}
       </div>
 
-      {/* Health Metrics */}
-      <div className="p-4 space-y-3">
-        {/* CPU */}
-        <MetricBar
-          label="CPU Usage"
-          value={scan.cpuUsage}
-          max={100}
-          unit="%"
-          color={scan.cpuUsage > 80 ? 'red' : scan.cpuUsage > 60 ? 'yellow' : 'green'}
-        />
-
-        {/* RAM */}
-        <MetricBar
-          label="RAM Usage"
-          value={scan.ramUsage}
-          max={100}
-          unit="%"
-          color={scan.ramUsage > 85 ? 'red' : scan.ramUsage > 70 ? 'yellow' : 'green'}
-        />
-
-        {/* Disk */}
-        <MetricBar
-          label="Disk Free"
-          value={scan.diskSpaceFree}
-          max={500}
-          unit="GB"
-          color={scan.diskSpaceFree < 20 ? 'red' : scan.diskSpaceFree < 50 ? 'yellow' : 'green'}
-        />
-
-        {/* Battery (if laptop) */}
-        {scan.batteryHealth !== undefined && (
-          <MetricBar
-            label="Battery Health"
-            value={scan.batteryHealth}
-            max={100}
-            unit="%"
-            color={scan.batteryHealth < 50 ? 'red' : scan.batteryHealth < 70 ? 'yellow' : 'green'}
-          />
-        )}
-
-        {/* Security Status */}
-        <div className="flex items-center justify-between text-sm pt-2 border-t">
-          <span className="text-gray-600">Antivirus:</span>
-          <span
-            className={`font-medium ${
-              scan.antivirusStatus === 'Active' ? 'text-green-600' : 'text-red-600'
-            }`}
-          >
-            {scan.antivirusStatus}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600">Firewall:</span>
-          <span
-            className={`font-medium ${
-              scan.firewallStatus === 'Active' ? 'text-green-600' : 'text-red-600'
-            }`}
-          >
-            {scan.firewallStatus}
-          </span>
-        </div>
-
-        {/* Issues */}
-        {scan.issues.length > 0 && (
-          <div className="pt-3 border-t">
-            <p className="text-sm font-medium text-gray-700 mb-2">
-              Issues ({scan.issues.length})
+      {/* Expanded Details - Only Show When Clicked */}
+      {isExpanded && (
+        <div className="px-4 pb-4 space-y-4">
+          {/* Scan Info */}
+          <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+            <p className="text-xs text-blue-800">
+              📅 Last scanned: {formatDateTime(scan.scanTimestamp)}
             </p>
-            <div className="space-y-1">
-              {scan.issues.slice(0, isExpanded ? scan.issues.length : 3).map((issue, index) => (
-                <div
-                  key={index}
-                  className={`text-xs p-2 rounded ${
-                    issue.severity === 'critical'
-                      ? 'bg-red-50 text-red-800'
-                      : issue.severity === 'high'
-                      ? 'bg-orange-50 text-orange-800'
-                      : issue.severity === 'medium'
-                      ? 'bg-yellow-50 text-yellow-800'
-                      : 'bg-blue-50 text-blue-800'
+          </div>
+
+          {/* Hardware Metrics */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <span>💻</span> Hardware Health
+            </h4>
+
+            {/* CPU */}
+            <MetricBar
+              label="CPU Usage"
+              value={scan.cpuUsage}
+              max={100}
+              unit="%"
+              color={scan.cpuUsage > 80 ? 'red' : scan.cpuUsage > 60 ? 'yellow' : 'green'}
+            />
+
+            {/* RAM */}
+            <MetricBar
+              label="RAM Usage"
+              value={scan.ramUsage}
+              max={100}
+              unit="%"
+              color={scan.ramUsage > 85 ? 'red' : scan.ramUsage > 70 ? 'yellow' : 'green'}
+            />
+
+            {/* Disk */}
+            <MetricBar
+              label="Disk Free Space"
+              value={scan.diskSpaceFree}
+              max={500}
+              unit="GB"
+              color={scan.diskSpaceFree < 20 ? 'red' : scan.diskSpaceFree < 50 ? 'yellow' : 'green'}
+            />
+
+            {/* Battery (if laptop) */}
+            {scan.batteryHealth !== undefined && (
+              <MetricBar
+                label="Battery Health"
+                value={scan.batteryHealth}
+                max={100}
+                unit="%"
+                color={scan.batteryHealth < 50 ? 'red' : scan.batteryHealth < 70 ? 'yellow' : 'green'}
+              />
+            )}
+
+            {scan.cpuTemp && (
+              <div>
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="text-gray-600">CPU Temperature</span>
+                  <span
+                    className={`font-medium ${
+                      scan.cpuTemp > 80 ? 'text-red-600' : scan.cpuTemp > 70 ? 'text-yellow-600' : 'text-green-600'
+                    }`}
+                  >
+                    {scan.cpuTemp}°C
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Security Status */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <span>🛡️</span> Security Status
+            </h4>
+            <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Antivirus:</span>
+                <span
+                  className={`font-medium ${
+                    scan.antivirusStatus === 'Active' ? 'text-green-600' : 'text-red-600'
                   }`}
                 >
-                  {issue.message}
-                </div>
-              ))}
+                  {scan.antivirusStatus}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Firewall:</span>
+                <span
+                  className={`font-medium ${
+                    scan.firewallStatus === 'Active' ? 'text-green-600' : 'text-red-600'
+                  }`}
+                >
+                  {scan.firewallStatus}
+                </span>
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Expanded Details */}
-        {isExpanded && (
-          <div className="pt-3 border-t mt-3 space-y-2">
-            <p className="text-sm font-medium text-gray-700 mb-2">
-              Device Details
-            </p>
-            <div className="text-xs space-y-1">
+          {/* Issues */}
+          {scan.issues.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <span>⚠️</span> Issues ({scan.issues.length})
+              </h4>
+              <div className="space-y-2">
+                {scan.issues.map((issue, index) => (
+                  <div
+                    key={index}
+                    className={`text-xs p-3 rounded-lg ${
+                      issue.severity === 'critical'
+                        ? 'bg-red-50 text-red-800 border border-red-200'
+                        : issue.severity === 'high'
+                        ? 'bg-orange-50 text-orange-800 border border-orange-200'
+                        : issue.severity === 'medium'
+                        ? 'bg-yellow-50 text-yellow-800 border border-yellow-200'
+                        : 'bg-blue-50 text-blue-800 border border-blue-200'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="font-semibold uppercase">{issue.severity}:</span>
+                      <span>{issue.message}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Device Details */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <span>📋</span> Device Information
+            </h4>
+            <div className="bg-gray-50 p-3 rounded-lg space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Device ID:</span>
-                <span className="font-mono text-gray-900">{scan.deviceId}</span>
+                <span className="font-mono text-gray-900 text-xs">{scan.deviceId}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">OS Version:</span>
@@ -435,48 +496,14 @@ function HealthCard({ scan }: { scan: HealthScan }) {
               </div>
               {scan.lastUpdate && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Last Update:</span>
-                  <span className="text-gray-900">{scan.lastUpdate.toLocaleDateString()}</span>
+                  <span className="text-gray-600">Last System Update:</span>
+                  <span className="text-gray-900">{formatDate(scan.lastUpdate)}</span>
                 </div>
               )}
-              {scan.cpuTemp && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">CPU Temperature:</span>
-                  <span
-                    className={`font-medium ${
-                      scan.cpuTemp > 80 ? 'text-red-600' : scan.cpuTemp > 70 ? 'text-yellow-600' : 'text-green-600'
-                    }`}
-                  >
-                    {scan.cpuTemp}°C
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons in Expanded View */}
-            <div className="flex gap-2 mt-4 pt-3 border-t">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  alert('View full details for ' + scan.staffName);
-                }}
-                className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium rounded transition-colors"
-              >
-                View Full Report
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  alert('Contact ' + scan.staffName);
-                }}
-                className="flex-1 px-3 py-2 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-medium rounded transition-colors"
-              >
-                Contact Staff
-              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

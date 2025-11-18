@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import APP_INFO from '@/config/appInfo';
+import { formatDate } from '@/lib/dateFormat';
 
 interface DownloadRecord {
   id: string;
@@ -133,8 +135,8 @@ export default function DownloadPage() {
         userEmail: user?.email || 'unknown@company.com',
         department: userDepartment, // ✅ Now gets real department from user profile
         downloadDate: new Date(),
-        version: '1.0',
-        platform: 'Windows',
+        version: APP_INFO.version, // ✅ Automatically synced from tauri.conf.json
+        platform: APP_INFO.platform,
       });
 
       // Start download
@@ -187,8 +189,24 @@ export default function DownloadPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
+      <div className="min-h-screen relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8" style={{
+        background: 'linear-gradient(135deg, #e3f2fd 0%, #f0f4ff 50%, #e8eeff 100%)',
+      }}>
+        {/* Blurred Background Elements - Large Corner Bubbles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Top Left Corner - Large Blue Bubble with visible border */}
+          <div className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full">
+            <div className="w-full h-full bg-gradient-to-br from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
+          </div>
+
+          {/* Bottom Right Corner - Large Blue Bubble with visible border */}
+          <div className="absolute -bottom-32 -right-32 w-[700px] h-[700px] rounded-full">
+            <div className="w-full h-full bg-gradient-to-tl from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
+          </div>
+        </div>
+        <div className="max-w-6xl mx-auto relative z-10">
           {/* Admin View - Only Download List */}
           {isAdmin ? (
             <>
@@ -202,17 +220,32 @@ export default function DownloadPage() {
                 </p>
               </div>
 
+              {/* Warning Banner */}
+              <div className="backdrop-blur-2xl bg-orange-50/80 border-4 border-orange-200 rounded-lg shadow-sm p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <svg className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <h3 className="text-sm font-bold text-orange-800 uppercase">⚠️ Important Notice</h3>
+                    <p className="text-sm text-orange-700 mt-1">
+                      Old download records (older than <strong>2 months</strong>) will be automatically deleted to save storage space. Please download and save your reports regularly!
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Download Tracking List for Admin */}
-              <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white">
+              <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg overflow-hidden">
+                <div className="backdrop-blur-xl bg-green-300/60 border-b border-white/50 p-6 text-gray-800">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-2xl font-bold">Download History</h2>
-                      <p className="text-green-100 mt-1">Complete list of all app downloads</p>
+                      <h2 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">DOWNLOAD · HISTORY</h2>
+                      <p className="mt-3 text-sm text-gray-600 font-normal">Complete list of all app downloads</p>
                     </div>
                     <div className="text-right">
                       <div className="text-4xl font-bold">{downloads.length}</div>
-                      <div className="text-sm text-green-100">Total Downloads</div>
+                      <div className="text-sm text-gray-600">Total Downloads</div>
                     </div>
                   </div>
                 </div>
@@ -253,17 +286,7 @@ export default function DownloadPage() {
                                   </span>
                                 </td>
                                 <td className="py-3 px-4 text-gray-600">
-                                  {download.downloadDate.toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric',
-                                    year: 'numeric',
-                                  })}{' '}
-                                  <span className="text-gray-400 text-sm">
-                                    {download.downloadDate.toLocaleTimeString('en-US', {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })}
-                                  </span>
+                                  {formatDate(download.downloadDate)}
                                 </td>
                                 <td className="py-3 px-4">
                                   <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-mono">
@@ -278,7 +301,9 @@ export default function DownloadPage() {
                                 <td className="py-3 px-4 text-center">
                                   <button
                                     onClick={() => handleDeleteRecord(download.id, download.userEmail)}
-                                    className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors"
+                                    className="border-4 p-2 rounded transition-colors
+                                      md:bg-red-100 md:border-red-300 md:hover:bg-red-200 md:hover:border-red-400 md:text-red-700 md:hover:text-red-800
+                                      bg-red-600 border-red-700 text-white"
                                     title="Delete this download record"
                                   >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -316,12 +341,12 @@ export default function DownloadPage() {
               </div>
 
               {/* Main Download Card */}
-              <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+              <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg overflow-hidden">
           {/* Banner */}
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-8 text-white text-center">
+          <div className="backdrop-blur-xl bg-green-300/60 p-8 text-gray-800 text-center border-b border-white/50">
             <div className="text-6xl mb-4">💻</div>
-            <h2 className="text-2xl font-bold mb-2">Device Monitor v1.0</h2>
-            <p className="text-blue-100">
+            <h2 className="text-2xl font-bold mb-2">{APP_INFO.productName} v{APP_INFO.version}</h2>
+            <p className="text-gray-600">
               Automatic health monitoring for Windows computers
             </p>
           </div>
@@ -332,7 +357,10 @@ export default function DownloadPage() {
               <button
                 onClick={handleDownload}
                 disabled={isDownloading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-4 px-8 rounded-lg text-lg shadow-lg transform transition hover:scale-105 disabled:scale-100 inline-flex items-center gap-3"
+                className="border-4 font-bold py-4 px-8 rounded-lg text-lg shadow-lg transform transition inline-flex items-center gap-3
+                  md:bg-blue-100 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800 md:hover:scale-105
+                  bg-blue-600 border-blue-700 text-white
+                  disabled:bg-gray-300 disabled:border-gray-400 disabled:text-gray-500 disabled:scale-100"
               >
                 {isDownloading ? (
                   <>
@@ -362,53 +390,67 @@ export default function DownloadPage() {
                 )}
               </button>
               <p className="text-sm text-gray-500 mt-3">
-                Size: ~8 MB | Version 1.0 | Windows 7/8/10/11
+                Download: {APP_INFO.fileSize} | Installed: {APP_INFO.installedSize} | Version {APP_INFO.version}
               </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {APP_INFO.supportedOS}
+              </p>
+            </div>
+
+            {/* What's New */}
+            <div className="border-t border-gray-200 pt-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                🎉 What&apos;s New in v{APP_INFO.version} ({APP_INFO.releaseDate})
+              </h3>
+              <ul className="space-y-2">
+                {APP_INFO.features.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <span className="text-blue-500 text-xl">•</span>
+                    <span className="text-gray-700 text-sm">{feature}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             {/* Features */}
             <div className="border-t border-gray-200 pt-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                ✨ What this app does:
+                ✨ Key Features:
               </h3>
               <ul className="space-y-3">
-                <li className="flex items-start gap-3">
-                  <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-gray-700">
-                    <strong>Automatic monitoring</strong> - Scans your computer every 2 weeks
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-gray-700">
-                    <strong>Zero disruption</strong> - Runs silently in background
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-gray-700">
-                    <strong>Health checks</strong> - CPU, RAM, disk space, battery, antivirus
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-gray-700">
-                    <strong>Early warnings</strong> - Detect problems before device breaks
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-gray-700">
-                    <strong>Lightweight</strong> - Only 8 MB, uses minimal resources
-                  </span>
-                </li>
+                {APP_INFO.highlights.map((highlight, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <span className="text-2xl">{highlight.icon}</span>
+                    <span className="text-gray-700">
+                      <strong>{highlight.title}</strong> - {highlight.description}
+                    </span>
+                  </li>
+                ))}
               </ul>
+            </div>
+
+            {/* Upgrade Notice */}
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+              <h4 className="font-semibold text-orange-900 mb-2 flex items-center gap-2">
+                <span className="text-xl">⚠️</span>
+                Upgrading from an older version?
+              </h4>
+              <p className="text-sm text-orange-800 mb-3">
+                If you have an older version installed, you must uninstall it first before installing v{APP_INFO.version}:
+              </p>
+              <ol className="text-sm text-orange-800 space-y-2 ml-4">
+                <li><strong>1.</strong> Press <kbd className="bg-orange-100 px-2 py-1 rounded border border-orange-300">Windows + I</kbd> → Open <strong>Settings</strong></li>
+                <li><strong>2.</strong> Go to <strong>Apps</strong> → <strong>Installed apps</strong> (or Apps & features)</li>
+                <li><strong>3.</strong> Search for &quot;<strong>Device Monitor</strong>&quot;</li>
+                <li><strong>4.</strong> Click <strong>Uninstall</strong> → Confirm</li>
+                <li><strong>5.</strong> Download and install the new version from this page</li>
+              </ol>
             </div>
 
             {/* Installation Steps */}
             <div className="border-t border-gray-200 pt-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                📋 How to install:
+                📋 Fresh Installation:
               </h3>
               <ol className="space-y-3">
                 <li className="flex gap-3">
@@ -454,68 +496,53 @@ export default function DownloadPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="font-semibold text-blue-900 mb-2">🔒 Privacy & Security</h4>
               <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Only collects technical data (CPU, RAM, disk space)</li>
-                <li>• No personal files, browsing history, or screenshots</li>
-                <li>• Data encrypted during transfer (HTTPS)</li>
-                <li>• Helps IT team maintain your device proactively</li>
+                {APP_INFO.privacy.map((item, index) => (
+                  <li key={index}>• {item}</li>
+                ))}
               </ul>
-            </div>
-
-            {/* Support */}
-            <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-              <p className="text-gray-600 text-sm mb-2">Need help?</p>
-              <p className="text-gray-500 text-sm">
-                Contact IT Support: <span className="text-blue-600 font-medium">it-support@company.com</span>
-              </p>
             </div>
           </div>
         </div>
 
         {/* System Requirements */}
-        <div className="mt-6 bg-white rounded-lg shadow p-6">
+        <div className="mt-6 backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             💾 System Requirements
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="font-medium text-gray-700">Operating System:</p>
-              <p className="text-gray-600">Windows 7, 8, 10, or 11</p>
+              <p className="text-gray-600">{APP_INFO.supportedOS}</p>
             </div>
             <div>
               <p className="font-medium text-gray-700">Disk Space:</p>
-              <p className="text-gray-600">100 MB free space</p>
+              <p className="text-gray-600">{APP_INFO.minDiskSpace}</p>
             </div>
             <div>
               <p className="font-medium text-gray-700">RAM:</p>
-              <p className="text-gray-600">Minimum 2 GB</p>
+              <p className="text-gray-600">Minimum {APP_INFO.minRAM}</p>
             </div>
             <div>
               <p className="font-medium text-gray-700">Internet:</p>
-              <p className="text-gray-600">Required for data sync</p>
+              <p className="text-gray-600">{APP_INFO.internetRequired ? 'Required for data sync' : 'Not required'}</p>
             </div>
           </div>
         </div>
 
         {/* FAQ */}
-        <div className="mt-6 bg-white rounded-lg shadow p-6">
+        <div className="mt-6 backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">❓ Frequently Asked Questions</h3>
           <div className="space-y-4 text-sm">
             <div>
               <p className="font-medium text-gray-700 mb-1">Will this slow down my computer?</p>
               <p className="text-gray-600">
-                No. The app uses only 20-40 MB of RAM and scans only once every 2 weeks for 2-3 minutes.
+                No. The app is lightweight and runs efficiently in the background without impacting your computer&apos;s performance.
               </p>
             </div>
             <div>
               <p className="font-medium text-gray-700 mb-1">Can I uninstall it later?</p>
               <p className="text-gray-600">
                 Yes. Use standard Windows &quot;Add or Remove Programs&quot; to uninstall anytime.
-              </p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700 mb-1">Will I see pop-ups or notifications?</p>
-              <p className="text-gray-600">
-                No. The app runs silently in the background. You&apos;ll only see a small icon in the system tray.
               </p>
             </div>
             <div>

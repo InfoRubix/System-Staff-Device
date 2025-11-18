@@ -1,8 +1,25 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useDevices } from '../contexts/DeviceContext';
 import { Department, Device } from '../types/device';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface DeviceScan {
+  id: string;
+  deviceId: string;
+  staffName: string;
+  deviceType: string;
+  scanTimestamp: Date;
+  computerModel: string;
+  computerManufacturer: string;
+  osVersion: string;
+  processor: string;
+  installedRAM: string;
+  graphicsCard: string;
+  totalStorage: string;
+}
 
 interface DepartmentDetailProps {
   department: Department;
@@ -15,6 +32,57 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
   const [showDeviceModal, setShowDeviceModal] = useState<Device | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [deviceScans, setDeviceScans] = useState<DeviceScan[]>([]);
+
+  // Load device scans from Firebase
+  useEffect(() => {
+    const q = query(
+      collection(db, 'device_scans'),
+      orderBy('scanTimestamp', 'desc'),
+      limit(500)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allScans: DeviceScan[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        allScans.push({
+          id: doc.id,
+          deviceId: data.deviceId,
+          staffName: data.staffName || '',
+          deviceType: data.deviceType || 'Desktop',
+          scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
+          computerModel: data.computerModel || (data.computerManufacturer ? `${data.computerManufacturer} ${data.computerName || ''}`.trim() : 'Unknown'),
+          computerManufacturer: data.computerManufacturer || 'Unknown',
+          osVersion: data.osVersion || 'N/A',
+          processor: data.processor || 'N/A',
+          installedRAM: data.installedRAM || 'N/A',
+          graphicsCard: data.graphicsCard || 'N/A',
+          totalStorage: data.totalStorage || 'N/A',
+        });
+      });
+
+      // Group by deviceId, keep latest scan
+      const latestScansMap = new Map();
+      allScans.forEach(scan => {
+        const existing = latestScansMap.get(scan.deviceId);
+        if (!existing || scan.scanTimestamp > existing.scanTimestamp) {
+          latestScansMap.set(scan.deviceId, scan);
+        }
+      });
+
+      setDeviceScans(Array.from(latestScansMap.values()));
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Get scan data for the device modal
+  const deviceScanData = useMemo(() => {
+    if (!showDeviceModal) return null;
+    // Find the latest scan for this device by matching staff name
+    return deviceScans.find(scan => scan.staffName === showDeviceModal.staffName);
+  }, [showDeviceModal, deviceScans]);
 
   // Filter devices by department and search query
   const departmentData = useMemo(() => {
@@ -133,15 +201,15 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
       </div>
 
       {/* Department Header */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4 sm:p-6">
+      <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-3 sm:space-x-4">
             <div className={`w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r ${style.gradient} rounded-xl flex items-center justify-center text-white text-lg sm:text-2xl shadow-lg`}>
               {style.icon}
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{department}</h1>
-              <p className="text-sm sm:text-base text-gray-600">Department Overview</p>
+              <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">{department}</h1>
+              <p className="mt-3 text-sm text-gray-600 font-normal">Department Overview</p>
             </div>
           </div>
         </div>
@@ -170,7 +238,7 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
+      <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-md p-4">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -248,18 +316,13 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
 
         {/* Device Table */}
         {!loading && filteredDevices.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+          <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-md overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Staff Name</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Device Type</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Operating System</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 hidden">Processor</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 hidden">RAM</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 hidden">Storage</th>
                     <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">Actions</th>
                   </tr>
                 </thead>
@@ -272,7 +335,6 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
                       onClick={() => setShowDeviceModal(device)}
                     >
                       <td className="px-4 py-4 text-sm font-medium text-gray-900">{device.staffName}</td>
-                      <td className="px-4 py-4 text-sm text-gray-700">{device.deviceType}</td>
                       <td className="px-4 py-4 text-sm">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           device.status === 'Working' ? 'bg-green-100 text-green-800' :
@@ -282,10 +344,6 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
                           {device.status}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-700">{device.operatingSystem || 'N/A'}</td>
-                      <td className="px-4 py-4 text-sm text-gray-700 hidden">{device.processor || 'N/A'}</td>
-                      <td className="px-4 py-4 text-sm text-gray-700 hidden">{device.ram || 'N/A'}</td>
-                      <td className="px-4 py-4 text-sm text-gray-700 hidden">{device.storage || 'N/A'}</td>
                       <td className="px-4 py-4 text-center">
                         <div className="flex justify-center space-x-2">
                           <button
@@ -293,7 +351,7 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
                               e.stopPropagation();
                               handleEdit(device);
                             }}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                            className="bg-blue-100 border-4 border-blue-300 hover:bg-blue-200 hover:border-blue-400 text-blue-700 hover:text-blue-800 px-3 py-1 rounded text-xs font-medium transition-colors"
                           >
                             Edit
                           </button>
@@ -302,7 +360,7 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
                               e.stopPropagation();
                               setShowDeleteModal(device.id);
                             }}
-                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                            className="bg-red-100 border-4 border-red-300 hover:bg-red-200 hover:border-red-400 text-red-700 hover:text-red-800 px-3 py-1 rounded text-xs font-medium transition-colors"
                           >
                             Delete
                           </button>
@@ -323,8 +381,8 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
           className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-screen w-screen z-50 flex items-center justify-center p-4"
           onClick={() => setShowDeleteModal(null)}
         >
-          <div 
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-sm w-full animate-modal-pop"
+          <div
+            className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-2xl max-w-sm w-full animate-modal-pop"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 text-center">
@@ -370,10 +428,10 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
             onClick={() => setShowDeviceModal(null)}
           >
           <div
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-2xl w-full my-8 animate-modal-pop flex flex-col max-h-[90vh]"
+            className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-2xl max-w-2xl w-full my-8 animate-modal-pop flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl">
+            <div className="sticky top-0 backdrop-blur-xl bg-white/40 border-b border-white/50 px-6 py-4 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
@@ -418,15 +476,15 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-green-600">Device Model</label>
-                    <p className="text-gray-900">{showDeviceModal.deviceModel || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.computerModel || showDeviceModal.deviceModel || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-green-600">Device Type</label>
-                    <p className="text-gray-900">{showDeviceModal.deviceType}</p>
+                    <p className="text-gray-900">{deviceScanData?.deviceType || showDeviceModal.deviceType}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-green-600">Operating System</label>
-                    <p className="text-gray-900">{showDeviceModal.operatingSystem || 'N/A'}</p>
+                    <p className="text-gray-900">{deviceScanData?.osVersion || showDeviceModal.operatingSystem || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-green-600">Status</label>
@@ -439,26 +497,26 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
                     </span>
                   </div>
                 </div>
-                
+
                 {/* Hardware Specifications - Sub-section within Device Information */}
                 <div className="mt-4 bg-white rounded-lg p-3 border border-green-300">
                   <h5 className="text-base font-semibold text-green-700 mb-3">Hardware Specifications</h5>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="text-sm font-medium text-gray-600">Processor/CPU</label>
-                      <p className="text-gray-900">{showDeviceModal.processor || 'N/A'}</p>
+                      <p className="text-gray-900">{deviceScanData?.processor || showDeviceModal.processor || 'N/A'}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">RAM</label>
-                      <p className="text-gray-900">{showDeviceModal.ram || 'N/A'}</p>
+                      <p className="text-gray-900">{deviceScanData?.installedRAM || showDeviceModal.ram || 'N/A'}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Graphics/GPU</label>
-                      <p className="text-gray-900">{showDeviceModal.graphics || 'N/A'}</p>
+                      <p className="text-gray-900">{deviceScanData?.graphicsCard || showDeviceModal.graphics || 'N/A'}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Storage</label>
-                      <p className="text-gray-900">{showDeviceModal.storage || 'N/A'}</p>
+                      <p className="text-gray-900">{deviceScanData?.totalStorage || showDeviceModal.storage || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
@@ -476,22 +534,13 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
             </div>
 
             {/* Action Buttons */}
-            <div className="flex-shrink-0 bg-white border-t border-gray-200 px-6 py-4">
-              <div className="flex justify-end space-x-3">
+            <div className="flex-shrink-0 backdrop-blur-xl bg-white/40 border-t border-white/50 px-6 py-4">
+              <div className="flex justify-end">
                 <button
                   onClick={() => setShowDeviceModal(null)}
                   className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
                 >
                   Close
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDeviceModal(null);
-                    handleEdit(showDeviceModal);
-                  }}
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  Edit Device
                 </button>
               </div>
             </div>

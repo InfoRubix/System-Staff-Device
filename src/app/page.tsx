@@ -6,19 +6,21 @@ import { useAuth } from '../contexts/AuthContext';
 import LoginForm from '../components/LoginForm';
 
 export default function Home() {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
   const router = useRouter();
 
   // Redirect based on user role
   useEffect(() => {
-    if (isAuthenticated) {
-      if (isAdmin) {
-        router.push('/dashboard'); // Admin goes to dashboard
+    if (isAuthenticated && user) {
+      if ((user as any).role === 'super_admin') {
+        router.push('/dashboard'); // Super admin goes to dashboard
+      } else if ((user as any).role === 'technician') {
+        router.push('/technician-dashboard'); // Technician goes to technician dashboard
       } else {
         router.push('/my-device'); // Regular user goes to their device page
       }
     }
-  }, [isAuthenticated, isAdmin, router]);
+  }, [isAuthenticated, user, router]);
 
   // Show loading spinner while checking auth state
   if (loading) {

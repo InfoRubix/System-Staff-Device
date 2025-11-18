@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { departmentService } from '../lib/departmentService';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -13,6 +14,8 @@ function LoginForm() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [_loadingDepartments, setLoadingDepartments] = useState(true);
   const { login, signUp } = useAuth();
   const router = useRouter();
 
@@ -42,6 +45,29 @@ function LoginForm() {
       .join(' ');
   };
 
+  // Load departments from Firestore on component mount
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        setLoadingDepartments(true);
+        // Initialize default departments if needed (creates departments collection)
+        await departmentService.initializeDefaultDepartments();
+
+        // Get active departments from Firestore
+        const deptNames = await departmentService.getActiveDepartmentNames();
+        setDepartments(deptNames);
+      } catch (error) {
+        console.error('Failed to load departments:', error);
+        // No fallback - departments must come from Firestore only
+        setDepartments([]);
+      } finally {
+        setLoadingDepartments(false);
+      }
+    };
+
+    loadDepartments();
+  }, []);
+
   // Update name when email changes (only in signup mode)
   const handleEmailChange = (newEmail: string) => {
     setEmail(newEmail);
@@ -52,18 +78,6 @@ function LoginForm() {
       }
     }
   };
-
-  const departments = [
-    'Marketing',
-    'Rubix',
-    'Convey',
-    'Account',
-    'HR',
-    'Litigation',
-    'Sanco',
-    'POT/POC',
-    'AFC'
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,13 +120,36 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4" style={{
+      background: 'linear-gradient(135deg, #e3f2fd 0%, #f0f4ff 50%, #e8eeff 100%)',
+    }}>
+      {/* Blurred Background Elements - Large Corner Bubbles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Top Left Corner - Large Blue Bubble with visible border */}
+        <div className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full">
+          <div className="w-full h-full bg-gradient-to-br from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+          <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
+        </div>
+
+        {/* Bottom Right Corner - Large Blue Bubble with visible border */}
+        <div className="absolute -bottom-32 -right-32 w-[700px] h-[700px] rounded-full">
+          <div className="w-full h-full bg-gradient-to-tl from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+          <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
+        </div>
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4">💻</div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Device Management System
+          <div className="mb-6 flex justify-center">
+            <img
+              src="/computer-logo.png"
+              alt="Device Management System"
+              className="w-56 h-auto object-contain drop-shadow-lg"
+            />
+          </div>
+          <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase mb-2">
+            DEVICE · MANAGEMENT · SYSTEM
           </h1>
           <p className="text-gray-600">
             {isSignUp ? 'Create your account' : 'Sign in to continue'}
@@ -120,7 +157,7 @@ function LoginForm() {
         </div>
 
         {/* Login/Signup Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Input */}
             <div>
@@ -219,7 +256,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+              className="w-full bg-blue-100 border-4 border-blue-300 hover:bg-blue-200 hover:border-blue-400 disabled:bg-gray-300 disabled:border-gray-400 text-blue-700 hover:text-blue-800 disabled:text-gray-500 font-semibold py-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -252,7 +289,7 @@ function LoginForm() {
           {/* Info for new users */}
           {isSignUp && (
             <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-900 font-medium mb-2">📱 For Staff Members:</p>
+              <p className="text-sm text-blue-900 font-medium mb-2">For Staff Members:</p>
               <ul className="text-xs text-blue-800 space-y-1">
                 <li>• Use your company email address</li>
                 <li>• After signup, download the monitoring app</li>

@@ -1,6 +1,6 @@
 {
   "productName": "Device Monitor",
-  "version": "0.1.0",
+  "version": "1.5.0",
   "identifier": "com.devicemonitor.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "title": "Device Monitor - Login",
-        "url": "device-login/index.html",
+        "url": "device-login.html",
         "width": 600,
         "height": 750,
         "minWidth": 500,
@@ -22,6 +22,7 @@
         "fullscreen": false,
         "decorations": true,
         "center": true,
+        "skipTaskbar": false,
         "devtools": true
       }
     ],
@@ -31,7 +32,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

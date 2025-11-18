@@ -6,6 +6,7 @@ import { DepartmentProvider } from "../contexts/DepartmentContext";
 import { BudgetProvider } from "../contexts/BudgetContext";
 import { NavigationProvider } from "../contexts/NavigationContext";
 import NavigationLoadingScreen from "../components/NavigationLoadingScreen";
+import NotificationPrompt from "../components/NotificationPrompt";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -39,6 +40,7 @@ export default function RootLayout({
               <BudgetProvider>
                 <NavigationProvider>
                   <NavigationLoadingScreen />
+                  <NotificationPrompt />
                   {children}
                 </NavigationProvider>
               </BudgetProvider>

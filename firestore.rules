@@ -7,10 +7,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper function to check if user is admin
+    // Helper function to check if user is super admin
     function isAdmin() {
       return isSignedIn() &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin';
     }
 
     // Users collection - users can read their own data, admins can read/write all
@@ -28,8 +28,10 @@ service cloud.firestore {
         request.auth.token.email == resource.data.staffEmail || isAdmin()
       );
 
-      // Only admins can write (desktop app uses REST API with API key, bypasses these rules)
-      allow create, update, delete: if isAdmin();
+      // Allow create/update for anyone (desktop app uses REST API with API key)
+      // Note: REST API with API key doesn't bypass rules, so we allow unauthenticated writes
+      allow create, update: if true;
+      allow delete: if isAdmin();
     }
 
     // Device health collection - authenticated users can read, only admins can write
@@ -45,14 +47,18 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Staff collection - only admins can read/write
+    // Staff collection - allow create/update for desktop app via API key
     match /staff/{staffId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      // Allow create/update for anyone (desktop app uses REST API with API key)
+      allow create, update: if true;
+      allow delete: if isAdmin();
     }
 
-    // Departments collection - only admins can read/write
+    // Departments collection - PUBLIC READ for signup page, admin write
     match /departments/{departmentId} {
-      allow read, write: if isAdmin();
+      allow read: if true; // PUBLIC READ - anyone can read departments (needed for signup dropdown)
+      allow write: if isAdmin();
     }
 
     // System logs - only admins can read/write
@@ -63,8 +69,8 @@ service cloud.firestore {
     // Device scans collection - devices can write with valid token, users can read their own
     match /device_scans/{scanId} {
       allow read: if isSignedIn();
-      // Devices can create scans (will need to validate device_token in backend)
-      allow create: if request.auth != null;
+      // Allow create for anyone (desktop app uses REST API with API key)
+      allow create: if true;
       allow update, delete: if isAdmin();
     }
 
@@ -79,6 +85,20 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if isSignedIn();
       allow create, update, delete: if isAdmin();
+    }
+
+    // Repair remarks collection - only admins can read/write remarks
+    match /repair_remarks/{remarkId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Assigned repairs collection - admins can write, technicians can read/update their own
+    match /assigned_repairs/{repairId} {
+      allow read, update: if isSignedIn() && (
+        request.auth.token.email == resource.data.technicianEmail ||
+        isAdmin()
+      );
+      allow create, delete: if isAdmin();
     }
 
     // Default deny all other collections

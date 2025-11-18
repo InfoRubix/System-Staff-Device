@@ -6,13 +6,15 @@ import {
   User,
   UserCredential
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
 export interface AuthUser {
   uid: string;
   email: string | null;
   displayName: string | null;
+  role?: string; // 'super_admin', 'technician', 'user'
+  department?: string;
 }
 
 export const authService = {
@@ -21,11 +23,17 @@ export const authService = {
     try {
       const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
+
+      // Fetch user role and department from Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.data();
+
       return {
         uid: user.uid,
         email: user.email,
-        displayName: user.displayName
+        displayName: user.displayName || userData?.name,
+        role: userData?.role || 'user',
+        department: userData?.department
       };
     } catch (error) {
       console.error('Sign in error:', error);
@@ -41,10 +49,11 @@ export const authService = {
       const user = userCredential.user;
 
       // Create user document in Firestore with profile data
+      // Convert department to uppercase for consistency
       await setDoc(doc(db, 'users', user.uid), {
         email: user.email,
         name: name,
-        department: department,
+        department: department.toUpperCase(),
         role: 'user', // Default role
         createdAt: new Date(),
         updatedAt: new Date()
@@ -78,13 +87,30 @@ export const authService = {
 
   // Listen to auth state changes
   onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void {
-    return onAuthStateChanged(auth, (user) => {
+    return onAuthStateChanged(auth, async (user) => {
       if (user) {
-        callback({
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName
-        });
+        // Fetch user role and department from Firestore
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          const userData = userDoc.data();
+
+          callback({
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || userData?.name,
+            role: userData?.role || 'user',
+            department: userData?.department
+          });
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          // Fallback without role/department
+          callback({
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            role: 'user'
+          });
+        }
       } else {
         callback(null);
       }
