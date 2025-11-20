@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import LoginForm from '../components/LoginForm';
 
 export default function Home() {
-  const { isAuthenticated, user, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const router = useRouter();
 
   // Redirect based on user role
