@@ -262,7 +262,7 @@ export default function UserManagementPage() {
                 </svg>
                 Back to Dashboard
               </button>
-              <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">USER · MANAGEMENT</h1>
+              <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">USER . MANAGEMENT</h1>
               <p className="mt-3 text-sm text-gray-600 font-normal">Manage staff members and their accounts</p>
             </div>
             <div className="flex items-center gap-6">
