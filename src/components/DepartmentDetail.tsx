@@ -126,11 +126,7 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
     setShowDeleteModal(null);
   };
 
-  const handleEdit = (device: Device) => {
-    if (onEdit) {
-      onEdit(device);
-    }
-  };
+  // handleEdit removed - devices are scanned automatically, no manual editing needed
 
   // Get department color scheme
   const getDepartmentStyle = (dept: Department) => {

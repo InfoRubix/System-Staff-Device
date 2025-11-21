@@ -114,8 +114,8 @@ function sendCriticalDeviceAlert(scan: DeviceScan) {
   try {
     const audio = new Audio('/notification-sound.mp3');
     audio.volume = 0.5;
-    audio.play().catch(err => console.log('Could not play sound:', err));
-  } catch (error) {
+    audio.play().catch(_err => console.log('Could not play sound'));
+  } catch {
     console.log('Audio notification not supported');
   }
 }
