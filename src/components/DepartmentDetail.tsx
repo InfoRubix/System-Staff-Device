@@ -27,7 +27,7 @@ interface DepartmentDetailProps {
   onEdit?: (device: Device) => void;
 }
 
-function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps) {
+function DepartmentDetail({ department, onBack, onEdit: _onEdit }: DepartmentDetailProps) {
   const { devices, deleteDevice, loading } = useDevices();
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
   const [showDeviceModal, setShowDeviceModal] = useState<Device | null>(null);
