@@ -7,7 +7,6 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import LoadingScreen from '@/components/LoadingScreen';
 import Navigation from '@/components/Navigation';
-import { useNavigation } from '@/contexts/NavigationContext';
 import { formatDateTime } from '@/lib/dateFormat';
 
 interface HealthScan {
@@ -31,7 +30,6 @@ interface HealthScan {
 export default function MyDevicePage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { navigate } = useNavigation();
   const [isLoading, setIsLoading] = useState(true);
   const [myDevice, setMyDevice] = useState<HealthScan | null>(null);
   const [hasAppInstalled, setHasAppInstalled] = useState(false);
@@ -226,7 +224,7 @@ export default function MyDevicePage() {
               Download and install the monitoring app to start tracking your device health.
             </p>
             <button
-              onClick={() => navigate('/download')}
+              onClick={() => router.push('/download')}
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
