@@ -2,17 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePathname } from 'next/navigation';
 import { notificationService } from '@/lib/notificationService';
 
 export default function NotificationPrompt() {
   const { user, isAdmin } = useAuth();
+  const pathname = usePathname();
   const [showPrompt, setShowPrompt] = useState(false);
   const [isEnabling, setIsEnabling] = useState(false);
 
   useEffect(() => {
     const checkNotificationStatus = async () => {
-      // Only show for super admins
-      if (!isAdmin || !user) {
+      // Only show for super admins, not on login/signup pages
+      const isLoginOrSignup = pathname === '/' || pathname === '/signup';
+
+      if (!isAdmin || !user || isLoginOrSignup) {
         setShowPrompt(false);
         return;
       }
@@ -28,7 +32,7 @@ export default function NotificationPrompt() {
     };
 
     checkNotificationStatus();
-  }, [isAdmin, user]);
+  }, [isAdmin, user, pathname]);
 
   const handleEnable = async () => {
     if (!user) return;

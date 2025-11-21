@@ -139,12 +139,12 @@ export default function DownloadPage() {
         platform: APP_INFO.platform,
       });
 
-      // Start download
-      window.location.href = '/downloads/DeviceMonitorSetup.exe';
+      // Start download from Google Drive
+      window.location.href = 'https://drive.google.com/uc?export=download&id=1yHxW_dkgvdWqOecqargDJG3SHXOmzfQO';
     } catch (error) {
       console.error('Error logging download:', error);
       // Still allow download even if logging fails
-      window.location.href = '/downloads/DeviceMonitorSetup.exe';
+      window.location.href = 'https://drive.google.com/uc?export=download&id=1yHxW_dkgvdWqOecqargDJG3SHXOmzfQO';
     } finally {
       setTimeout(() => setIsDownloading(false), 2000);
     }
