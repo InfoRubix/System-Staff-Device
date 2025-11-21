@@ -42,6 +42,13 @@ export default function UserManagementPage() {
   } | null>(null);
   const [departments, setDepartments] = useState<string[]>([]);
 
+  // Reset Database Modal States
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [showResetSuccessModal, setShowResetSuccessModal] = useState(false);
+
   // Load staff
   useEffect(() => {
     loadStaff();
@@ -227,6 +234,45 @@ export default function UserManagementPage() {
     }
   };
 
+  const handleResetDatabase = async () => {
+    if (resetConfirmText !== 'RESET') {
+      setResetError('Please type RESET to confirm');
+      return;
+    }
+
+    setIsResetting(true);
+    setResetError('');
+
+    try {
+      // Call API to reset database
+      const response = await fetch('/api/resetDatabase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to reset database');
+      }
+
+      const result = await response.json();
+
+      // Show success modal
+      setShowResetModal(false);
+      setResetConfirmText('');
+      setShowResetSuccessModal(true);
+
+      console.log('✅ Database reset successful:', result);
+    } catch (error: any) {
+      console.error('Failed to reset database:', error);
+      setResetError(error.message || 'Failed to reset database. Please try again.');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const uniqueDepartments = Array.from(new Set(staff.map(s => s.department))).sort();
 
   return (
@@ -265,19 +311,17 @@ export default function UserManagementPage() {
               <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">USER . MANAGEMENT</h1>
               <p className="mt-3 text-sm text-gray-600 font-normal">Manage staff members and their accounts</p>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 sm:px-6 sm:py-3
-                  md:bg-blue-100 md:border-4 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800
-                  bg-blue-600 border-4 border-blue-700 text-white
-                  font-semibold rounded-lg transition-colors flex items-center gap-2 shadow-md hover:shadow-lg"
+                className="px-4 py-2 sm:px-6 sm:py-3 md:bg-blue-100 md:border-4 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800 bg-blue-600 border-4 border-blue-700 text-white font-semibold rounded-lg transition-colors flex items-center gap-2 shadow-md hover:shadow-lg"
               >
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 <span className="text-sm sm:text-base">Create Technician</span>
               </button>
+              {/* Reset Database button hidden - Firebase Admin SDK not configured */}
               <div className="text-right">
                 <div className="text-2xl font-bold text-blue-600">{staff.length}</div>
                 <div className="text-sm text-gray-500">Total Users</div>
@@ -473,10 +517,7 @@ export default function UserManagementPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <button
                           onClick={() => setShowDeleteModal(member)}
-                          className="inline-flex items-center px-3 py-1 border-4 text-xs font-medium rounded-md
-                            md:bg-red-100 md:hover:bg-red-200 md:border-red-300 md:hover:border-red-400 md:text-red-700 md:hover:text-red-800
-                            bg-red-600 border-red-700 text-white
-                            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                          className="inline-flex items-center px-3 py-1 border-4 text-xs font-medium rounded-md md:bg-red-100 md:hover:bg-red-200 md:border-red-300 md:hover:border-red-400 md:text-red-700 md:hover:text-red-800 bg-red-600 border-red-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
                         >
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -496,11 +537,11 @@ export default function UserManagementPage() {
       {/* Create Technician Modal */}
       {showCreateModal && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
           onClick={() => !isCreating && setShowCreateModal(false)}
         >
           <div
-            className="bg-white border border-gray-200 rounded-2xl shadow-2xl max-w-lg w-full animate-modal-pop"
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-modal-pop"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
@@ -637,20 +678,14 @@ export default function UserManagementPage() {
                 <button
                   onClick={() => setShowCreateModal(false)}
                   disabled={isCreating}
-                  className="flex-1 px-4 py-2
-                    md:bg-gray-200 md:hover:bg-gray-300 md:text-gray-700
-                    bg-gray-600 text-white
-                    rounded-lg font-medium transition-colors disabled:opacity-50"
+                  className="flex-1 px-4 py-2 md:bg-gray-200 md:hover:bg-gray-300 md:text-gray-700 bg-gray-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreateTechnician}
                   disabled={isCreating}
-                  className="flex-1 px-4 py-2 border-4
-                    md:bg-blue-100 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800
-                    bg-blue-600 border-blue-700 text-white
-                    rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center"
+                  className="flex-1 px-4 py-2 border-4 md:bg-blue-100 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800 bg-blue-600 border-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center"
                 >
                   {isCreating ? (
                     <>
@@ -675,10 +710,10 @@ export default function UserManagementPage() {
       {/* Success Modal - Show Password */}
       {showSuccessModal && createdTechnicianInfo && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
         >
           <div
-            className="bg-white border border-gray-200 rounded-2xl shadow-2xl max-w-lg w-full animate-modal-pop"
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-modal-pop"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
@@ -764,10 +799,7 @@ export default function UserManagementPage() {
                     setCreatedTechnicianInfo(null);
                   }
                 }}
-                className="w-full px-4 py-3 border-4
-                  md:bg-green-100 md:border-green-300 md:hover:bg-green-200 md:hover:border-green-400 md:text-green-700 md:hover:text-green-800
-                  bg-green-600 border-green-700 text-white
-                  rounded-lg font-medium transition-colors"
+                className="w-full px-4 py-3 border-4 md:bg-green-100 md:border-green-300 md:hover:bg-green-200 md:hover:border-green-400 md:text-green-700 md:hover:text-green-800 bg-green-600 border-green-700 text-white rounded-lg font-medium transition-colors"
               >
                 Done - Close
               </button>
@@ -779,11 +811,11 @@ export default function UserManagementPage() {
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
           onClick={() => !isDeleting && setShowDeleteModal(null)}
         >
           <div
-            className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-2xl max-w-md w-full animate-modal-pop"
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-modal-pop"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
@@ -828,22 +860,24 @@ export default function UserManagementPage() {
 
               <div className="text-xs text-red-600 text-center mb-6 space-y-2">
                 <p className="font-semibold">⚠️ This action cannot be undone!</p>
-                <p>All Firestore data will be permanently deleted:</p>
+                <p>The following will be permanently deleted:</p>
                 <ul className="text-left inline-block">
-                  <li>• User profile</li>
-                  <li>• All device scans ({showDeleteModal.scanCount || 0})</li>
+                  <li>• User profile from database</li>
                   <li>• Download history</li>
                   {showDeleteModal.role === 'technician' && (
                     <li className="text-red-700 font-bold">• All assigned repairs (as technician)</li>
                   )}
                 </ul>
+                <p className="text-green-600 bg-green-50 p-2 rounded mt-3">
+                  📊 <strong>Device Scans Preserved:</strong> All device scan history ({showDeleteModal.scanCount || 0} scans) will be kept for historical records. Scans are tied to devices, not user accounts.
+                </p>
                 {showDeleteModal.role === 'technician' && (
                   <p className="text-red-700 bg-red-50 p-2 rounded mt-3 font-semibold border border-red-200">
                     🔧 <strong>Warning:</strong> This is a technician. All their assigned repairs will be permanently deleted!
                   </p>
                 )}
                 <p className="text-orange-600 bg-orange-50 p-2 rounded mt-3">
-                  ℹ️ <strong>Note:</strong> Firebase Auth login will NOT be deleted. To fully remove access, also delete from Firebase Console → Authentication.
+                  🔐 <strong>Firebase Auth Account:</strong> Login credentials will remain in Firebase Authentication. Admin must manually delete from Firebase Console → Authentication if needed. User cannot login without database profile.
                 </p>
               </div>
 
@@ -858,20 +892,14 @@ export default function UserManagementPage() {
                 <button
                   onClick={() => setShowDeleteModal(null)}
                   disabled={isDeleting}
-                  className="flex-1 px-4 py-2
-                    md:bg-gray-200 md:hover:bg-gray-300 md:text-gray-700
-                    bg-gray-600 text-white
-                    rounded-lg font-medium transition-colors disabled:opacity-50"
+                  className="flex-1 px-4 py-2 md:bg-gray-200 md:hover:bg-gray-300 md:text-gray-700 bg-gray-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={isDeleting}
-                  className="flex-1 px-4 py-2 border-4
-                    md:bg-red-100 md:border-red-300 md:hover:bg-red-200 md:hover:border-red-400 md:text-red-700 md:hover:text-red-800
-                    bg-red-600 border-red-700 text-white
-                    rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center"
+                  className="flex-1 px-4 py-2 border-4 md:bg-red-100 md:border-red-300 md:hover:bg-red-200 md:hover:border-red-400 md:text-red-700 md:hover:text-red-800 bg-red-600 border-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center"
                 >
                   {isDeleting ? (
                     <>
@@ -884,6 +912,139 @@ export default function UserManagementPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Database Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-modal-pop">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold text-red-600 flex items-center gap-2">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Reset & Seed Database
+              </h3>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                <p className="text-red-800 font-bold text-lg mb-2">⚠️ DANGER ZONE ⚠️</p>
+                <p className="text-red-700 text-sm mb-3">This will permanently DELETE ALL DATA:</p>
+                <ul className="text-red-700 text-sm space-y-1 ml-4">
+                  <li>• All users from Firebase Authentication</li>
+                  <li>• All staff profiles</li>
+                  <li>• All departments</li>
+                  <li>• All devices</li>
+                  <li>• All device scans</li>
+                  <li>• All repairs</li>
+                  <li>• ALL other data</li>
+                </ul>
+              </div>
+
+              <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                <p className="text-green-800 font-bold mb-2">✅ New Super Admin will be created:</p>
+                <ul className="text-green-700 text-sm space-y-1 ml-4">
+                  <li>• Email: <span className="font-mono font-bold">admin.company@gmail.com</span></li>
+                  <li>• Password: <span className="font-mono font-bold">12345678admin</span></li>
+                  <li>• Role: Super Admin</li>
+                </ul>
+              </div>
+
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+                <p className="text-yellow-800 font-bold mb-2">⚡ You will be logged out!</p>
+                <p className="text-yellow-700 text-sm">After reset, login with the new admin credentials above.</p>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Type <span className="text-red-600 font-mono">RESET</span> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={resetConfirmText}
+                  onChange={(e) => {
+                    setResetConfirmText(e.target.value);
+                    setResetError('');
+                  }}
+                  placeholder="Type RESET"
+                  className="w-full px-4 py-3 border-4 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 font-mono text-center text-lg"
+                />
+              </div>
+
+              {resetError && (
+                <p className="text-sm text-red-600 text-center bg-red-50 border border-red-200 rounded-lg p-2">
+                  {resetError}
+                </p>
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowResetModal(false);
+                  setResetConfirmText('');
+                  setResetError('');
+                }}
+                disabled={isResetting}
+                className="flex-1 px-4 py-2 md:bg-gray-200 md:hover:bg-gray-300 md:text-gray-700 bg-gray-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResetDatabase}
+                disabled={isResetting || resetConfirmText !== 'RESET'}
+                className="flex-1 px-4 py-2 border-4 md:bg-red-100 md:border-red-300 md:hover:bg-red-200 md:hover:border-red-400 md:text-red-700 md:hover:text-red-800 bg-red-600 border-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center"
+              >
+                {isResetting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Resetting...
+                  </>
+                ) : (
+                  'RESET EVERYTHING'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Success Modal */}
+      {showResetSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-modal-pop">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-green-600 mb-2">Database Reset Complete!</h3>
+              <p className="text-gray-600 mb-4">You will be redirected to login page...</p>
+
+              <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 text-left">
+                <p className="text-blue-800 font-bold mb-2">🔑 New Admin Credentials:</p>
+                <ul className="text-blue-700 text-sm space-y-1 ml-4">
+                  <li>• Email: <span className="font-mono font-bold">admin.company@gmail.com</span></li>
+                  <li>• Password: <span className="font-mono font-bold">12345678admin</span></li>
+                </ul>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowResetSuccessModal(false);
+                // Logout and redirect to login
+                window.location.href = '/';
+              }}
+              className="w-full px-4 py-3 border-4 md:bg-green-100 md:border-green-300 md:hover:bg-green-200 md:hover:border-green-400 md:text-green-700 md:hover:text-green-800 bg-green-600 border-green-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Go to Login
+            </button>
           </div>
         </div>
       )}

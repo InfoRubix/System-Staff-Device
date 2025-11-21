@@ -450,14 +450,14 @@ class PDFService {
 
       doc.setFontSize(16);
       doc.setTextColor(...this.brandColors.primary);
-      doc.text('Device Status Analysis', 20, yPos);
+      doc.text('Device Status Distribution', 20, yPos);
       yPos += 12;
 
       if (devices.length > 0) {
-        const statusCounts = { Working: 0, 'Needs Repair': 0, 'Broken': 0 };
+        const statusCounts = { Healthy: 0, Warning: 0, Critical: 0 };
         devices.forEach(device => {
-          if (statusCounts.hasOwnProperty(device.status)) {
-            statusCounts[device.status]++;
+          if (statusCounts.hasOwnProperty(device.overallStatus)) {
+            statusCounts[device.overallStatus]++;
           }
         });
 
@@ -472,9 +472,9 @@ class PDFService {
           const percentage = devices.length > 0 ? ((count / devices.length) * 100).toFixed(1) : '0.0';
           let recommendation = 'Monitor status';
 
-          if (status === 'Broken') recommendation = 'Immediate replacement required';
-          else if (status === 'Needs Repair') recommendation = 'Schedule maintenance';
-          else if (status === 'Working') recommendation = 'Continue monitoring';
+          if (status === 'Critical') recommendation = 'Immediate attention required - Critical issues detected';
+          else if (status === 'Warning') recommendation = 'Schedule maintenance - Warning issues detected';
+          else if (status === 'Healthy') recommendation = 'Continue monitoring - Device in good condition';
 
           return {
             status,
@@ -500,7 +500,7 @@ class PDFService {
       yPos += 12;
 
       if (devices.length > 0) {
-        const typeCounts = { Laptop: 0, Desktop: 0, Tablet: 0, Phone: 0 };
+        const typeCounts = { Laptop: 0, Desktop: 0 };
         devices.forEach(device => {
           if (typeCounts.hasOwnProperty(device.deviceType)) {
             typeCounts[device.deviceType]++;
@@ -522,8 +522,6 @@ class PDFService {
 
             if (type === 'Laptop') businessImpact = 'High mobility, flexible work';
             else if (type === 'Desktop') businessImpact = 'Office-based, high performance';
-            else if (type === 'Tablet') businessImpact = 'Presentations, mobile tasks';
-            else if (type === 'Phone') businessImpact = 'Communication, mobile access';
 
             return {
               type,
@@ -608,8 +606,9 @@ class PDFService {
    * Creates device health report PDF
    * @param {Array} healthScans - Array of device health scan objects
    * @param {Object} stats - Statistics (total, healthy, warning, critical)
+   * @param {string} period - Period text (e.g., "October 2024", "2024", "All Time")
    */
-  async exportDeviceHealthReport(healthScans = [], stats = {}) {
+  async exportDeviceHealthReport(healthScans = [], stats = {}, period = 'All Time') {
     try {
       const { jsPDF } = await import('jspdf');
       const doc = new jsPDF('l', 'mm', 'a4'); // Landscape for better table display
@@ -632,6 +631,8 @@ class PDFService {
       doc.setFontSize(11);
       doc.setTextColor(...this.brandColors.secondary);
       doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')} at ${new Date().toLocaleTimeString('en-GB')}`, 20, yPos);
+      yPos += 6;
+      doc.text(`Period: ${period}`, 20, yPos);
       yPos += 6;
       doc.text(`Total Devices Monitored: ${stats.total || 0}`, 20, yPos);
       yPos += 15;

@@ -26,13 +26,15 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isTransferring, setIsTransferring] = useState(false);
 
-  // Load all staff members
+  // Load all staff members - reload every time the component mounts
+  // This ensures staff counts are always up-to-date when modal opens
   useEffect(() => {
     const loadStaff = async () => {
       try {
         setIsLoading(true);
         const allStaff = await staffService.getAllStaff();
         setStaffList(allStaff);
+        console.log('✅ Loaded fresh staff data:', allStaff.length, 'staff members');
       } catch (err) {
         console.error('Failed to load staff:', err);
         setError('Failed to load staff members');
@@ -41,8 +43,9 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
       }
     };
 
+    // Load staff data immediately when component mounts
     loadStaff();
-  }, []);
+  }, []); // Empty dependency array means this runs once per mount
 
   // Get staff for selected department
   const departmentStaff = useMemo(() => {
@@ -68,6 +71,7 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
     departments.forEach(dept => {
       counts[dept] = staffList.filter(s => s.department === dept).length;
     });
+    console.log('📊 Department staff counts:', counts);
     return counts;
   }, [staffList, departments]);
 
@@ -145,12 +149,12 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
   if (departments.length < 2) {
     return (
       <div
-        className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-screen w-screen z-50 animate-fade-in"
+        className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 overflow-y-auto h-screen w-screen z-50 animate-fade-in"
         onClick={onCancel}
       >
         <div className="relative min-h-full flex items-start sm:items-center justify-center p-2 sm:p-4">
           <div
-            className="w-full max-w-md bg-white rounded-lg sm:rounded-2xl shadow-2xl border border-gray-200 animate-modal-pop mt-4 sm:mt-0"
+            className="w-full max-w-md bg-white rounded-lg sm:rounded-2xl shadow-2xl animate-modal-pop mt-4 sm:mt-0"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 sm:p-6">
@@ -185,12 +189,12 @@ function TransferStaffForm({ onSuccess, onCancel }: TransferStaffFormProps) {
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-screen w-screen z-50 animate-fade-in"
+      className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 overflow-y-auto h-screen w-screen z-50 animate-fade-in"
       onClick={onCancel}
     >
       <div className="relative min-h-full flex items-start sm:items-center justify-center p-2 sm:p-4">
         <div
-          className="w-full max-w-3xl bg-white rounded-lg sm:rounded-2xl shadow-2xl border border-gray-200 animate-modal-pop mt-4 sm:mt-0"
+          className="w-full max-w-3xl bg-white rounded-lg sm:rounded-2xl shadow-2xl animate-modal-pop mt-4 sm:mt-0"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-4 sm:p-6">

@@ -173,7 +173,7 @@ export default function TechnicianDashboardPage() {
         // This makes it show as FIXED in the super admin's repair management page
         if (repairData) {
           const { setDoc } = await import('firebase/firestore');
-          const fixedRepairId = `${repairData.deviceId}-${repairData.issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
+          const fixedRepairId = `${repairData.deviceId}-${repairData.staffEmail}-${repairData.issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
           const fixedRepairRef = doc(db, 'repairs', fixedRepairId);
 
           await setDoc(fixedRepairRef, {

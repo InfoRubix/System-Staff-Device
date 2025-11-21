@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useRouter } from 'next/navigation';
-import { collection, query, onSnapshot, orderBy, addDoc, doc, updateDoc, where, getDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, addDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { staffService, StaffMember } from '@/lib/staffService';
 import Navigation from '@/components/Navigation';
+import YearMonthFilter from '@/components/YearMonthFilter';
 
 interface RepairIssue {
   id: string;
@@ -49,9 +50,12 @@ export default function RepairManagementPage() {
   const router = useRouter();
   const [componentsReady, setComponentsReady] = useState(false);
   const [groupedIssues, setGroupedIssues] = useState<GroupedDeviceIssues[]>([]);
+  const [filteredGroupedIssues, setFilteredGroupedIssues] = useState<GroupedDeviceIssues[]>([]);
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'urgent' | 'high' | 'medium'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [_showNotifyModal, _setShowNotifyModal] = useState(false);
   const [_selectedStaff, _setSelectedStaff] = useState<string[]>([]);
   const [_notificationMessage, _setNotificationMessage] = useState('');
@@ -66,6 +70,7 @@ export default function RepairManagementPage() {
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [assignedTechnicianPhone, setAssignedTechnicianPhone] = useState('');
   const [whatsappMessage, setWhatsappMessage] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
 
   // Track fixed repairs (to filter them out)
   const [fixedRepairs, setFixedRepairs] = useState<Set<string>>(new Set());
@@ -183,6 +188,31 @@ export default function RepairManagementPage() {
     }
   }, [isNavigating, isPageLoaded, componentsReady, finishNavigation, setShowLoadingScreen]);
 
+  // Filter groupedIssues by year/month
+  useEffect(() => {
+    if (selectedYear === 'all') {
+      setFilteredGroupedIssues(groupedIssues);
+      return;
+    }
+
+    const filtered = groupedIssues.filter(group => {
+      const detectedDate = group.detectedDate;
+      const detectedYear = detectedDate.getFullYear().toString();
+      const detectedMonth = detectedDate.getMonth().toString();
+
+      if (detectedYear !== selectedYear) return false;
+      if (selectedMonth === 'all') return true;
+      return detectedMonth === selectedMonth;
+    });
+
+    setFilteredGroupedIssues(filtered);
+  }, [groupedIssues, selectedYear, selectedMonth]);
+
+  const handleFilterChange = (year: string, month: string) => {
+    setSelectedYear(year);
+    setSelectedMonth(month);
+  };
+
   useEffect(() => {
     if (!isAdmin) return;
 
@@ -262,7 +292,7 @@ export default function RepairManagementPage() {
     // RAM Critical
     if (scanData.ramUsage > 90) {
       const issueType = 'RAM Critical / Memory Failure';
-      const issueId = `${scanData.deviceId}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const issueId = `${scanData.deviceId}-${scanData.staffEmail}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
       issues.push({
         id: issueId,
@@ -297,7 +327,7 @@ export default function RepairManagementPage() {
     // Disk Space Low
     if (scanData.diskSpaceFree < 20) {
       const issueType = 'Low Disk Space';
-      const issueId = `${scanData.deviceId}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const issueId = `${scanData.deviceId}-${scanData.staffEmail}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
       issues.push({
         id: issueId,
@@ -332,7 +362,7 @@ export default function RepairManagementPage() {
     // CPU Overheating
     if (scanData.cpuTemp && scanData.cpuTemp > 85) {
       const issueType = 'CPU Overheating';
-      const issueId = `${scanData.deviceId}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const issueId = `${scanData.deviceId}-${scanData.staffEmail}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
       issues.push({
         id: issueId,
@@ -368,7 +398,7 @@ export default function RepairManagementPage() {
     // Battery Degraded
     if (scanData.batteryHealth && scanData.batteryHealth < 50) {
       const issueType = 'Battery Degraded';
-      const issueId = `${scanData.deviceId}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const issueId = `${scanData.deviceId}-${scanData.staffEmail}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
       issues.push({
         id: issueId,
@@ -404,7 +434,7 @@ export default function RepairManagementPage() {
     // Antivirus Disabled
     if (scanData.antivirusStatus !== 'Active') {
       const issueType = 'Antivirus Disabled';
-      const issueId = `${scanData.deviceId}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const issueId = `${scanData.deviceId}-${scanData.staffEmail}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
       issues.push({
         id: issueId,
@@ -439,7 +469,7 @@ export default function RepairManagementPage() {
     // Firewall Disabled
     if (scanData.firewallStatus !== 'Active') {
       const issueType = 'Firewall Disabled';
-      const issueId = `${scanData.deviceId}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const issueId = `${scanData.deviceId}-${scanData.staffEmail}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
       issues.push({
         id: issueId,
@@ -473,23 +503,23 @@ export default function RepairManagementPage() {
     return issues;
   };
 
-  // Calculate stats from grouped issues
-  const totalIssuesCount = groupedIssues.reduce((sum, g) => sum + g.issues.length, 0);
-  const urgentCount = groupedIssues.filter(g => g.highestSeverity === 'urgent').length;
-  const highCount = groupedIssues.filter(g => g.highestSeverity === 'high').length;
-  const mediumCount = groupedIssues.filter(g => g.highestSeverity === 'medium').length;
+  // Calculate stats from filtered grouped issues
+  const totalIssuesCount = filteredGroupedIssues.reduce((sum, g) => sum + g.issues.length, 0);
+  const urgentCount = filteredGroupedIssues.filter(g => g.highestSeverity === 'urgent').length;
+  const highCount = filteredGroupedIssues.filter(g => g.highestSeverity === 'high').length;
+  const mediumCount = filteredGroupedIssues.filter(g => g.highestSeverity === 'medium').length;
 
-  // Apply filter and search
-  const getFilteredGroupedIssues = () => {
-    let filtered = groupedIssues;
+  // Apply severity filter and search
+  const getDisplayedIssues = () => {
+    let filtered = filteredGroupedIssues;
 
     // First apply severity filter
     if (filter === 'urgent') {
-      filtered = groupedIssues.filter(g => g.highestSeverity === 'urgent');
+      filtered = filteredGroupedIssues.filter(g => g.highestSeverity === 'urgent');
     } else if (filter === 'high') {
-      filtered = groupedIssues.filter(g => g.highestSeverity === 'high');
+      filtered = filteredGroupedIssues.filter(g => g.highestSeverity === 'high');
     } else if (filter === 'medium') {
-      filtered = groupedIssues.filter(g => g.highestSeverity === 'medium');
+      filtered = filteredGroupedIssues.filter(g => g.highestSeverity === 'medium');
     }
 
     // Then apply search filter
@@ -511,7 +541,7 @@ export default function RepairManagementPage() {
     });
   };
 
-  const filteredGroupedIssues = getFilteredGroupedIssues();
+  const displayedIssues = getDisplayedIssues();
 
   const toggleIssue = async (issueId: string) => {
     const isExpanding = expandedIssue !== issueId;
@@ -532,7 +562,7 @@ export default function RepairManagementPage() {
           });
         }
         // If document doesn't exist, silently skip (it's just a detected issue, not assigned yet)
-      } catch (error) {
+      } catch {
         // Silently ignore errors for non-existent documents
         console.warn('Could not mark issue as read (document may not exist):', issueId);
       }
@@ -541,7 +571,7 @@ export default function RepairManagementPage() {
 
   // Get unique staff list with issues
   const getStaffWithIssues = () => {
-    return filteredGroupedIssues.map(group => ({
+    return displayedIssues.map(group => ({
       name: group.staffName,
       email: group.staffEmail,
       issueCount: group.issues.length,
@@ -668,6 +698,127 @@ export default function RepairManagementPage() {
     }
   };
 
+  // Generate PDF Report
+  const generateReport = async () => {
+    setIsExporting(true);
+    try {
+      const jsPDFModule: any = await import('jspdf');
+      const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
+      const { pdfService } = await import('@/services/pdfService');
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.width;
+      let yPos = 20;
+
+      // Brand Colors
+      const primaryColor: [number, number, number] = [25, 118, 210];
+      const secondaryColor: [number, number, number] = [100, 100, 100];
+      const lightGray: [number, number, number] = [245, 245, 245];
+
+      // Header
+      doc.setFontSize(24);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont(undefined, 'bold');
+      doc.text('REPAIR MANAGEMENT REPORT', pageWidth / 2, yPos, { align: 'center' });
+      yPos += 12;
+
+      // Metadata
+      doc.setFontSize(10);
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')} at ${new Date().toLocaleTimeString('en-GB')}`, 20, yPos);
+      yPos += 5;
+
+      // Period text
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+      let periodText = 'All Time';
+      if (selectedYear !== 'all') {
+        if (selectedMonth !== 'all') {
+          periodText = `${monthNames[parseInt(selectedMonth)]} ${selectedYear}`;
+        } else {
+          periodText = selectedYear;
+        }
+      }
+      doc.text(`Period: ${periodText}`, 20, yPos);
+      yPos += 12;
+
+      // Statistics boxes
+      const boxWidth = (pageWidth - 50) / 4;
+      const boxHeight = 25;
+      const boxStartY = yPos;
+
+      const stats = [
+        { label: 'Total Issues', value: totalIssuesCount.toString(), color: [59, 130, 246] as [number, number, number] },
+        { label: 'Urgent', value: urgentCount.toString(), color: [239, 68, 68] as [number, number, number] },
+        { label: 'High Priority', value: highCount.toString(), color: [245, 158, 11] as [number, number, number] },
+        { label: 'Medium', value: mediumCount.toString(), color: [59, 130, 246] as [number, number, number] }
+      ];
+
+      stats.forEach((stat, index) => {
+        const boxX = 20 + (index * (boxWidth + 3));
+        doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+        doc.rect(boxX, boxStartY, boxWidth, boxHeight, 'F');
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
+        doc.rect(boxX, boxStartY, boxWidth, boxHeight);
+        doc.setFontSize(8);
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.setFont(undefined, 'bold');
+        doc.text(stat.label, boxX + boxWidth / 2, boxStartY + 8, { align: 'center' });
+        doc.setFontSize(16);
+        doc.setTextColor(stat.color[0], stat.color[1], stat.color[2]);
+        doc.text(stat.value, boxX + boxWidth / 2, boxStartY + 18, { align: 'center' });
+      });
+
+      yPos = boxStartY + boxHeight + 15;
+
+      // Issues table
+      doc.setFontSize(14);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont(undefined, 'bold');
+      doc.text(`Detected Issues (${displayedIssues.length})`, 20, yPos);
+      yPos += 12;
+
+      if (displayedIssues.length === 0) {
+        doc.setFontSize(11);
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.setFont(undefined, 'normal');
+        doc.text('No repair issues found in this period.', pageWidth / 2, yPos + 20, { align: 'center' });
+      } else {
+        const tableData = displayedIssues.flatMap(group =>
+          group.issues.map(issue => ({
+            staff: `${group.staffName} (${group.department})`,
+            issue: issue.type,
+            severity: issue.severity.toUpperCase(),
+            status: issue.status === 'fixed' ? 'FIXED' : 'DETECTED',
+            impact: issue.impact
+          }))
+        );
+
+        const columns = [
+          { key: 'staff', header: 'Staff (Dept)', width: 1.8 },
+          { key: 'issue', header: 'Issue Type', width: 1.5 },
+          { key: 'severity', header: 'Severity', width: 0.8 },
+          { key: 'status', header: 'Status', width: 0.8 },
+          { key: 'impact', header: 'Impact', width: 2 }
+        ];
+
+        pdfService.addProfessionalTable(doc, tableData, columns, yPos);
+      }
+
+      // Save PDF
+      const filename = `Repair_Management_${periodText.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+
+      setIsExporting(false);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF report. Please try again.');
+      setIsExporting(false);
+    }
+  };
+
   // Handle opening WhatsApp
   const handleOpenWhatsApp = () => {
     if (!assignedTechnicianPhone) {
@@ -745,23 +896,31 @@ export default function RepairManagementPage() {
               </p>
             </div>
 
-          </div>
-        </div>
-
-        {/* Warning Banner */}
-        <div className="backdrop-blur-2xl bg-orange-50/80 border-4 border-orange-200 rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <svg className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <div>
-              <h3 className="text-sm font-bold text-orange-800 uppercase">⚠️ Important Notice</h3>
-              <p className="text-sm text-orange-700 mt-1">
-                Old repair records (older than <strong>2 months</strong>) will be automatically deleted to save storage space. Please download and save your reports regularly!
-              </p>
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={generateReport}
+                disabled={isExporting || filteredGroupedIssues.length === 0}
+                className="px-4 py-2 border-4 font-medium rounded-lg transition-colors flex items-center gap-2
+                  md:bg-blue-100 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800
+                  bg-blue-600 border-blue-700 text-white
+                  disabled:bg-gray-300 disabled:border-gray-400 disabled:text-gray-500 disabled:cursor-not-allowed"
+              >
+                {isExporting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
+                    Generating...
+                  </>
+                ) : (
+                  'GENERATE REPORT'
+                )}
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Year/Month Filter */}
+        <YearMonthFilter onFilterChange={handleFilterChange} />
 
         {/* Summary Cards - Glassmorphism */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
@@ -851,13 +1010,13 @@ export default function RepairManagementPage() {
           </div>
           {searchTerm && (
             <p className="mt-4 text-sm text-gray-600 font-normal">
-              Found <span className="font-semibold text-gray-800">{filteredGroupedIssues.length}</span> device(s)
+              Found <span className="font-semibold text-gray-800">{displayedIssues.length}</span> device(s)
             </p>
           )}
         </div>
 
         {/* Filtered Issues */}
-        {filteredGroupedIssues.length > 0 ? (
+        {displayedIssues.length > 0 ? (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-semibold text-gray-800 uppercase tracking-widest">
@@ -866,7 +1025,7 @@ export default function RepairManagementPage() {
                 {filter === 'high' && 'HIGH PRIORITY'}
                 {filter === 'medium' && 'MEDIUM PRIORITY'}
                 <span className="ml-3 text-sm text-gray-500 font-normal">
-                  ({filteredGroupedIssues.length})
+                  ({displayedIssues.length})
                 </span>
               </h2>
               {filter !== 'all' && (
@@ -879,7 +1038,7 @@ export default function RepairManagementPage() {
               )}
             </div>
             <div className="space-y-4">
-              {filteredGroupedIssues.map(group => (
+              {displayedIssues.map(group => (
                 <GroupedDeviceCard
                   key={group.id}
                   group={group}
@@ -897,7 +1056,7 @@ export default function RepairManagementPage() {
         ) : null}
 
         {/* No Issues or No Search Results */}
-        {filteredGroupedIssues.length === 0 && groupedIssues.length > 0 && (
+        {displayedIssues.length === 0 && filteredGroupedIssues.length > 0 && (
           <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-lg p-16 text-center">
             <div className="text-6xl mb-6 opacity-50">🔍</div>
             <h2 className="text-3xl font-semibold text-gray-800 mb-3 uppercase tracking-wider">No Results</h2>

@@ -64,6 +64,7 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
   const [showIssuesModal, setShowIssuesModal] = useState(false);
   const [showDeviceModal, setShowDeviceModal] = useState<Device | null>(null);
   const [showTransferForm, setShowTransferForm] = useState(false);
+  const [transferFormKey, setTransferFormKey] = useState(0); // Counter to force fresh mount
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Get scan data for the currently displayed device
@@ -324,7 +325,10 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
             </button>
           )}
           <button
-            onClick={() => setShowTransferForm(true)}
+            onClick={() => {
+              setTransferFormKey(prev => prev + 1); // Increment to force fresh data
+              setShowTransferForm(true);
+            }}
             className="flex-1 sm:flex-none sm:w-auto bg-green-100 border-4 border-green-300 hover:bg-green-200 hover:border-green-400 px-2 py-2 sm:px-6 sm:py-3 text-center text-xs sm:text-sm font-medium sm:font-semibold text-green-700 hover:text-green-800 rounded-md sm:rounded-lg shadow-md sm:shadow-lg transition-all duration-200 touch-manipulation"
           >
             <span className="block sm:hidden">Transfer</span>
@@ -471,26 +475,15 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
                           </div>
                         </td>
                         <td className="px-4 py-4 text-center">
-                          <div className="flex justify-center space-x-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEdit(device);
-                              }}
-                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowDeleteModal(device.id);
-                              }}
-                              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowDeleteModal(device.id);
+                            }}
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -837,6 +830,7 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
       {/* Transfer Staff Form */}
       {showTransferForm && (
         <TransferStaffForm
+          key={transferFormKey} // Use counter to force fresh mount with updated data
           onSuccess={(fromDept: string, toDept: string, staffCount: number) => {
             setShowTransferForm(false);
             setSuccessMessage(`Successfully transferred ${staffCount} staff member${staffCount !== 1 ? 's' : ''} from ${fromDept} to ${toDept}`);

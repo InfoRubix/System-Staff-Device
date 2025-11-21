@@ -27,12 +27,13 @@ export interface StaffMember {
 }
 
 export const staffService = {
-  // Get all staff members
+  // Get all staff members (always fetches fresh data from Firestore)
   async getAllStaff(): Promise<StaffMember[]> {
     try {
+      console.log('🔄 Fetching fresh staff data from Firestore...');
       const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
 
-      return querySnapshot.docs.map(doc => {
+      const staff = querySnapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -45,6 +46,9 @@ export const staffService = {
           createdAt: data.createdAt?.toDate(),
         } as StaffMember;
       });
+
+      console.log(`✅ Fetched ${staff.length} staff members from Firestore`);
+      return staff;
     } catch (error) {
       console.error('Error getting staff:', error);
       throw error;
@@ -145,7 +149,8 @@ export const staffService = {
     }
   },
 
-  // Delete staff member permanently (user, scans, downloads, assigned repairs, and all related data)
+  // Delete staff member permanently (user account, downloads, assigned repairs, Firebase Auth)
+  // NOTE: Device scans are PRESERVED to maintain historical device data
   async deleteStaff(staffId: string, staffEmail: string): Promise<void> {
     try {
       const batch = writeBatch(db);
@@ -154,16 +159,8 @@ export const staffService = {
       const userRef = doc(db, USERS_COLLECTION, staffId);
       batch.delete(userRef);
 
-      // 2. Find and delete all device scans for this staff member
-      const scansQuery = query(
-        collection(db, DEVICE_SCANS_COLLECTION),
-        where('staffEmail', '==', staffEmail)
-      );
-      const scansSnapshot = await getDocs(scansQuery);
-
-      scansSnapshot.forEach(scanDoc => {
-        batch.delete(scanDoc.ref);
-      });
+      // 2. Device scans are NOT deleted - they are preserved as historical data
+      // This allows device history to remain even if staff accounts change
 
       // 3. Find and delete all app download records for this user
       const downloadsQuery = query(
@@ -189,17 +186,39 @@ export const staffService = {
 
       await batch.commit();
 
-      console.log(`✅ Deleted user ${staffEmail} and all related data from Firestore`);
-      console.log(`   - Device scans: ${scansSnapshot.size}`);
+      console.log(`✅ Deleted user ${staffEmail} from Firestore`);
+      console.log(`   - Device scans: PRESERVED (not deleted)`);
       console.log(`   - App downloads: ${downloadsSnapshot.size}`);
       console.log(`   - Assigned repairs: ${assignedRepairsSnapshot.size}`);
-      console.warn('⚠️ Firebase Auth account NOT deleted - user can still login but will have no data');
-      console.warn('   To fully delete: Use Firebase Console → Authentication → Find user → Delete');
 
-      // NOTE: Firebase Auth account deletion requires either:
-      // 1. Cloud Functions with Admin SDK (recommended for production)
-      // 2. Manual deletion via Firebase Console → Authentication
-      // We cannot delete other users' auth accounts from client-side code
+      // 5. Attempt to delete from Firebase Authentication using Cloud Function
+      // NOTE: This requires Firebase Admin SDK credentials to be configured
+      try {
+        const response = await fetch('/api/deleteUser', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: staffEmail }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          // Just log a warning, don't fail the entire operation
+          console.warn('⚠️ Could not delete from Firebase Auth:', error.error);
+          console.warn('   User Firestore data has been deleted successfully');
+          console.warn('   Firebase Auth account still exists but cannot login (no Firestore data)');
+          console.warn('   Optional: Admin can manually delete from Firebase Console → Authentication');
+        } else {
+          console.log(`✅ Deleted Firebase Auth account for ${staffEmail}`);
+        }
+      } catch (authError: any) {
+        // Auth deletion failed, but that's okay - the user can't login without Firestore data anyway
+        console.warn('⚠️ Firebase Auth deletion not available:', authError.message);
+        console.warn('   User Firestore data deleted successfully - user cannot login');
+        console.warn('   Firebase Auth account remains but is effectively disabled');
+        // Don't throw - Firestore deletion is the critical part and it succeeded
+      }
 
     } catch (error) {
       console.error('Error deleting staff:', error);

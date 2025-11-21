@@ -14,25 +14,17 @@ export default function DeviceLoginPage() {
   const [message, setMessage] = useState('');
   const [isTauri, setIsTauri] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [debugSteps, setDebugSteps] = useState<string[]>([]);
-
-  const addDebugStep = (step: string) => {
-    setDebugSteps(prev => [...prev, `${new Date().toLocaleTimeString()}: ${step}`]);
-  };
 
   useEffect(() => {
-    addDebugStep('Page loaded');
     console.log('🔵 Component mounted');
     // Check if running in Tauri
     if (typeof window !== 'undefined' && '__TAURI__' in window) {
-      addDebugStep('✅ Running in Tauri');
       console.log('✅ Running in Tauri');
       setIsTauri(true);
 
       // Validate saved session
       validateSavedSession();
     } else {
-      addDebugStep('❌ NOT running in Tauri!');
       console.log('❌ Not running in Tauri');
     }
   }, []);
@@ -43,7 +35,6 @@ export default function DeviceLoginPage() {
     const savedName = localStorage.getItem('staff_name');
     const savedDept = localStorage.getItem('staff_department');
 
-    addDebugStep(`Checking localStorage: email=${savedEmail ? 'YES' : 'NO'}, name=${savedName ? 'YES' : 'NO'}, dept=${savedDept ? 'YES' : 'NO'}`);
     console.log('Checking localStorage:', {
       email: savedEmail,
       name: savedName,
@@ -51,7 +42,6 @@ export default function DeviceLoginPage() {
     });
 
     if (savedEmail && savedName && savedDept) {
-      addDebugStep('Found saved login - waiting for Firebase to initialize...');
       console.log('🔍 Waiting for Firebase Auth to initialize...');
 
       try {
@@ -65,34 +55,28 @@ export default function DeviceLoginPage() {
 
         // Now check if Firebase auth session exists
         const currentUser = auth.currentUser;
-        addDebugStep(`Firebase initialized - currentUser: ${currentUser ? 'EXISTS' : 'NULL'}`);
 
         if (currentUser) {
           // Session is valid, check if user doc exists in Firestore
-          addDebugStep('Firebase auth session valid - checking Firestore...');
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
 
           if (userDoc.exists()) {
-            addDebugStep('✅ Account valid! Auto-login successful');
             console.log('✅ Account valid! Auto-login successful');
             setIsLoggedIn(true);
           } else {
             // User deleted from Firestore but Auth still exists
-            addDebugStep('⚠️ User deleted from Firestore - clearing session');
             console.warn('⚠️ User deleted from Firestore - clearing session');
             clearSessionAndShowMessage('Your account has been removed. Please contact admin.');
           }
         } else {
           // No Firebase auth session yet - could be temporary during startup
           // Keep localStorage and try to stay logged in
-          addDebugStep('⚠️ No Firebase auth session - but keeping localStorage, will work offline mode');
           console.warn('⚠️ No Firebase auth session - keeping session for offline mode');
           // Allow user to stay logged in with localStorage
           setIsLoggedIn(true);
         }
       } catch (error: unknown) {
         const firebaseError = error as { code?: string; message?: string };
-        addDebugStep(`❌ Session validation error: ${firebaseError.code || 'unknown'}`);
         console.error('Session validation error:', error);
 
         // Check for specific auth errors
@@ -102,13 +86,11 @@ export default function DeviceLoginPage() {
           clearSessionAndShowMessage('Previous user account has been removed. Please login with your credentials.');
         } else {
           // Other errors - still allow auto-login attempt
-          addDebugStep('✅ Proceeding with saved login despite validation error');
           console.log('✅ Proceeding with saved login');
           setIsLoggedIn(true);
         }
       }
     } else {
-      addDebugStep('No saved login found - ready for new login');
       console.log('❌ No saved login found');
     }
   };
@@ -122,7 +104,6 @@ export default function DeviceLoginPage() {
     localStorage.removeItem('last_scan');
     setMessage(msg);
     setIsLoggedIn(false);
-    addDebugStep('Session cleared - showing login screen');
   };
 
   // Background auto-scan checker - runs every hour
@@ -199,60 +180,49 @@ export default function DeviceLoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    addDebugStep('🔵 Login button clicked');
     console.log('🔵 Login button clicked');
     console.log('Email:', email);
     console.log('Is Tauri?', isTauri);
 
     setIsLoading(true);
     setMessage('Logging in...');
-    setDebugSteps([]); // Clear previous debug steps
 
     try {
-      addDebugStep('Attempting Firebase authentication...');
       console.log('🔵 Attempting Firebase authentication...');
       // Sign in with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      addDebugStep(`✅ Firebase auth successful! UID: ${user.uid}`);
       console.log('✅ Firebase auth successful, UID:', user.uid);
 
       setMessage('Fetching your profile...');
 
       // Get user profile from Firestore
-      addDebugStep('Fetching user profile from Firestore...');
       console.log('🔵 Fetching user profile from Firestore...');
       const userDoc = await getDoc(doc(db, 'users', user.uid));
 
       if (!userDoc.exists()) {
-        addDebugStep('❌ User profile NOT FOUND in Firestore!');
         console.error('❌ User profile not found in Firestore');
         throw new Error('User profile not found. Please contact your administrator.');
       }
 
       const userData = userDoc.data();
-      addDebugStep(`✅ User profile found: ${userData.name}`);
       console.log('✅ User profile found:', userData);
       const staffName = userData.name || userData.email?.split('@')[0] || 'Unknown';
       const department = (userData.department || 'IT').toUpperCase();
-      addDebugStep(`Name: ${staffName}, Dept: ${department}`);
       console.log('Staff Name:', staffName);
       console.log('Department:', department);
 
       // Save user info to localStorage
-      addDebugStep('Saving to localStorage...');
       localStorage.setItem('staff_email', email);
       localStorage.setItem('staff_name', staffName);
       localStorage.setItem('staff_department', department);
       localStorage.setItem('user_id', user.uid);
-      addDebugStep('✅ Saved to localStorage!');
       console.log('✅ Saved to localStorage');
 
       setMessage('Running initial device scan...');
 
       // Run initial scan
       try {
-        addDebugStep('Invoking Tauri scan command...');
         console.log('🔵 Invoking Tauri scan command...');
         const result = await invoke('scan_and_submit_device_data', {
           staffEmail: email,
@@ -260,12 +230,10 @@ export default function DeviceLoginPage() {
           department: department,
         });
 
-        addDebugStep(`✅ Scan completed: ${result}`);
         console.log('✅ Initial scan result:', result);
         localStorage.setItem('last_scan', new Date().toISOString());
 
         setMessage('Login successful! Device scan completed. The app will now run in the background and scan automatically every 2 weeks.');
-        addDebugStep('✅ Setting isLoggedIn to TRUE');
         setIsLoggedIn(true);
 
         // Notify user they can close the window
@@ -274,15 +242,12 @@ export default function DeviceLoginPage() {
         }, 3000);
 
       } catch (scanError) {
-        addDebugStep(`❌ Scan error: ${scanError}`);
         console.error('❌ Scan error:', scanError);
         setMessage('Login successful, but scan failed. You can try again later. Error: ' + scanError);
-        addDebugStep('Setting isLoggedIn to TRUE (despite scan error)');
         setIsLoggedIn(true);
       }
 
     } catch (error: unknown) {
-      addDebugStep(`❌ LOGIN ERROR: ${error}`);
       console.error('❌ Login error:', error);
       let errorMessage = 'Login failed. ';
       const firebaseError = error as { code?: string; message?: string };
@@ -298,10 +263,8 @@ export default function DeviceLoginPage() {
       }
 
       setMessage(errorMessage);
-      addDebugStep(`Error message: ${errorMessage}`);
     } finally {
       setIsLoading(false);
-      addDebugStep('Login process finished');
       console.log('🔵 Login process finished');
     }
   };
@@ -396,20 +359,6 @@ export default function DeviceLoginPage() {
             Please download the app from the dashboard.
           </p>
 
-          {/* ALWAYS VISIBLE DEBUG PANEL */}
-          <div className="mt-6 p-4 rounded-lg bg-gray-900 text-green-400 border border-gray-700">
-            <div className="text-xs font-mono space-y-1">
-              <div className="text-yellow-400 font-bold mb-2">DEBUG LOG:</div>
-              <div className="text-red-400">NOT running in Tauri!</div>
-              <div className="text-gray-400">window.__TAURI__ is {typeof window !== 'undefined' && '__TAURI__' in window ? 'PRESENT' : 'MISSING'}</div>
-              <div className="text-gray-400">Debug steps: {debugSteps.length}</div>
-              {debugSteps.map((step, index) => (
-                <div key={index} className="text-xs">
-                  {step}
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     );
@@ -607,26 +556,6 @@ export default function DeviceLoginPage() {
             <p className="text-sm">{message}</p>
           </div>
         )}
-
-        {/* DEBUG PANEL - ALWAYS VISIBLE */}
-        <div className="mt-6 p-4 rounded-lg bg-gray-900 text-green-400 border border-gray-700 max-h-60 overflow-y-auto">
-          <div className="text-xs font-mono space-y-1">
-            <div className="text-yellow-400 font-bold mb-2">DEBUG LOG:</div>
-            <div className="text-green-400">Running in Tauri: {isTauri ? 'YES' : 'NO'}</div>
-            <div className="text-gray-400">Debug steps count: {debugSteps.length}</div>
-            <div className="text-gray-400">Is logged in: {isLoggedIn ? 'YES' : 'NO'}</div>
-            <div className="text-gray-400">---</div>
-            {debugSteps.length > 0 ? (
-              debugSteps.map((step, index) => (
-                <div key={index} className="text-xs">
-                  {step}
-                </div>
-              ))
-            ) : (
-              <div className="text-gray-400 italic">No debug steps yet...</div>
-            )}
-          </div>
-        </div>
 
         <div className="mt-8 pt-6 border-t border-gray-200">
           <p className="text-xs text-gray-500 text-center leading-relaxed">

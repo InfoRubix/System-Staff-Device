@@ -345,26 +345,15 @@ function DepartmentDetail({ department, onBack, onEdit }: DepartmentDetailProps)
                         </span>
                       </td>
                       <td className="px-4 py-4 text-center">
-                        <div className="flex justify-center space-x-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(device);
-                            }}
-                            className="bg-blue-100 border-4 border-blue-300 hover:bg-blue-200 hover:border-blue-400 text-blue-700 hover:text-blue-800 px-3 py-1 rounded text-xs font-medium transition-colors"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowDeleteModal(device.id);
-                            }}
-                            className="bg-red-100 border-4 border-red-300 hover:bg-red-200 hover:border-red-400 text-red-700 hover:text-red-800 px-3 py-1 rounded text-xs font-medium transition-colors"
-                          >
-                            Delete
-                          </button>
-                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDeleteModal(device.id);
+                          }}
+                          className="bg-red-100 border-4 border-red-300 hover:bg-red-200 hover:border-red-400 text-red-700 hover:text-red-800 px-3 py-1 rounded text-xs font-medium transition-colors"
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}

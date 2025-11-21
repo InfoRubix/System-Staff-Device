@@ -41,7 +41,7 @@ export default function Navigation() {
         repairsSnapshot.docs.forEach(doc => {
           const data = doc.data();
           if (data.status === 'fixed' || data.status === 'completed') {
-            const fixedId = `${data.deviceId}-${data.issueType?.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const fixedId = `${data.deviceId}-${data.staffEmail}-${data.issueType?.replace(/[^a-zA-Z0-9]/g, '_')}`;
             fixedSet.add(fixedId);
           }
         });
@@ -72,32 +72,32 @@ export default function Navigation() {
           latestScans.forEach(scan => {
             // RAM Critical
             if (scan.ramUsage > 90) {
-              const id = `${scan.deviceId}-RAM_Critical___Memory_Failure`;
+              const id = `${scan.deviceId}-${scan.staffEmail}-RAM_Critical___Memory_Failure`;
               if (!fixedSet.has(id)) unreadCount++;
             }
             // Low Disk Space
             if (scan.diskSpaceFree < 20) {
-              const id = `${scan.deviceId}-Low_Disk_Space`;
+              const id = `${scan.deviceId}-${scan.staffEmail}-Low_Disk_Space`;
               if (!fixedSet.has(id)) unreadCount++;
             }
             // CPU Overheating
             if (scan.cpuTemp && scan.cpuTemp > 85) {
-              const id = `${scan.deviceId}-CPU_Overheating`;
+              const id = `${scan.deviceId}-${scan.staffEmail}-CPU_Overheating`;
               if (!fixedSet.has(id)) unreadCount++;
             }
             // Battery Degraded
             if (scan.batteryHealth && scan.batteryHealth < 50) {
-              const id = `${scan.deviceId}-Battery_Degraded`;
+              const id = `${scan.deviceId}-${scan.staffEmail}-Battery_Degraded`;
               if (!fixedSet.has(id)) unreadCount++;
             }
             // Antivirus Disabled
             if (scan.antivirusStatus !== 'Active') {
-              const id = `${scan.deviceId}-Antivirus_Disabled`;
+              const id = `${scan.deviceId}-${scan.staffEmail}-Antivirus_Disabled`;
               if (!fixedSet.has(id)) unreadCount++;
             }
             // Firewall Disabled
             if (scan.firewallStatus !== 'Active') {
-              const id = `${scan.deviceId}-Firewall_Disabled`;
+              const id = `${scan.deviceId}-${scan.staffEmail}-Firewall_Disabled`;
               if (!fixedSet.has(id)) unreadCount++;
             }
           });
@@ -152,7 +152,7 @@ export default function Navigation() {
     { href: '/data-analysis', label: 'Data Analysis' },
     { href: '/device-health', label: 'Device Health' },
     { href: '/repair-management', label: 'Repair Management' },
-    { href: '/download', label: 'Download App' },
+    // { href: '/download', label: 'Download App' }, // Hidden per boss request
   ];
 
   const technicianNavItems = [

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
+import YearMonthFilter from '@/components/YearMonthFilter';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -25,8 +26,10 @@ export default function RepairHistoryPage() {
   const { user, isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const [completedRepairs, setCompletedRepairs] = useState<CompletedRepair[]>([]);
+  const [filteredRepairs, setFilteredRepairs] = useState<CompletedRepair[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'all'>('month');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
 
   // Check authentication
   useEffect(() => {
@@ -82,45 +85,50 @@ export default function RepairHistoryPage() {
     return () => unsubscribe();
   }, [user]);
 
-  // Filter by time range
-  const filteredRepairs = completedRepairs.filter(repair => {
-    if (timeRange === 'all') return true;
-
-    const now = new Date();
-    const completedDate = repair.completedDate;
-
-    if (timeRange === 'week') {
-      const weekAgo = new Date(now);
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return completedDate >= weekAgo;
-    } else if (timeRange === 'month') {
-      const monthAgo = new Date(now);
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
-      return completedDate >= monthAgo;
+  // Filter by year/month
+  useEffect(() => {
+    if (selectedYear === 'all') {
+      setFilteredRepairs(completedRepairs);
+      return;
     }
 
-    return true;
-  });
+    const filtered = completedRepairs.filter(repair => {
+      const completedDate = repair.completedDate;
+      const completedYear = completedDate.getFullYear().toString();
+      const completedMonth = completedDate.getMonth().toString();
 
-  // Calculate stats
-  const thisWeekCount = completedRepairs.filter(r => {
+      if (completedYear !== selectedYear) return false;
+      if (selectedMonth === 'all') return true;
+      return completedMonth === selectedMonth;
+    });
+
+    setFilteredRepairs(filtered);
+  }, [completedRepairs, selectedYear, selectedMonth]);
+
+  const handleFilterChange = (year: string, month: string) => {
+    setSelectedYear(year);
+    setSelectedMonth(month);
+  };
+
+  // Calculate stats from filtered repairs
+  const thisWeekCount = filteredRepairs.filter(r => {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     return r.completedDate >= weekAgo;
   }).length;
 
-  const thisMonthCount = completedRepairs.filter(r => {
+  const thisMonthCount = filteredRepairs.filter(r => {
     const monthAgo = new Date();
     monthAgo.setMonth(monthAgo.getMonth() - 1);
     return r.completedDate >= monthAgo;
   }).length;
 
-  const avgCompletionTime = completedRepairs.length > 0
-    ? completedRepairs.reduce((acc, r) => {
+  const avgCompletionTime = filteredRepairs.length > 0
+    ? filteredRepairs.reduce((acc, r) => {
         const timeDiff = r.completedDate.getTime() - r.assignedDate.getTime();
         const hours = timeDiff / (1000 * 60 * 60);
         return acc + hours;
-      }, 0) / completedRepairs.length
+      }, 0) / filteredRepairs.length
     : 0;
 
   // Generate Professional PDF Report for Repair History (TABLE FORMAT)
@@ -159,8 +167,17 @@ export default function RepairHistoryPage() {
       doc.text(`Generated: ${now.toLocaleDateString('en-GB')} at ${now.toLocaleTimeString('en-GB')}`, 20, yPos);
 
       yPos += 5;
-      const timeRangeText = timeRange === 'week' ? 'Last 7 Days' : timeRange === 'month' ? 'Last 30 Days' : 'All Time';
-      doc.text(`Time Range: ${timeRangeText}`, 20, yPos);
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+      let periodText = 'All Time';
+      if (selectedYear !== 'all') {
+        if (selectedMonth !== 'all') {
+          periodText = `${monthNames[parseInt(selectedMonth)]} ${selectedYear}`;
+        } else {
+          periodText = selectedYear;
+        }
+      }
+      doc.text(`Period: ${periodText}`, 20, yPos);
 
       yPos += 12;
 
@@ -170,7 +187,7 @@ export default function RepairHistoryPage() {
       const boxStartY = yPos;
 
       const stats = [
-        { label: 'Total Completed', value: completedRepairs.length.toString(), color: [16, 185, 129] as [number, number, number] },
+        { label: 'Total Completed', value: filteredRepairs.length.toString(), color: [16, 185, 129] as [number, number, number] },
         { label: 'This Week', value: thisWeekCount.toString(), color: [59, 130, 246] as [number, number, number] },
         { label: 'This Month', value: thisMonthCount.toString(), color: [139, 92, 246] as [number, number, number] },
         { label: 'Avg. Time', value: avgCompletionTime.toFixed(1) + 'h', color: [245, 158, 11] as [number, number, number] }
@@ -245,7 +262,7 @@ export default function RepairHistoryPage() {
 
 
       // Save PDF
-      const filename = `Repair_History_${technicianName.replace(/\s+/g, '_')}_${timeRangeText.replace(/\s+/g, '_')}_${now.toISOString().split('T')[0]}.pdf`;
+      const filename = `Repair_History_${technicianName.replace(/\s+/g, '_')}_${periodText.replace(/\s+/g, '_')}_${now.toISOString().split('T')[0]}.pdf`;
       doc.save(filename);
 
     } catch (error) {
@@ -326,36 +343,38 @@ export default function RepairHistoryPage() {
         <div className="max-w-7xl mx-auto relative z-10">
           {/* Header */}
           <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-sm p-6 mb-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div>
                 <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">REPAIR · HISTORY</h1>
                 <p className="mt-3 text-sm text-gray-600 font-normal">
                   Your completed repairs and performance stats
                 </p>
               </div>
-            </div>
-          </div>
 
-          {/* Warning Banner */}
-          <div className="backdrop-blur-2xl bg-orange-50/80 border-4 border-orange-200 rounded-lg shadow-sm p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <svg className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <div>
-                <h3 className="text-sm font-bold text-orange-800 uppercase">⚠️ Important Notice</h3>
-                <p className="text-sm text-orange-700 mt-1">
-                  Old repair records (older than <strong>2 months</strong>) will be automatically deleted to save storage space. Please download and save your reports regularly!
-                </p>
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={generateReport}
+                  disabled={filteredRepairs.length === 0}
+                  className="px-4 py-2 border-4 font-medium rounded-lg transition-colors flex items-center gap-2 md:bg-purple-100 md:border-purple-300 md:hover:bg-purple-200 md:hover:border-purple-400 md:text-purple-700 md:hover:text-purple-800 bg-purple-600 border-purple-700 text-white disabled:bg-gray-300 disabled:border-gray-400 disabled:text-gray-500 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  GENERATE REPORT
+                </button>
               </div>
             </div>
           </div>
+
+          {/* Year/Month Filter */}
+          <YearMonthFilter onFilterChange={handleFilterChange} />
 
           {/* Performance Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
             <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-6">
               <p className="text-sm font-medium text-gray-600">Total Completed</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{completedRepairs.length}</p>
+              <p className="text-3xl font-bold text-green-600 mt-1">{filteredRepairs.length}</p>
             </div>
             <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-6">
               <p className="text-sm font-medium text-gray-600">This Week</p>
@@ -368,49 +387,6 @@ export default function RepairHistoryPage() {
             <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-6">
               <p className="text-sm font-medium text-gray-600">Avg. Time</p>
               <p className="text-3xl font-bold text-orange-600 mt-1">{avgCompletionTime.toFixed(1)}h</p>
-            </div>
-          </div>
-
-          {/* Time Range Filter */}
-          <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-4 mb-6">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-gray-700">Show:</span>
-              <button
-                onClick={() => setTimeRange('week')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  timeRange === 'week' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Last 7 Days
-              </button>
-              <button
-                onClick={() => setTimeRange('month')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  timeRange === 'month' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                Last 30 Days
-              </button>
-              <button
-                onClick={() => setTimeRange('all')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  timeRange === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                All Time
-              </button>
-              <span className="ml-auto text-sm text-gray-600">
-                Showing {filteredRepairs.length} repair(s)
-              </span>
-              <button
-                onClick={generateReport}
-                className="ml-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Generate Report
-              </button>
             </div>
           </div>
 

@@ -43,6 +43,7 @@ next-env.d.ts
 # Windows reserved names and dev logs
 nul
 dev.log
+build.log
 
 # ====================================
 # SECURITY - DO NOT COMMIT
