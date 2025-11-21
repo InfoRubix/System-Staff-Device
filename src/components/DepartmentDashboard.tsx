@@ -276,11 +276,7 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
     }
   };
 
-  const handleEdit = (device: Device) => {
-    if (onEdit) {
-      onEdit(device);
-    }
-  };
+  // handleEdit removed - devices are scanned automatically, no manual editing needed
 
   const handleDelete = (id: string) => {
     deleteDevice(id);
