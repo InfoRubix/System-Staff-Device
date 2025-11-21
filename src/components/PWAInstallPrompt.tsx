@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePathname } from 'next/navigation';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -10,6 +12,8 @@ interface BeforeInstallPromptEvent extends Event {
 export default function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const { isAdmin } = useAuth();
+  const pathname = usePathname();
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -18,9 +22,11 @@ export default function PWAInstallPrompt() {
       // Save the event for later use
       setDeferredPrompt(e as BeforeInstallPromptEvent);
 
-      // Check if user has dismissed before
+      // Only show for super admins, not on login/signup pages
+      const isLoginOrSignup = pathname === '/' || pathname === '/signup';
       const dismissed = localStorage.getItem('pwa-install-dismissed');
-      if (!dismissed) {
+
+      if (isAdmin && !isLoginOrSignup && !dismissed) {
         setShowPrompt(true);
       }
     };
@@ -30,7 +36,7 @@ export default function PWAInstallPrompt() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
     };
-  }, []);
+  }, [isAdmin, pathname]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
