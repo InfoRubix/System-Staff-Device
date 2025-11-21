@@ -13,7 +13,8 @@ export const APP_INFO = {
   // What's new in this version
   releaseDate: 'November 2024',
   features: [
-    '🎨 New pixel art login interface - Modern visual design',
+    '🎨 Improved user interface - Cleaner and more modern design',
+    '📊 Device scan history preserved - Historical data kept even when users change',
     '📌 System tray icon - Runs in background, close window to minimize to tray',
     '💻 Automatic device detection - Correctly identifies Laptop vs Desktop',
     '🚀 Auto-start on boot - Starts automatically when Windows boots',

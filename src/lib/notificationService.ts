@@ -104,4 +104,25 @@ export const notificationService = {
       console.error('Error disabling notifications:', error);
     }
   },
+
+  // Send local browser notification (works without server)
+  sendBrowserNotification(title: string, body: string, options?: NotificationOptions): void {
+    try {
+      if (Notification.permission === 'granted') {
+        new Notification(title, {
+          body,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: 'critical-device-alert',
+          requireInteraction: true, // Keeps notification visible until user interacts
+          ...options,
+        });
+        console.log('📢 Browser notification sent:', title);
+      } else {
+        console.warn('Notification permission not granted');
+      }
+    } catch (error) {
+      console.error('Error sending browser notification:', error);
+    }
+  },
 };

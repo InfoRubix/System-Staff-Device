@@ -6,8 +6,15 @@ import { useNavigation } from '@/contexts/NavigationContext';
 import { useRouter } from 'next/navigation';
 import DeviceHealthDashboard from '@/components/DeviceHealthDashboard';
 import Navigation from '@/components/Navigation';
+import YearMonthFilter from '@/components/YearMonthFilter';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+
+interface HealthIssue {
+  type: 'hardware' | 'software' | 'security' | 'performance';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  message: string;
+}
 
 interface HealthScan {
   id: string;
@@ -16,18 +23,17 @@ interface HealthScan {
   department: string;
   scanTimestamp: Date;
   cpuUsage: number;
+  cpuTemp?: number;
   ramUsage: number;
   diskSpaceFree: number;
   diskHealth: 'Good' | 'Warning' | 'Critical';
   batteryHealth?: number;
-  antivirusStatus: string;
-  firewallStatus: string;
+  osVersion: string;
+  antivirusStatus: 'Active' | 'Inactive' | 'Not Installed';
+  firewallStatus: 'Active' | 'Inactive';
+  lastUpdate?: Date;
   overallStatus: 'Healthy' | 'Warning' | 'Critical';
-  issues: Array<{
-    type: string;
-    severity: string;
-    message: string;
-  }>;
+  issues: HealthIssue[];
 }
 
 export default function DeviceHealthPage() {
@@ -36,7 +42,10 @@ export default function DeviceHealthPage() {
   const _router = useRouter();
   const [componentsReady, setComponentsReady] = useState(false);
   const [healthScans, setHealthScans] = useState<HealthScan[]>([]);
+  const [filteredScans, setFilteredScans] = useState<HealthScan[]>([]);
   const [exporting, setExporting] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
 
   // Fetch health scans from Firebase
   useEffect(() => {
@@ -73,6 +82,31 @@ export default function DeviceHealthPage() {
     return () => unsubscribe();
   }, []);
 
+  // Filter scans by year/month
+  useEffect(() => {
+    if (selectedYear === 'all') {
+      setFilteredScans(healthScans);
+      return;
+    }
+
+    const filtered = healthScans.filter(scan => {
+      const scanDate = scan.scanTimestamp;
+      const scanYear = scanDate.getFullYear().toString();
+      const scanMonth = scanDate.getMonth().toString();
+
+      if (scanYear !== selectedYear) return false;
+      if (selectedMonth === 'all') return true;
+      return scanMonth === selectedMonth;
+    });
+
+    setFilteredScans(filtered);
+  }, [healthScans, selectedYear, selectedMonth]);
+
+  const handleFilterChange = (year: string, month: string) => {
+    setSelectedYear(year);
+    setSelectedMonth(month);
+  };
+
   // Reset states when navigation starts
   useEffect(() => {
     if (isNavigating) {
@@ -88,18 +122,31 @@ export default function DeviceHealthPage() {
       // Import the professional PDF service
       const { pdfService } = await import('@/services/pdfService');
 
-      // Calculate statistics
+      // Calculate period text
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+      let periodText = 'All Time';
+      if (selectedYear !== 'all') {
+        if (selectedMonth !== 'all') {
+          periodText = `${monthNames[parseInt(selectedMonth)]} ${selectedYear}`;
+        } else {
+          periodText = selectedYear;
+        }
+      }
+
+      // Calculate statistics from filtered scans
       const stats = {
-        total: healthScans.length,
-        healthy: healthScans.filter((s) => s.overallStatus === 'Healthy').length,
-        warning: healthScans.filter((s) => s.overallStatus === 'Warning').length,
-        critical: healthScans.filter((s) => s.overallStatus === 'Critical').length,
+        total: filteredScans.length,
+        healthy: filteredScans.filter((s) => s.overallStatus === 'Healthy').length,
+        warning: filteredScans.filter((s) => s.overallStatus === 'Warning').length,
+        critical: filteredScans.filter((s) => s.overallStatus === 'Critical').length,
       };
 
       // Generate the professional PDF report
       const success = await pdfService.exportDeviceHealthReport(
-        healthScans,
-        stats
+        filteredScans,
+        stats,
+        periodText
       );
 
       if (!success) {
@@ -232,7 +279,7 @@ export default function DeviceHealthPage() {
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={exportToPDF}
-                disabled={exporting || healthScans.length === 0}
+                disabled={exporting || filteredScans.length === 0}
                 className="px-4 py-2 border-4 font-medium rounded-lg transition-colors flex items-center gap-2
                   md:bg-blue-100 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800
                   bg-blue-600 border-blue-700 text-white
@@ -251,7 +298,10 @@ export default function DeviceHealthPage() {
           </div>
         </div>
 
-        <DeviceHealthDashboard />
+        {/* Year/Month Filter */}
+        <YearMonthFilter onFilterChange={handleFilterChange} />
+
+        <DeviceHealthDashboard scans={filteredScans} />
         </div>
       </div>
     </>

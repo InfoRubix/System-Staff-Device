@@ -6,6 +6,7 @@ import { useNavigation as _useNavigation } from '../contexts/NavigationContext';
 // Remove unused imports - DEPARTMENTS and Department are not needed in this component
 import BudgetCard from './BudgetCard';
 import Navigation from './Navigation';
+import YearMonthFilter from './YearMonthFilter';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -87,7 +88,10 @@ ChartJS.register(
 
 function DataAnalysis() {
   const [deviceScans, setDeviceScans] = useState<DeviceScan[]>([]);
+  const [filteredScans, setFilteredScans] = useState<DeviceScan[]>([]);
   const [scansLoading, setScansLoading] = useState(true);
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
   // const { getDevicesData } = useBudget();
   // const { isNavigating } = useNavigation();
   const [showUpgradePopup, setShowUpgradePopup] = useState(false);
@@ -146,6 +150,37 @@ function DataAnalysis() {
     return () => unsubscribe();
   }, []);
 
+  // Filter scans by year and month
+  useEffect(() => {
+    if (selectedYear === 'all') {
+      setFilteredScans(deviceScans);
+      return;
+    }
+
+    const filtered = deviceScans.filter(scan => {
+      const scanDate = scan.scanTimestamp;
+      const scanYear = scanDate.getFullYear().toString();
+      const scanMonth = scanDate.getMonth().toString(); // 0-11
+
+      // Check year match
+      if (scanYear !== selectedYear) return false;
+
+      // If month is 'all', include all months of the year
+      if (selectedMonth === 'all') return true;
+
+      // Check month match
+      return scanMonth === selectedMonth;
+    });
+
+    setFilteredScans(filtered);
+  }, [deviceScans, selectedYear, selectedMonth]);
+
+  // Handle filter change from YearMonthFilter component
+  const handleFilterChange = (year: string, month: string) => {
+    setSelectedYear(year);
+    setSelectedMonth(month);
+  };
+
   // Use budget context devices for consistent OS distribution
   // const budgetDevices = getDevicesData();
 
@@ -157,7 +192,7 @@ function DataAnalysis() {
 
   // Get devices for selected OS (using cleaned OS names)
   const selectedOSDevices = useMemo(() => {
-    if (!selectedOS || !deviceScans) return [];
+    if (!selectedOS || !filteredScans) return [];
     // Clean OS name helper (same logic as in osAgeData)
     const cleanOSName = (osName: string): string => {
       if (!osName) return 'Unknown';
@@ -165,17 +200,17 @@ function DataAnalysis() {
       cleaned = cleaned.replace(/\s+(Pro|Home|Enterprise|Professional|Education|Ultimate)$/i, '');
       return cleaned.trim() || 'Unknown';
     };
-    return deviceScans.filter(scan => cleanOSName(scan.osVersion) === selectedOS);
-  }, [selectedOS, deviceScans]);
+    return filteredScans.filter(scan => cleanOSName(scan.osVersion) === selectedOS);
+  }, [selectedOS, filteredScans]);
 
   // Calculate upgrade status for each device based on real specifications
   const devicesWithUpgradeStatus = useMemo(() => {
-    if (!deviceScans || deviceScans.length === 0) return [];
+    if (!filteredScans || filteredScans.length === 0) return [];
 
     const currentYear = new Date().getFullYear();
     const cutoffYear = currentYear - 8; // Devices older than 8 years need upgrade
 
-    return deviceScans.map(scan => {
+    return filteredScans.map(scan => {
       let needsUpgrade = false;
       const processor = scan.processor.toLowerCase();
       const ramSize = parseInt(scan.installedRAM.replace(/[^\d]/g, ''));
@@ -245,11 +280,11 @@ function DataAnalysis() {
         needsUpgrade
       };
     });
-  }, [deviceScans]);
+  }, [filteredScans]);
 
   // Calculate KPI metrics
   const kpiMetrics = useMemo(() => {
-    if (!deviceScans || deviceScans.length === 0) {
+    if (!filteredScans || filteredScans.length === 0) {
       return {
         upgradePercentage: 0,
         upgradeStats: { upgraded: 0, total: 0 },
@@ -260,7 +295,7 @@ function DataAnalysis() {
       };
     }
 
-    const totalDevices = deviceScans.length;
+    const totalDevices = filteredScans.length;
 
     // 1. Upgrade calculation (using real device specifications)
     const devicesNeedingUpgrade = devicesWithUpgradeStatus.filter(device => device.needsUpgrade).length;
@@ -269,7 +304,7 @@ function DataAnalysis() {
 
     // 2. OS distribution
     const osCounts = { Windows: 0, Android: 0, iOS: 0 };
-    deviceScans.forEach(scan => {
+    filteredScans.forEach(scan => {
       const os = scan.osVersion.toLowerCase();
       if (os.includes('windows')) osCounts.Windows++;
       else if (os.includes('android')) osCounts.Android++;
@@ -286,7 +321,7 @@ function DataAnalysis() {
     const currentYear = new Date().getFullYear();
     const cutoffYear = currentYear - 8; // CPUs older than 8 years need upgrade
 
-    const devicesNeedingCPUUpgrade = deviceScans.filter(scan => {
+    const devicesNeedingCPUUpgrade = filteredScans.filter(scan => {
       const processor = scan.processor.toLowerCase();
 
       // Intel generation to year mapping (approximate release years)
@@ -347,7 +382,7 @@ function DataAnalysis() {
 
     // 4. RAM distribution
     const ramCounts = { under8GB: 0, ram8GB: 0, ram16GBPlus: 0 };
-    deviceScans.forEach(scan => {
+    filteredScans.forEach(scan => {
       const ramSize = parseInt(scan.installedRAM.replace(/[^\d]/g, ''));
       if (ramSize < 8) ramCounts.under8GB++;
       else if (ramSize === 8) ramCounts.ram8GB++;
@@ -368,7 +403,7 @@ function DataAnalysis() {
       processorStats: { belowSpec: devicesNeedingCPUUpgrade, total: totalDevices },
       ramDistribution
     };
-  }, [deviceScans, devicesWithUpgradeStatus]);
+  }, [filteredScans]);
 
   // PDF Export Function using Professional PDF Service
   const exportToPDF = async () => {
@@ -390,15 +425,28 @@ function DataAnalysis() {
       };
 
       // Apply any filters (add current filter state if available)
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+
+      let periodText = 'All Time';
+      if (selectedYear !== 'all') {
+        if (selectedMonth !== 'all') {
+          periodText = `${monthNames[parseInt(selectedMonth)]} ${selectedYear}`;
+        } else {
+          periodText = selectedYear;
+        }
+      }
+
       const filters = {
         company: 'Device Management System',
-        generatedBy: 'Data Analysis Dashboard'
+        generatedBy: 'Data Analysis Dashboard',
+        period: periodText
       };
 
-      // Generate the professional PDF report
+      // Generate the professional PDF report (using filtered data)
       const success = await pdfService.exportDataAnalysisReport(
         analysisData,
-        deviceScans || [],
+        filteredScans || [],
         filters
       );
 
@@ -418,7 +466,7 @@ function DataAnalysis() {
   useEffect(() => {
     // This effect ensures the chart data recalculates when deviceScans change
     // The deviceTypeData useMemo will automatically trigger when deviceScans updates
-  }, [deviceScans, scansLoading]);
+  }, [filteredScans]);
 
   // Removed pageLoading effect - using navigation loading instead
 
@@ -439,7 +487,7 @@ function DataAnalysis() {
 
   // Calculate device status data for pie chart
   const statusData = useMemo(() => {
-    if (!deviceScans || deviceScans.length === 0) return { labels: [], datasets: [] };
+    if (!filteredScans || filteredScans.length === 0) return { labels: [], datasets: [] };
 
     const statusCounts = {
       Healthy: 0,
@@ -447,7 +495,7 @@ function DataAnalysis() {
       Critical: 0,
     };
 
-    deviceScans.forEach(scan => {
+    filteredScans.forEach(scan => {
       if (scan.overallStatus === 'Healthy') {
         statusCounts.Healthy++;
       } else if (scan.overallStatus === 'Warning') {
@@ -476,52 +524,44 @@ function DataAnalysis() {
         },
       ],
     };
-  }, [deviceScans]);
+  }, [filteredScans]);
 
   // Calculate device type data for pie chart
   const deviceTypeData = useMemo(() => {
-    if (!deviceScans || deviceScans.length === 0) return { labels: [], datasets: [] };
+    if (!filteredScans || filteredScans.length === 0) return { labels: [], datasets: [] };
 
     const typeCounts = {
       Laptop: 0,
       Desktop: 0,
-      Tablet: 0,
-      Phone: 0,
     };
 
-    deviceScans.forEach(scan => {
+    filteredScans.forEach(scan => {
       if (scan.deviceType === 'Laptop') typeCounts.Laptop++;
       else if (scan.deviceType === 'Desktop') typeCounts.Desktop++;
-      else if (scan.deviceType === 'Tablet') typeCounts.Tablet++;
-      else if (scan.deviceType === 'Phone') typeCounts.Phone++;
     });
 
     return {
-      labels: ['Laptop', 'Desktop', 'Tablet', 'Phone'],
+      labels: ['Laptop', 'Desktop'],
       datasets: [
         {
-          data: [typeCounts.Laptop, typeCounts.Desktop, typeCounts.Tablet, typeCounts.Phone],
+          data: [typeCounts.Laptop, typeCounts.Desktop],
           backgroundColor: [
             '#3B82F6', // Blue for Laptop
             '#8B5CF6', // Purple for Desktop
-            '#10B981', // Green for Tablet
-            '#F59E0B', // Yellow for Phone
           ],
           borderColor: [
             '#2563EB',
             '#7C3AED',
-            '#059669',
-            '#D97706',
           ],
           borderWidth: 2,
         },
       ],
     };
-  }, [deviceScans]);
+  }, [filteredScans]);
 
   // Calculate OS age data for bar chart based on actual device data
   const osAgeData = useMemo(() => {
-    if (!deviceScans || deviceScans.length === 0) return { labels: [], datasets: [] };
+    if (!filteredScans || filteredScans.length === 0) return { labels: [], datasets: [] };
 
     // OS release year mapping for automatic age calculation
     const osReleaseYears: Record<string, number> = {
@@ -585,7 +625,7 @@ function DataAnalysis() {
     };
 
     // Get unique CLEANED OS names from device scans
-    const uniqueOSNames = [...new Set(deviceScans.map(scan => cleanOSName(scan.osVersion)))];
+    const uniqueOSNames = [...new Set(filteredScans.map(scan => cleanOSName(scan.osVersion)))];
 
     uniqueOSNames.forEach(osName => {
       if (osName && osName !== 'Unknown') {
@@ -598,7 +638,7 @@ function DataAnalysis() {
         } else {
           // If OS not in mapping, estimate age based on scan timestamp
           // Match by CLEANED OS name
-          const scansWithThisOS = deviceScans.filter(s => cleanOSName(s.osVersion) === osName);
+          const scansWithThisOS = filteredScans.filter(s => cleanOSName(s.osVersion) === osName);
           if (scansWithThisOS.length > 0) {
             // Use oldest scan timestamp as estimate
             const oldestScan = scansWithThisOS.reduce((oldest, current) =>
@@ -623,7 +663,7 @@ function DataAnalysis() {
 
     // Count how many devices use each OS (using cleaned names)
     const deviceCounts = sortedOSNames.map(osName => {
-      return deviceScans.filter(scan => cleanOSName(scan.osVersion) === osName).length;
+      return filteredScans.filter(scan => cleanOSName(scan.osVersion) === osName).length;
     });
 
     const maxAge = Math.max(...ages);
@@ -646,11 +686,11 @@ function DataAnalysis() {
       maxAge, // Pass maxAge for dynamic Y-axis scaling
       deviceCounts, // Pass device counts for data labels
     };
-  }, [deviceScans]);
+  }, [filteredScans]);
 
   // Calculate issues trend data for line chart based on device status and dates
   const issuesTrendData = useMemo(() => {
-    if (!deviceScans || deviceScans.length === 0) return { labels: [], datasets: [] };
+    if (!filteredScans || filteredScans.length === 0) return { labels: [], datasets: [] };
 
     // Get the last 12 months
     const currentDate = new Date();
@@ -665,7 +705,7 @@ function DataAnalysis() {
       // Count device scans with issues (Warning, Critical)
       // that were scanned in this month
       let issueCount = 0;
-      deviceScans.forEach(scan => {
+      filteredScans.forEach(scan => {
         const problemStatuses = ['Warning', 'Critical'];
 
         if (problemStatuses.includes(scan.overallStatus)) {
@@ -703,7 +743,7 @@ function DataAnalysis() {
         },
       ],
     };
-  }, [deviceScans]);
+  }, [filteredScans]);
 
   // Chart options
   const statusPieOptions = {
@@ -1008,9 +1048,37 @@ function DataAnalysis() {
       <div id="analysis-content" className="w-full px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 backdrop-blur-2xl bg-white/30 border-4 border-white relative z-10">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">DATA · ANALYSIS</h1>
-          <p className="mt-3 text-sm text-gray-600 font-normal">Visual insights and analytics for device management</p>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div>
+              <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">DATA · ANALYSIS</h1>
+              <p className="mt-3 text-sm text-gray-600 font-normal">Visual insights and analytics for device management</p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-3 pdf-ignore">
+              <button
+                onClick={exportToPDF}
+                disabled={exporting || scansLoading}
+                className="px-4 py-2 border-4 font-medium rounded-lg transition-colors flex items-center gap-2
+                  md:bg-blue-100 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800
+                  bg-blue-600 border-blue-700 text-white
+                  disabled:bg-gray-300 disabled:border-gray-400 disabled:text-gray-500 disabled:cursor-not-allowed"
+              >
+                {exporting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
+                    Generating...
+                  </>
+                ) : (
+                  'GENERATE REPORT'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
+
+        {/* Year/Month Filter */}
+        <YearMonthFilter onFilterChange={handleFilterChange} />
 
         {/* KPI Cards - Responsive grid layout */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
@@ -1126,29 +1194,6 @@ function DataAnalysis() {
         </div>
       </div>
 
-      {/* Export PDF Button - Below analysis content */}
-      <div className="mt-8 text-center pdf-ignore">
-        <button
-          onClick={exportToPDF}
-          disabled={exporting || scansLoading}
-          className="inline-flex items-center px-6 py-3
-            md:bg-blue-100 md:border-4 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800
-            bg-blue-600 border-4 border-blue-700 hover:bg-blue-700 hover:border-blue-800 text-white hover:text-white
-            disabled:bg-gray-300 disabled:border-gray-400 disabled:text-gray-500 font-medium rounded-lg shadow-sm transition-colors duration-200 disabled:cursor-not-allowed"
-        >
-          {exporting ? (
-            <>
-              <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Generating Report...
-            </>
-          ) : (
-            <>
-              GENERATE REPORT
-            </>
-          )}
-        </button>
-      </div>
-
       {/* Popups remain unchanged for space - keeping existing popup implementations */}
       {/* Upgrade Details Popup */}
       {showUpgradePopup && (
@@ -1230,7 +1275,7 @@ function DataAnalysis() {
                 </div>
 
                 <div className="space-y-4">
-                  {deviceScans && deviceScans.length > 0 ? deviceScans.map(scan => {
+                  {deviceScans && filteredScans.length > 0 ? filteredScans.map(scan => {
                     const os = scan.osVersion.toLowerCase();
                     let osCategory = 'Other';
                     let osColor = 'bg-gray-100 text-gray-700';
@@ -1299,7 +1344,7 @@ function DataAnalysis() {
                 </div>
 
                 <div className="space-y-4">
-                  {deviceScans && deviceScans.length > 0 ? deviceScans.map(scan => {
+                  {deviceScans && filteredScans.length > 0 ? filteredScans.map(scan => {
                     const ramSize = parseInt(scan.installedRAM.replace(/[^\d]/g, ''));
                     let ramCategory = 'Other';
                     let ramColor = 'bg-gray-100 text-gray-700';
@@ -1365,7 +1410,7 @@ function DataAnalysis() {
                 </div>
 
                 <div className="space-y-4">
-                  {deviceScans && deviceScans.length > 0 ? deviceScans.map(scan => {
+                  {deviceScans && filteredScans.length > 0 ? filteredScans.map(scan => {
                     const processor = scan.processor.toLowerCase();
                     const currentYear = new Date().getFullYear();
                     const cutoffYear = currentYear - 8;

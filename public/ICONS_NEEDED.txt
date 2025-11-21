@@ -1,0 +1,30 @@
+PWA ICONS NEEDED
+================
+
+Please create the following icon files in this directory (/public):
+
+1. icon-192.png (192x192 pixels)
+   - Use for: App icon on home screen, notifications
+   - Recommended: Simple, recognizable logo on solid background
+   - File format: PNG with transparency
+
+2. icon-512.png (512x512 pixels)
+   - Use for: High-resolution app icon, splash screen
+   - Same design as icon-192.png, just larger
+   - File format: PNG with transparency
+
+TEMPORARY SOLUTION:
+Until you create custom icons, you can:
+1. Use any existing logo/icon from your company
+2. Or create simple icons using:
+   - Canva.com (free)
+   - Figma.com (free)
+   - Or ask your designer
+
+QUICK ICON IDEAS:
+- Computer/laptop icon with a checkmark
+- Heart rate monitor symbol (for "health" monitoring)
+- Shield with device icon (for protection/monitoring)
+- Simple initials "DM" (Device Manager)
+
+The app will work without icons, but users won't see a nice icon when they install it.

@@ -161,8 +161,6 @@ function DeviceForm({ device, onSubmit, onCancel }: DeviceFormProps) {
                 >
                   <option value="Laptop">LAPTOP</option>
                   <option value="Desktop">DESKTOP</option>
-                  <option value="Tablet">TABLET</option>
-                  <option value="Phone">PHONE</option>
                 </select>
               </div>
 

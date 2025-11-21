@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useState } from 'react';
 import { formatDate, formatDateTime, formatTime } from '@/lib/dateFormat';
 
 interface HealthScan {
@@ -37,51 +35,16 @@ interface HealthIssue {
   message: string;
 }
 
-export default function DeviceHealthDashboard() {
-  const [healthScans, setHealthScans] = useState<HealthScan[]>([]);
-  const [loading, setLoading] = useState(true);
+interface DeviceHealthDashboardProps {
+  scans: HealthScan[];
+}
+
+export default function DeviceHealthDashboard({ scans }: DeviceHealthDashboardProps) {
   const [filter, setFilter] = useState<'all' | 'healthy' | 'warning' | 'critical'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    // Listen to device_scans collection in Firebase
-    const q = query(
-      collection(db, 'device_scans'),
-      orderBy('scanTimestamp', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allScans: HealthScan[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        allScans.push({
-          id: doc.id,
-          ...data,
-          scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
-          lastUpdate: data.lastUpdate?.toDate(),
-        } as HealthScan);
-      });
-
-      // Group scans by deviceId and keep only the latest scan for each device
-      const latestScansMap = new Map<string, HealthScan>();
-      allScans.forEach(scan => {
-        const existing = latestScansMap.get(scan.deviceId);
-        if (!existing || scan.scanTimestamp > existing.scanTimestamp) {
-          latestScansMap.set(scan.deviceId, scan);
-        }
-      });
-
-      // Convert map to array
-      const scans = Array.from(latestScansMap.values());
-      setHealthScans(scans);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
   // Filter scans
-  const filteredScans = healthScans.filter((scan) => {
+  const filteredScans = scans.filter((scan) => {
     const matchesFilter =
       filter === 'all' ||
       (filter === 'healthy' && scan.overallStatus === 'Healthy') ||
@@ -98,13 +61,13 @@ export default function DeviceHealthDashboard() {
 
   // Calculate statistics
   const stats = {
-    total: healthScans.length,
-    healthy: healthScans.filter((s) => s.overallStatus === 'Healthy').length,
-    warning: healthScans.filter((s) => s.overallStatus === 'Warning').length,
-    critical: healthScans.filter((s) => s.overallStatus === 'Critical').length,
+    total: scans.length,
+    healthy: scans.filter((s) => s.overallStatus === 'Healthy').length,
+    warning: scans.filter((s) => s.overallStatus === 'Warning').length,
+    critical: scans.filter((s) => s.overallStatus === 'Critical').length,
   };
 
-  if (loading) {
+  if (scans.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
