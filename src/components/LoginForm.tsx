@@ -298,13 +298,6 @@ function LoginForm() {
             </div>
           )}
         </div>
-
-        {/* Admin Info */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Admin? Use <span className="font-mono bg-gray-100 px-2 py-1 rounded">admin@company.com</span>
-          </p>
-        </div>
       </div>
     </div>
   );
