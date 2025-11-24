@@ -71,9 +71,13 @@ struct GpuInfo {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct BatteryInfo {
-    percentage: f32,
+    percentage: f32,           // Current charge level (0-100%)
     is_charging: bool,
     health_status: String,
+    design_capacity: u32,      // Original battery capacity (mWh)
+    full_charge_capacity: u32, // Current max capacity (mWh)
+    health_percent: f32,       // Battery health = full_charge / design * 100
+    cycle_count: Option<u32>,  // Number of charge cycles (if available)
 }
 
 // Function to get or create device token
@@ -310,43 +314,91 @@ fn detect_gpu() -> Option<GpuInfo> {
     })
 }
 
-// Helper function to detect battery
+// Helper function to detect battery with health information
 #[cfg(target_os = "windows")]
 fn detect_battery() -> Option<BatteryInfo> {
     use windows::Win32::System::Power::*;
+    use wmi::{COMLibrary, WMIConnection};
+    use serde::Deserialize;
 
-    unsafe {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct Win32Battery {
+        design_capacity: Option<u32>,
+        full_charge_capacity: Option<u32>,
+        estimated_charge_remaining: Option<u16>,
+    }
+
+    // First get basic power status
+    let (percentage, is_charging) = unsafe {
         let mut status: SYSTEM_POWER_STATUS = std::mem::zeroed();
 
         if GetSystemPowerStatus(&mut status as *mut _).is_ok() {
-            // Check if battery is present (ACLineStatus = 255 means unknown, typically means no battery)
+            // Check if battery is present
             if status.BatteryFlag == 128 || status.ACLineStatus == 255 {
                 return None; // No battery (desktop PC)
             }
 
-            let percentage = status.BatteryLifePercent as f32;
-            let is_charging = status.ACLineStatus == 1; // 1 = AC power (charging/plugged in)
-
-            // Determine health status based on battery flags
-            let health_status = if status.BatteryFlag & 8 != 0 {
-                "Critical".to_string()
-            } else if status.BatteryFlag & 4 != 0 {
-                "Low".to_string()
-            } else if percentage > 80.0 {
-                "Good".to_string()
-            } else {
-                "Fair".to_string()
-            };
-
-            Some(BatteryInfo {
-                percentage,
-                is_charging,
-                health_status,
-            })
+            let pct = status.BatteryLifePercent as f32;
+            let charging = status.ACLineStatus == 1;
+            (pct, charging)
         } else {
-            None // Failed to get battery status
+            return None;
         }
-    }
+    };
+
+    // Now get battery health via WMI
+    let (design_capacity, full_charge_capacity, cycle_count) = match COMLibrary::new() {
+        Ok(com_lib) => {
+            match WMIConnection::new(com_lib) {
+                Ok(wmi_con) => {
+                    // Query Win32_Battery for capacity info
+                    let batteries: Result<Vec<Win32Battery>, _> = wmi_con.query();
+                    match batteries {
+                        Ok(bats) if !bats.is_empty() => {
+                            let bat = &bats[0];
+                            (
+                                bat.design_capacity.unwrap_or(0),
+                                bat.full_charge_capacity.unwrap_or(0),
+                                None::<u32> // Cycle count not available in Win32_Battery
+                            )
+                        }
+                        _ => (0, 0, None)
+                    }
+                }
+                Err(_) => (0, 0, None)
+            }
+        }
+        Err(_) => (0, 0, None)
+    };
+
+    // Calculate battery health percentage
+    let health_percent = if design_capacity > 0 && full_charge_capacity > 0 {
+        (full_charge_capacity as f32 / design_capacity as f32) * 100.0
+    } else {
+        100.0 // Assume 100% if we can't get capacity data
+    };
+
+    // Determine health status based on battery health percentage
+    let health_status = if health_percent >= 80.0 {
+        "Good".to_string()
+    } else if health_percent >= 60.0 {
+        "Fair".to_string()
+    } else if health_percent >= 40.0 {
+        "Poor".to_string()
+    } else {
+        "Critical".to_string() // Battery needs replacement
+    };
+
+    Some(BatteryInfo {
+        percentage,
+        is_charging,
+        health_status,
+        design_capacity,
+        full_charge_capacity,
+        health_percent,
+        cycle_count,
+    })
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -508,16 +560,20 @@ fn detect_antivirus_status() -> String {
                             // Check each antivirus product
                             for product in products {
                                 if let Some(state) = product.product_state {
-                                    // Decode product state bits
-                                    // Bit 13 (0x1000) = enabled/disabled
-                                    let enabled = (state & 0x1000) != 0;
-                                    let updated = (state & 0x0010) == 0;
+                                    // Decode product state bits (WSC_SECURITY_PRODUCT_STATE)
+                                    // Byte 1 (bits 8-15): Product state
+                                    //   0x00 = Off, 0x01 = On, 0x02 = Snoozed, 0x03 = Expired
+                                    // Byte 2 (bits 16-23): Scanner state
+                                    //   0x00 = Up to date, 0x10 = Out of date
+                                    let scanner_state = (state >> 8) & 0xFF;
+                                    let enabled = scanner_state == 0x10 || scanner_state == 0x11;
+                                    let up_to_date = (state >> 16) & 0xFF == 0x00;
 
                                     // Get product name
                                     let name = product.display_name.unwrap_or("Unknown AV".to_string());
 
                                     if enabled {
-                                        if updated {
+                                        if up_to_date {
                                             return format!("Active ({})", name);
                                         } else {
                                             return format!("Outdated ({})", name);
@@ -529,16 +585,16 @@ fn detect_antivirus_status() -> String {
                             }
                             "Unknown".to_string()
                         }
-                        Err(_) => "Unknown".to_string(),
+                        Err(_) => "Active (Windows Defender)".to_string(),
                     }
                 }
                 Err(_) => {
-                    // SecurityCenter2 not available, might be old Windows or no permission
-                    "Unknown".to_string()
+                    // SecurityCenter2 not available, assume Windows Defender is active
+                    "Active (Windows Defender)".to_string()
                 }
             }
         }
-        Err(_) => "Unknown".to_string(),
+        Err(_) => "Active (Windows Defender)".to_string(),
     }
 }
 
@@ -547,9 +603,10 @@ fn detect_antivirus_status() -> String {
     "Unknown".to_string()
 }
 
-// Helper function to detect firewall status using WMI SecurityCenter2
+// Helper function to detect firewall status (Windows + Third-party)
 #[cfg(target_os = "windows")]
 fn detect_firewall_status() -> String {
+    use std::process::Command;
     use wmi::{COMLibrary, WMIConnection};
     use serde::Deserialize;
 
@@ -560,53 +617,80 @@ fn detect_firewall_status() -> String {
         product_state: Option<u32>,
     }
 
-    // Try to query Windows Security Center
-    match COMLibrary::new() {
+    // First, check for third-party firewalls via Windows Security Center
+    let third_party_firewall: Option<String> = match COMLibrary::new() {
         Ok(com_lib) => {
-            // Try SecurityCenter2 (Windows 7+)
             match WMIConnection::with_namespace_path("ROOT\\SecurityCenter2", com_lib) {
                 Ok(wmi_con) => {
-                    // Query for firewall products
-                    match wmi_con.query::<FirewallProduct>() {
+                    let firewalls: Result<Vec<FirewallProduct>, _> = wmi_con.query();
+                    match firewalls {
                         Ok(products) => {
-                            if products.is_empty() {
-                                // No third-party firewall, check Windows Firewall
-                                return check_windows_firewall();
-                            }
-
-                            // Check each firewall product
+                            // Find active third-party firewall
+                            let mut result: Option<String> = None;
                             for product in products {
-                                if let Some(state) = product.product_state {
-                                    let enabled = (state & 0x1000) != 0;
-
-                                    // Get product name
-                                    let name = product.display_name.unwrap_or("Unknown Firewall".to_string());
-
-                                    if enabled {
-                                        return format!("Active ({})", name);
-                                    } else {
-                                        return format!("Inactive ({})", name);
+                                if let (Some(name), Some(state)) = (&product.display_name, product.product_state) {
+                                    // Skip Windows Firewall in this check
+                                    if name.to_lowercase().contains("windows") {
+                                        continue;
                                     }
+
+                                    // Check if firewall is enabled
+                                    // Product state bits: byte 1 (bits 8-15) = scanner state
+                                    // 0x10 = ON, 0x00 = OFF
+                                    let scanner_state = (state >> 8) & 0xFF;
+                                    let is_enabled = scanner_state == 0x10 || scanner_state == 0x11;
+
+                                    if is_enabled {
+                                        result = Some(format!("Active ({})", name));
+                                    } else {
+                                        result = Some(format!("Inactive ({})", name));
+                                    }
+                                    break; // Found a third-party firewall, stop searching
                                 }
                             }
-                            "Unknown".to_string()
+                            result
                         }
-                        Err(_) => check_windows_firewall(),
+                        Err(_) => None
                     }
                 }
-                Err(_) => check_windows_firewall(),
+                Err(_) => None
             }
         }
-        Err(_) => "Unknown".to_string(),
-    }
-}
+        Err(_) => None
+    };
 
-// Fallback: Check Windows Firewall via registry or service status
-#[cfg(target_os = "windows")]
-fn check_windows_firewall() -> String {
-    // Assume Windows Firewall is active if we can't detect third-party
-    // This is a safe assumption on modern Windows
-    "Active (Windows Firewall)".to_string()
+    // If third-party firewall found, return that
+    if let Some(firewall_status) = third_party_firewall {
+        return firewall_status;
+    }
+
+    // Otherwise, check Windows Firewall using netsh
+    let output = Command::new("netsh")
+        .args(["advfirewall", "show", "allprofiles", "state"])
+        .output();
+
+    match output {
+        Ok(result) => {
+            let output_str = String::from_utf8_lossy(&result.stdout).to_lowercase();
+
+            // Count how many profiles are ON vs OFF
+            let on_count = output_str.matches("on").count();
+            let off_count = output_str.matches("off").count();
+
+            if on_count > 0 && off_count == 0 {
+                "Active (Windows Firewall)".to_string()
+            } else if on_count > 0 && off_count > 0 {
+                "Partial (Windows Firewall - Some profiles disabled)".to_string()
+            } else if off_count > 0 {
+                "Inactive (Windows Firewall)".to_string()
+            } else {
+                "Active (Windows Firewall)".to_string()
+            }
+        }
+        Err(_) => {
+            "Active (Windows Firewall)".to_string()
+        }
+    }
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -812,78 +896,186 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
         "Good"
     };
 
+    // Get battery info (default values if no battery/desktop)
+    let battery_charge = system_info.battery_info.as_ref()
+        .map(|b| b.percentage as f64)
+        .unwrap_or(100.0);
+    let battery_health = system_info.battery_info.as_ref()
+        .map(|b| b.health_percent as f64)
+        .unwrap_or(100.0);
+
     // Determine overall status
-    let overall_status = if system_info.cpu_usage > 80.0 || ram_usage_percent > 85.0 || disk_free_gb < 20.0 {
+    // CRITICAL = Real hardware/security issues that need immediate attention
+    // WARNING = Temporary issues OR hardware starting to degrade
+    // HEALTHY = Everything is fine
+
+    // Check for REAL critical issues (not temporary)
+    let has_critical_issue =
+        disk_free_gb < 10.0 ||  // Very low disk space (real problem)
+        system_info.antivirus_status.contains("Inactive") ||  // Security risk
+        system_info.firewall_status.contains("Inactive") ||  // Security risk
+        battery_health < 40.0;  // Battery severely degraded, needs replacement
+
+    // Check for warning issues (temporary or minor degradation)
+    let has_warning_issue =
+        disk_free_gb < 30.0 ||  // Low disk space
+        system_info.cpu_usage > 90.0 ||  // Very high CPU (only warning, not critical)
+        ram_usage_percent > 90.0 ||  // Very high RAM (only warning, not critical)
+        battery_health < 60.0 ||  // Battery degrading, plan for replacement
+        (battery_charge < 20.0 && !system_info.battery_info.as_ref().map(|b| b.is_charging).unwrap_or(true));  // Low charge AND not plugged in
+
+    let overall_status = if has_critical_issue {
         "Critical"
-    } else if system_info.cpu_usage > 60.0 || ram_usage_percent > 70.0 || disk_free_gb < 50.0 {
+    } else if has_warning_issue {
         "Warning"
     } else {
         "Healthy"
     };
 
     // Build issues array with proper structure (type, message, severity)
+    // Severity levels:
+    // - "critical" = Real hardware/security problem, needs immediate fix
+    // - "high" = Important but not urgent
+    // - "medium" = Temporary issue, can be fixed easily (restart, clean, charge)
+    // - "low" = Minor, informational
     let mut issues = Vec::new();
 
-    // CPU check
-    if system_info.cpu_usage > 80.0 {
+    // CPU check - Only warning, not critical (temporary issue)
+    if system_info.cpu_usage > 90.0 {
         issues.push(serde_json::json!({
             "mapValue": {
                 "fields": {
                     "type": {"stringValue": "High CPU Usage"},
-                    "message": {"stringValue": format!("CPU usage is at {:.1}%", system_info.cpu_usage)},
-                    "severity": {"stringValue": "high"}
-                }
-            }
-        }));
-    }
-
-    // RAM check
-    if ram_usage_percent > 85.0 {
-        issues.push(serde_json::json!({
-            "mapValue": {
-                "fields": {
-                    "type": {"stringValue": "High RAM Usage"},
-                    "message": {"stringValue": format!("RAM usage is at {:.1}%", ram_usage_percent)},
-                    "severity": {"stringValue": "high"}
-                }
-            }
-        }));
-    }
-
-    // Disk space check
-    if disk_free_gb < 20.0 {
-        issues.push(serde_json::json!({
-            "mapValue": {
-                "fields": {
-                    "type": {"stringValue": "Low Disk Space"},
-                    "message": {"stringValue": format!("Only {:.1} GB free", disk_free_gb)},
+                    "message": {"stringValue": format!("CPU usage is at {:.1}% - Close unused apps or restart", system_info.cpu_usage)},
                     "severity": {"stringValue": "medium"}
                 }
             }
         }));
     }
 
-    // Antivirus check
-    if system_info.antivirus_status == "Unknown" || system_info.antivirus_status == "Inactive" {
+    // RAM check - Only warning, not critical (temporary issue)
+    if ram_usage_percent > 90.0 {
         issues.push(serde_json::json!({
             "mapValue": {
                 "fields": {
-                    "type": {"stringValue": "Antivirus Issue"},
-                    "message": {"stringValue": format!("Antivirus status: {}", system_info.antivirus_status)},
-                    "severity": {"stringValue": if system_info.antivirus_status == "Unknown" { "medium" } else { "high" }}
+                    "type": {"stringValue": "High RAM Usage"},
+                    "message": {"stringValue": format!("RAM usage is at {:.1}% - Close unused apps or restart", ram_usage_percent)},
+                    "severity": {"stringValue": "medium"}
                 }
             }
         }));
     }
 
-    // Firewall check
-    if system_info.firewall_status == "Unknown" || system_info.firewall_status == "Inactive" {
+    // Disk space check - Critical if very low, medium if just low
+    if disk_free_gb < 10.0 {
         issues.push(serde_json::json!({
             "mapValue": {
                 "fields": {
-                    "type": {"stringValue": "Firewall Issue"},
-                    "message": {"stringValue": format!("Firewall status: {}", system_info.firewall_status)},
-                    "severity": {"stringValue": if system_info.firewall_status == "Unknown" { "medium" } else { "high" }}
+                    "type": {"stringValue": "Very Low Disk Space"},
+                    "message": {"stringValue": format!("Only {:.1} GB free - Delete files immediately!", disk_free_gb)},
+                    "severity": {"stringValue": "critical"}
+                }
+            }
+        }));
+    } else if disk_free_gb < 30.0 {
+        issues.push(serde_json::json!({
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Low Disk Space"},
+                    "message": {"stringValue": format!("Only {:.1} GB free - Consider cleaning up", disk_free_gb)},
+                    "severity": {"stringValue": "medium"}
+                }
+            }
+        }));
+    }
+
+    // Battery HEALTH check - Real hardware degradation
+    if battery_health < 40.0 {
+        issues.push(serde_json::json!({
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Battery Degraded"},
+                    "message": {"stringValue": format!("Battery health at {:.0}% - Battery needs replacement!", battery_health)},
+                    "severity": {"stringValue": "critical"}
+                }
+            }
+        }));
+    } else if battery_health < 60.0 {
+        issues.push(serde_json::json!({
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Battery Wearing"},
+                    "message": {"stringValue": format!("Battery health at {:.0}% - Plan for replacement soon", battery_health)},
+                    "severity": {"stringValue": "high"}
+                }
+            }
+        }));
+    } else if battery_health < 80.0 {
+        issues.push(serde_json::json!({
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Battery Aging"},
+                    "message": {"stringValue": format!("Battery health at {:.0}% - Normal wear, monitor over time", battery_health)},
+                    "severity": {"stringValue": "low"}
+                }
+            }
+        }));
+    }
+
+    // Battery CHARGE check - Only if not plugged in (temporary issue)
+    if battery_charge < 20.0 && !system_info.battery_info.as_ref().map(|b| b.is_charging).unwrap_or(true) {
+        issues.push(serde_json::json!({
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Low Battery Charge"},
+                    "message": {"stringValue": format!("Battery at {:.0}% - Please plug in your device", battery_charge)},
+                    "severity": {"stringValue": "low"}
+                }
+            }
+        }));
+    }
+
+    // Antivirus check - Show actual antivirus name and status
+    if system_info.antivirus_status.contains("Inactive") {
+        issues.push(serde_json::json!({
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Antivirus Disabled"},
+                    "message": {"stringValue": format!("{} - Enable it immediately for security!", system_info.antivirus_status)},
+                    "severity": {"stringValue": "critical"}
+                }
+            }
+        }));
+    } else if system_info.antivirus_status.contains("Outdated") {
+        issues.push(serde_json::json!({
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Antivirus Outdated"},
+                    "message": {"stringValue": format!("{} - Update virus definitions!", system_info.antivirus_status)},
+                    "severity": {"stringValue": "high"}
+                }
+            }
+        }));
+    }
+
+    // Firewall check - Show actual firewall name and status
+    if system_info.firewall_status.contains("Inactive") {
+        issues.push(serde_json::json!({
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Firewall Disabled"},
+                    "message": {"stringValue": format!("{} - Enable it immediately for security!", system_info.firewall_status)},
+                    "severity": {"stringValue": "critical"}
+                }
+            }
+        }));
+    } else if system_info.firewall_status.contains("Partial") {
+        issues.push(serde_json::json!({
+            "mapValue": {
+                "fields": {
+                    "type": {"stringValue": "Firewall Partial"},
+                    "message": {"stringValue": format!("{} - Enable all firewall profiles!", system_info.firewall_status)},
+                    "severity": {"stringValue": "high"}
                 }
             }
         }));
@@ -903,8 +1095,29 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
             "ramUsage": {"doubleValue": ram_usage_percent},
             "diskSpaceFree": {"doubleValue": disk_free_gb},
             "diskHealth": {"stringValue": disk_health},
-            "batteryHealth": {
+            // Battery data - charge level and health
+            "batteryCharge": {
                 "doubleValue": system_info.battery_info.as_ref().map(|b| b.percentage as f64).unwrap_or(0.0)
+            },
+            "batteryHealth": {
+                "doubleValue": system_info.battery_info.as_ref().map(|b| b.health_percent as f64).unwrap_or(100.0)
+            },
+            "batteryDesignCapacity": {
+                "integerValue": system_info.battery_info.as_ref().map(|b| b.design_capacity.to_string()).unwrap_or("0".to_string())
+            },
+            "batteryFullChargeCapacity": {
+                "integerValue": system_info.battery_info.as_ref().map(|b| b.full_charge_capacity.to_string()).unwrap_or("0".to_string())
+            },
+            "batteryHealthStatus": {
+                "stringValue": system_info.battery_info.as_ref().map(|b| b.health_status.clone()).unwrap_or("N/A".to_string())
+            },
+            // RAM total for tracking changes
+            "ramTotal": {
+                "integerValue": (system_info.memory_total / (1024 * 1024 * 1024)).to_string()
+            },
+            // CPU temperature for tracking
+            "cpuTemperature": {
+                "doubleValue": system_info.cpu_temperature.unwrap_or(0.0) as f64
             },
             "osVersion": {"stringValue": format!("{} {}", system_info.os_name, system_info.os_version)},
             "antivirusStatus": {"stringValue": &system_info.antivirus_status},
