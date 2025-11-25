@@ -42,6 +42,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deviceScans, setDeviceScans] = useState<DeviceScan[]>([]);
+  const [fixedRepairs, setFixedRepairs] = useState<Set<string>>(new Set());
   const [estimationTotals, setEstimationTotals] = useState({
     estimatedRepairsTotal: 0,
     estimatedReplacements: 0,
@@ -119,8 +120,88 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Listen to fixed/completed repairs
+  useEffect(() => {
+    let unsubscribeSnapshot: (() => void) | undefined;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const q = query(collection(db, 'repairs'));
+
+        unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+          const fixedSet = new Set<string>();
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.status === 'fixed' || data.status === 'completed') {
+              // Create ID in same format as issue detection
+              const fixedId = `${data.deviceId}-${data.staffEmail}-${data.issueType?.replace(/[^a-zA-Z0-9]/g, '_')}`;
+              fixedSet.add(fixedId);
+            }
+          });
+          setFixedRepairs(fixedSet);
+        });
+      } else {
+        setFixedRepairs(new Set());
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+      }
+    };
+  }, []);
+
   // Calculate repair and replacement costs from ACTUAL device scan data (hardware issues)
-  const calculateDeviceCosts = useCallback((scans: DeviceScan[]) => {
+  const calculateFilteredRepairCosts = useCallback((scans: DeviceScan[]) => {
+    const HARDWARE_REPAIR_COSTS = {
+      RAM_CRITICAL: 250,
+      LOW_DISK_SPACE: 400,
+      CPU_OVERHEATING: 100,
+      BATTERY_DEGRADED: 350,
+    };
+
+    let estimatedRepairsTotal = 0;
+
+    scans.forEach(scan => {
+      let deviceRepairCost = 0;
+
+      if (scan.ramUsage > 85) {
+        const issueId = `${scan.deviceId}-${scan.staffEmail}-RAM_Critical___Memory_Failure`;
+        if (!fixedRepairs.has(issueId)) {
+          deviceRepairCost += HARDWARE_REPAIR_COSTS.RAM_CRITICAL;
+        }
+      }
+
+      if (scan.diskSpaceFree < 20) {
+        const issueId = `${scan.deviceId}-${scan.staffEmail}-Low_Disk_Space`;
+        if (!fixedRepairs.has(issueId)) {
+          deviceRepairCost += HARDWARE_REPAIR_COSTS.LOW_DISK_SPACE;
+        }
+      }
+
+      if (scan.cpuTemp && scan.cpuTemp > 85) {
+        const issueId = `${scan.deviceId}-${scan.staffEmail}-CPU_Overheating`;
+        if (!fixedRepairs.has(issueId)) {
+          deviceRepairCost += HARDWARE_REPAIR_COSTS.CPU_OVERHEATING;
+        }
+      }
+
+      if (scan.batteryHealth && scan.batteryHealth < 50) {
+        const issueId = `${scan.deviceId}-${scan.staffEmail}-Battery_Degraded`;
+        if (!fixedRepairs.has(issueId)) {
+          deviceRepairCost += HARDWARE_REPAIR_COSTS.BATTERY_DEGRADED;
+        }
+      }
+
+      estimatedRepairsTotal += deviceRepairCost;
+    });
+
+    return estimatedRepairsTotal;
+  }, [fixedRepairs]);
+
+  const calculateDeviceCosts = useCallback((scans: DeviceScan[], fixedRepairsSet: Set<string>) => {
     if (!scans || scans.length === 0) {
       return {
         estimatedRepairsTotal: 0,
@@ -177,24 +258,38 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       byDeviceType[deviceType].count++;
 
       // REPAIR COSTS: Based on ACTUAL hardware issues from scan data
+      // Only count issues that are NOT fixed
+
       // RAM Critical / Memory Failure (match repair management threshold)
       if (scan.ramUsage > 85) {
-        deviceRepairCost += HARDWARE_REPAIR_COSTS.RAM_CRITICAL;
+        const issueId = `${scan.deviceId}-${scan.staffEmail}-RAM_Critical___Memory_Failure`;
+        if (!fixedRepairsSet.has(issueId)) {
+          deviceRepairCost += HARDWARE_REPAIR_COSTS.RAM_CRITICAL;
+        }
       }
 
       // Low Disk Space (needs SSD upgrade)
       if (scan.diskSpaceFree < 20) {
-        deviceRepairCost += HARDWARE_REPAIR_COSTS.LOW_DISK_SPACE;
+        const issueId = `${scan.deviceId}-${scan.staffEmail}-Low_Disk_Space`;
+        if (!fixedRepairsSet.has(issueId)) {
+          deviceRepairCost += HARDWARE_REPAIR_COSTS.LOW_DISK_SPACE;
+        }
       }
 
       // CPU Overheating
       if (scan.cpuTemp && scan.cpuTemp > 85) {
-        deviceRepairCost += HARDWARE_REPAIR_COSTS.CPU_OVERHEATING;
+        const issueId = `${scan.deviceId}-${scan.staffEmail}-CPU_Overheating`;
+        if (!fixedRepairsSet.has(issueId)) {
+          deviceRepairCost += HARDWARE_REPAIR_COSTS.CPU_OVERHEATING;
+        }
       }
 
       // Battery Degraded (for laptops/tablets)
       if (scan.batteryHealth && scan.batteryHealth < 50) {
-        deviceRepairCost += HARDWARE_REPAIR_COSTS.BATTERY_DEGRADED;
+        const issueId = `${scan.deviceId}-${scan.staffEmail}-Battery_Degraded`;
+        if (!fixedRepairsSet.has(issueId)) {
+          deviceRepairCost += HARDWARE_REPAIR_COSTS.BATTERY_DEGRADED;
+        }
       }
 
       // Add to totals if device needs repair
@@ -487,7 +582,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       const scanData = deviceScans || [];
 
       // Calculate repair and replacement costs from ACTUAL scan data
-      const estimationData = calculateDeviceCosts(scanData);
+      const estimationData = calculateDeviceCosts(scanData, fixedRepairs);
       setEstimationTotals(estimationData);
 
       const totalBudget = 20000; // RM 20,000 monthly budget
@@ -704,7 +799,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadBudgetData();
-  }, [deviceScans, calculateDeviceCosts, calculateBudgetValues, loadBudgetData]);
+  }, [deviceScans, fixedRepairs, calculateDeviceCosts, calculateBudgetValues, loadBudgetData]);
 
 
   // Update alerts when budget changes
@@ -743,6 +838,8 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       getDevicesNeedingRepair,
       getDevicesNeedingReplacement,
       getDevicesWithRepairDetails,
+      deviceScans,
+      calculateFilteredRepairCosts,
     }}>
       {children}
     </BudgetContext.Provider>

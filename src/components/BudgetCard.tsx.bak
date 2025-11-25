@@ -3,11 +3,7 @@
 import { useState } from 'react';
 import { useBudget } from '../contexts/BudgetContext';
 
-interface BudgetCardProps {
-  filteredRepairCost?: number;
-}
-
-function BudgetCard({ filteredRepairCost }: BudgetCardProps) {
+function BudgetCard() {
   const {
     currentBudget,
     getEstimatedRepairCosts,
@@ -43,8 +39,8 @@ function BudgetCard({ filteredRepairCost }: BudgetCardProps) {
     );
   }
 
-  // Get estimation totals - use filtered cost if provided
-  const estimatedRepairCosts = filteredRepairCost !== undefined ? filteredRepairCost : getEstimatedRepairCosts();
+  // Get estimation totals
+  const estimatedRepairCosts = getEstimatedRepairCosts();
   const estimatedReplacementCosts = getEstimatedReplacementCosts();
   const totalEstimation = estimatedRepairCosts + estimatedReplacementCosts;
 

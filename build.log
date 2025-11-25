@@ -1,30 +1,23 @@
 
-> my-project@1.5.0 tauri:build
-> tauri build
-
-        Info Looking up installed tauri packages to check mismatched versions...
-        Warn The bundle identifier "com.devicemonitor.app" set in `tauri.conf.json identifier` ends with `.app`. This is not recommended because it conflicts with the application bundle extension on macOS.
-     Running beforeBuildCommand `npm run build`
-
 > my-project@1.5.0 build
 > next build
 
  ⚠ Specified "headers" will not automatically work with "output: export". See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
    ▲ Next.js 15.5.2
-   - Environments: .env
+   - Environments: .env.local, .env
 
    Creating an optimized production build ...
  ⚠ Specified "headers" will not automatically work with "output: export". See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
  ⚠ Specified "headers" will not automatically work with "output: export". See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
  ⚠ Specified "headers" will not automatically work with "output: export". See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
- ✓ Compiled successfully in 22.3s
+ ✓ Compiled successfully in 4.1min
    Linting and checking validity of types ...
 
 ./src/app/api/deleteUser/route.ts
 43:19  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/app/api/resetDatabase/route.ts
-91:19  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+93:19  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/app/device-login/page.tsx
 30:6  Warning: React Hook useEffect has a missing dependency: 'validateSavedSession'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
@@ -33,8 +26,8 @@
 500:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
 
 ./src/app/my-device/page.tsx
-27:11  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-190:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+26:11  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+189:48  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/app/page.tsx
 15:20  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
@@ -47,10 +40,14 @@
 274:36  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/app/repair-management/page.tsx
-273:38  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-289:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-705:26  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-1306:6  Warning: React Hook useEffect has a missing dependency: 'loadRemarks'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+270:38  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+286:45  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+702:26  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+1303:6  Warning: React Hook useEffect has a missing dependency: 'loadRemarks'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/repair-management-history/page.tsx
+230:72  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+246:72  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/app/technician-dashboard/page.tsx
 48:27  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
@@ -66,21 +63,21 @@
 268:21  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/components/DataAnalysis.tsx
-406:6  Warning: React Hook useMemo has a missing dependency: 'devicesWithUpgradeStatus'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+338:6  Warning: React Hook useMemo has a missing dependency: 'devicesWithUpgradeStatus'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./src/components/LoginForm.tsx
 145:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
 
 ./src/components/Navigation.tsx
-21:33  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-183:23  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-289:25  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+22:33  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+205:23  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+368:25  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
 
 ./src/contexts/BudgetContext.tsx
-210:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-211:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-213:37  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
-534:6  Warning: React Hook useCallback has a missing dependency: 'deviceScans'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+305:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+306:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+308:37  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+629:6  Warning: React Hook useCallback has missing dependencies: 'deviceScans' and 'fixedRepairs'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./src/lib/notificationService.ts
 53:43  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
@@ -103,7 +100,7 @@ Firebase Admin initialization error: Error: Service account object must contain 
   errorInfo: [Object],
   codePrefix: 'app'
 }
-   Generating static pages (0/17) ...
+   Generating static pages (0/19) ...
 Firebase Admin initialization error: Error: Service account object must contain a string "private_key" property.
     at <unknown> (C:\Users\hp\Desktop\Website_intern\work_intern\System-Staff-Device\.next\server\app\api\deleteUser\route.js:1:6919) {
   errorInfo: [Object],
@@ -114,32 +111,38 @@ Firebase Admin initialization error: Error: Service account object must contain 
   errorInfo: [Object],
   codePrefix: 'app'
 }
-   Generating static pages (4/17) 
 Data Analysis Page - Not rendering, waiting for navigation to complete and components to be ready
-   Generating static pages (8/17) 
-   Generating static pages (12/17) 
- ✓ Generating static pages (17/17)
+   Generating static pages (4/19) 
+   Generating static pages (9/19) 
+   Generating static pages (14/19) 
+ ✓ Generating static pages (19/19)
    Finalizing page optimization ...
    Collecting build traces ...
  ⚠ rewrites, redirects, and headers are not applied when exporting your application, detected (headers). See more info here: https://nextjs.org/docs/messages/export-no-custom-routes
-   Exporting (0/2) ...
- ✓ Exporting (2/2)
+   Exporting (0/15) ...
+Data Analysis Page - Not rendering, waiting for navigation to complete and components to be ready
+   Exporting (3/15) 
+   Exporting (7/15) 
+   Exporting (11/15) 
+ ✓ Exporting (15/15)
 
 Route (app)                                 Size  First Load JS
 ┌ ○ /                                    1.89 kB         232 kB
 ├ ○ /_not-found                            996 B         103 kB
-├ ƒ /api/deleteUser                        131 B         102 kB
-├ ƒ /api/resetDatabase                     131 B         102 kB
-├ ○ /dashboard                           19.3 kB         256 kB
-├ ○ /data-analysis                       83.4 kB         320 kB
+├ ƒ /api/deleteUser                        134 B         102 kB
+├ ƒ /api/resetDatabase                     134 B         102 kB
+├ ƒ /api/sendNotification                  134 B         102 kB
+├ ○ /dashboard                             19 kB         256 kB
+├ ○ /data-analysis                       83.1 kB         320 kB
 ├ ○ /device-health                       5.63 kB         236 kB
 ├ ○ /device-login                        4.51 kB         231 kB
-├ ○ /download                             5.7 kB         236 kB
-├ ○ /my-device                           6.29 kB         236 kB
+├ ○ /download                             5.8 kB         236 kB
+├ ○ /my-device                           2.87 kB         233 kB
 ├ ○ /repair-history                      4.56 kB         238 kB
 ├ ○ /repair-management                   12.6 kB         243 kB
+├ ○ /repair-management-history           3.45 kB         234 kB
 ├ ○ /technician-dashboard                4.64 kB         235 kB
-└ ○ /user-management                     9.97 kB         239 kB
+└ ○ /user-management                     9.89 kB         239 kB
 + First Load JS shared by all             102 kB
   ├ chunks/255-6c71416215d3c84c.js       45.6 kB
   ├ chunks/4bd1b696-409494caf8c83275.js  54.2 kB
@@ -148,30 +151,4 @@ Route (app)                                 Size  First Load JS
 
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
-
-   Compiling device-monitor v1.5.0 (C:\Users\hp\Desktop\Website_intern\work_intern\System-Staff-Device\src-tauri)
-warning: unused import: `tauri::Manager`
-  --> src\main.rs:11:5
-   |
-11 | use tauri::Manager;
-   |     ^^^^^^^^^^^^^^
-   |
-   = note: `#[warn(unused_imports)]` on by default
-
-warning: structure field `InstallDate` should have a snake case name
-   --> src\main.rs:625:9
-    |
-625 |         InstallDate: Option<String>,
-    |         ^^^^^^^^^^^ help: convert the identifier to snake case: `install_date`
-    |
-    = note: `#[warn(non_snake_case)]` on by default
-
-warning: `device-monitor` (bin "device-monitor") generated 2 warnings
-    Finished `release` profile [optimized] target(s) in 5m 06s
-       Built application at: C:\Users\hp\Desktop\Website_intern\work_intern\System-Staff-Device\src-tauri\target\release\device-monitor.exe
-        Info Patching binary "C:\\Users\\hp\\Desktop\\Website_intern\\work_intern\\System-Staff-Device\\src-tauri\\target\\release\\device-monitor.exe" for type nsis
-        Info Target: x64
-     Running makensis to produce C:\Users\hp\Desktop\Website_intern\work_intern\System-Staff-Device\src-tauri\target\release\bundle\nsis\Device Monitor_1.6.0_x64-setup.exe
-    Finished 1 bundle at:
-        C:\Users\hp\Desktop\Website_intern\work_intern\System-Staff-Device\src-tauri\target\release\bundle\nsis\Device Monitor_1.6.0_x64-setup.exe
 

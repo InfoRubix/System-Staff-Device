@@ -89,7 +89,7 @@ export default function RepairManagementPage() {
         // Include both 'fixed' and 'completed' status
         if (data.status === 'fixed' || data.status === 'completed') {
           // Create the same ID format as in analyzeDeviceForIssues
-          const fixedId = `${data.deviceId}-${data.issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
+          const fixedId = `${data.deviceId}-${data.staffEmail}-${data.issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
           fixedSet.add(fixedId);
         }
       });
@@ -247,15 +247,12 @@ export default function RepairManagementPage() {
         detectedIssues.push(...scanIssues);
       });
 
-      // Mark issues as fixed if they're in the fixed repairs list
-      const issuesWithStatus = detectedIssues.map(issue => ({
-        ...issue,
-        status: fixedRepairs.has(issue.id) ? 'fixed' : 'detected'
-      }));
+      // Filter out fixed issues - only show detected issues
+      const unfixedIssues = detectedIssues.filter(issue => !fixedRepairs.has(issue.id));
 
-      // Group issues by deviceId (ALL issues, both fixed and unfixed)
+      // Group ONLY unfixed issues by deviceId
       const deviceIssuesMap = new Map<string, GroupedDeviceIssues>();
-      issuesWithStatus.forEach(issue => {
+      unfixedIssues.forEach(issue => {
         if (!deviceIssuesMap.has(issue.deviceId)) {
           deviceIssuesMap.set(issue.deviceId, {
             id: issue.deviceId,
@@ -279,7 +276,12 @@ export default function RepairManagementPage() {
         }
       });
 
-      setGroupedIssues(Array.from(deviceIssuesMap.values()));
+      // Sort by detectedDate (newest first)
+      const sortedIssues = Array.from(deviceIssuesMap.values()).sort((a, b) => {
+        return b.detectedDate.getTime() - a.detectedDate.getTime();
+      });
+
+      setGroupedIssues(sortedIssues);
     });
 
     return () => unsubscribe();
@@ -547,13 +549,22 @@ export default function RepairManagementPage() {
     const isExpanding = expandedIssue !== issueId;
     setExpandedIssue(isExpanding ? issueId : null);
 
-    // Mark as read when expanding (like Facebook notifications)
-    // Only if the repair document exists in the repairs collection
+    // Mark device as viewed when expanding (like game notifications)
     if (isExpanding) {
       try {
-        const issueRef = doc(db, 'repairs', issueId);
+        // Mark device as viewed in localStorage
+        const viewedDevices = localStorage.getItem('viewedRepairDevices');
+        const viewed = viewedDevices ? JSON.parse(viewedDevices) : [];
+        if (!viewed.includes(issueId)) {
+          viewed.push(issueId);
+          localStorage.setItem('viewedRepairDevices', JSON.stringify(viewed));
 
-        // Check if document exists before updating
+          // Dispatch custom event to update badge in Navigation
+          window.dispatchEvent(new Event('viewedDevicesUpdated'));
+        }
+
+        // Also mark as read in repairs collection if it exists
+        const issueRef = doc(db, 'repairs', issueId);
         const docSnap = await getDoc(issueRef);
         if (docSnap.exists()) {
           await updateDoc(issueRef, {
@@ -561,10 +572,8 @@ export default function RepairManagementPage() {
             readAt: new Date(),
           });
         }
-        // If document doesn't exist, silently skip (it's just a detected issue, not assigned yet)
-      } catch {
-        // Silently ignore errors for non-existent documents
-        console.warn('Could not mark issue as read (document may not exist):', issueId);
+      } catch (error) {
+        console.warn('Could not mark device as viewed:', error);
       }
     }
   };

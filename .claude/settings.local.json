@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npm run build:*)",
       "Bash(npm run tauri:build:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(echo:*)",
+      "Bash(src/types/budget.ts)",
+      "Bash(export TAURI_FIREBASE_PROJECT_ID=system-staff-device)",
+      "Bash(export TAURI_FIREBASE_API_KEY=AIzaSyA54ncjdRwuWNx-6Or0pw6bKl_Wu0MWf4I)",
+      "Bash(npm run tauri:*)"
     ],
     "deny": [],
     "ask": []
