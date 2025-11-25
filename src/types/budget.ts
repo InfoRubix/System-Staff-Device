@@ -1,3 +1,24 @@
+export interface DeviceScan {
+  id: string;
+  deviceId: string;
+  staffName: string;
+  staffEmail: string;
+  department: string;
+  deviceType: string;
+  scanTimestamp: Date;
+  overallStatus: 'Healthy' | 'Warning' | 'Critical';
+  ramUsage: number;
+  diskSpaceFree: number;
+  batteryHealth?: number;
+  cpuTemp?: number;
+  processor: string;
+  installedRAM: string;
+  graphicsCard: string;
+  totalStorage: string;
+  computerModel: string;
+  osVersion: string;
+}
+
 export interface BudgetData {
   id: string;
   month: string; // Format: "2024-01"
@@ -87,4 +108,6 @@ export interface BudgetContextType {
     repairCost: number;
     issues: { name: string; cost: number }[];
   }>;
+  deviceScans: DeviceScan[];
+  calculateFilteredRepairCosts: (scans: DeviceScan[]) => number;
 }

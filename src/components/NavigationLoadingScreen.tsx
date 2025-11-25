@@ -125,9 +125,11 @@ export default function NavigationLoadingScreen() {
     const isPhone = /iPhone|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
     const isTablet = /iPad|Android(?!.*Mobile)|tablet/i.test(userAgent);
 
+    const deviceSuffix = isPhone ? ' (Mobile)' : isTablet ? ' (Tablet)' : '';
+
     if (navigationTarget === '/data-analysis') {
       const messages = [
-        `Initializing Data Analysis${isPhone ? ' (Mobile)' : isTablet ? ' (Tablet)' : ''}...`,
+        `Initializing Data Analysis${deviceSuffix}...`,
         'Connecting to Database...',
         'Fetching Device Data...',
         'Processing Analytics...',
@@ -138,12 +140,17 @@ export default function NavigationLoadingScreen() {
       return messages[loadingStep] || messages[0];
     }
 
-    switch (navigationTarget) {
-      case '/dashboard':
-        return `Loading Dashboard${isPhone ? ' (Mobile)' : isTablet ? ' (Tablet)' : ''}...`;
-      default:
-        return 'Loading...';
-    }
+    // Generic loading steps for all other pages
+    const step = Math.floor((progress / 100) * 5); // Map progress to 5 steps
+    const genericMessages = [
+      `Initializing${deviceSuffix}...`,
+      'Connecting to Server...',
+      'Loading Data...',
+      'Processing Information...',
+      'Finalizing...',
+      'Ready!'
+    ];
+    return genericMessages[step] || genericMessages[0];
   };
 
   const getLoadingDescription = () => {
@@ -160,12 +167,17 @@ export default function NavigationLoadingScreen() {
       return descriptions[loadingStep] || descriptions[0];
     }
 
-    switch (navigationTarget) {
-      case '/dashboard':
-        return 'Loading department overview';
-      default:
-        return 'Please wait';
-    }
+    // Generic descriptions for all other pages
+    const step = Math.floor((progress / 100) * 5); // Map progress to 5 steps
+    const genericDescriptions = [
+      'Setting up environment',
+      'Establishing connection',
+      'Fetching latest information',
+      'Processing data',
+      'Preparing interface',
+      'Ready to view'
+    ];
+    return genericDescriptions[step] || genericDescriptions[0];
   };
 
   return (
@@ -201,12 +213,10 @@ export default function NavigationLoadingScreen() {
           ></div>
         </div>
 
-        {/* Progress Percentage */}
-        {navigationTarget === '/data-analysis' && (
-          <div className="text-xs text-gray-400 font-medium">
-            {progress}% Complete
-          </div>
-        )}
+        {/* Progress Percentage - Show for ALL pages */}
+        <div className="text-xs text-gray-400 font-medium">
+          {progress}% Complete
+        </div>
       </div>
     </div>
   );

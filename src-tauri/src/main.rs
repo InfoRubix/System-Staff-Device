@@ -115,6 +115,21 @@ fn get_device_token() -> Result<(String, String), String> {
     Ok((device_id, device_token))
 }
 
+// Helper function to round RAM to nearest standard size (4, 8, 16, 32, 64, 128 GB)
+fn round_ram_to_standard(ram_gb: u64) -> u64 {
+    let standard_sizes = [4, 8, 16, 32, 64, 128, 256];
+
+    // Find the closest standard size
+    for &size in &standard_sizes {
+        if ram_gb <= size {
+            return size;
+        }
+    }
+
+    // If larger than all standard sizes, return as-is
+    ram_gb
+}
+
 #[tauri::command]
 fn get_system_info() -> Result<SystemInfo, String> {
     // Get or generate device token first
@@ -824,7 +839,7 @@ fn register_staff(system_info: &SystemInfo, staff_email: &str, staff_name: &str,
             },
             // System Info
             "processor": {"stringValue": &system_info.cpu_name},
-            "installedRAM": {"stringValue": format!("{} GB", system_info.memory_total / (1024 * 1024 * 1024))},
+            "installedRAM": {"stringValue": format!("{} GB", round_ram_to_standard(system_info.memory_total / (1024 * 1024 * 1024)))},
             "systemType": {"stringValue": &system_info.system_type},
             // Storage Info
             "totalStorage": {"stringValue": if !system_info.disk_info.is_empty() {
@@ -1113,7 +1128,7 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
             },
             // RAM total for tracking changes
             "ramTotal": {
-                "integerValue": (system_info.memory_total / (1024 * 1024 * 1024)).to_string()
+                "integerValue": (round_ram_to_standard(system_info.memory_total / (1024 * 1024 * 1024))).to_string()
             },
             // CPU temperature for tracking
             "cpuTemperature": {
@@ -1129,7 +1144,7 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
             "computerModel": {"stringValue": system_info.computer_info.as_ref().map(|c| c.model.clone()).unwrap_or("Unknown".to_string())},
             "computerName": {"stringValue": system_info.computer_info.as_ref().map(|c| c.computer_name.clone()).unwrap_or("Unknown".to_string())},
             "processor": {"stringValue": &system_info.cpu_name},
-            "installedRAM": {"stringValue": format!("{} GB", system_info.memory_total / (1024 * 1024 * 1024))},
+            "installedRAM": {"stringValue": format!("{} GB", round_ram_to_standard(system_info.memory_total / (1024 * 1024 * 1024)))},
             "systemType": {"stringValue": &system_info.system_type},
             "totalStorage": {"stringValue": if !system_info.disk_info.is_empty() { format!("{} GB", system_info.disk_info[0].total_space / (1024 * 1024 * 1024)) } else { "Unknown".to_string() }},
             "graphicsCard": {"stringValue": system_info.gpu_info.as_ref().map(|g| g.name.clone()).unwrap_or("Unknown".to_string())},

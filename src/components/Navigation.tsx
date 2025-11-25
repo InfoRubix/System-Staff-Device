@@ -15,10 +15,40 @@ export default function Navigation() {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDashboardDropdownOpen, setIsDashboardDropdownOpen] = useState(false);
+  const [isRepairDropdownOpen, setIsRepairDropdownOpen] = useState(false);
   const [unreadRepairCount, setUnreadRepairCount] = useState(0);
+  const [storageUpdateTrigger, setStorageUpdateTrigger] = useState(0);
   const previousCountRef = useRef<number>(0);
 
   const isTechnician = (user as any)?.role === 'technician';
+
+  // Get viewed devices from localStorage
+  const getViewedDevices = (): Set<string> => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const viewed = localStorage.getItem('viewedRepairDevices');
+      return viewed ? new Set(JSON.parse(viewed)) : new Set();
+    } catch {
+      return new Set();
+    }
+  };
+
+  // Listen for localStorage changes (when device is marked as viewed)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setStorageUpdateTrigger(prev => prev + 1);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also listen for custom event (for same-tab updates)
+    window.addEventListener('viewedDevicesUpdated', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('viewedDevicesUpdated', handleStorageChange);
+    };
+  }, []);
 
   // Listen for detected issues from device scans (only for admins)
   useEffect(() => {
@@ -67,45 +97,61 @@ export default function Navigation() {
             }
           });
 
-          // Count issues from latest scans
-          let unreadCount = 0;
+          // Get viewed devices from localStorage
+          const viewedDevices = getViewedDevices();
+
+          // Count devices with issues (not individual issues)
+          const devicesWithIssues = new Set<string>();
           latestScans.forEach(scan => {
+            let hasIssue = false;
+
             // RAM Critical
             if (scan.ramUsage > 90) {
               const id = `${scan.deviceId}-${scan.staffEmail}-RAM_Critical___Memory_Failure`;
-              if (!fixedSet.has(id)) unreadCount++;
+              if (!fixedSet.has(id)) hasIssue = true;
             }
             // Low Disk Space
             if (scan.diskSpaceFree < 20) {
               const id = `${scan.deviceId}-${scan.staffEmail}-Low_Disk_Space`;
-              if (!fixedSet.has(id)) unreadCount++;
+              if (!fixedSet.has(id)) hasIssue = true;
             }
             // CPU Overheating
             if (scan.cpuTemp && scan.cpuTemp > 85) {
               const id = `${scan.deviceId}-${scan.staffEmail}-CPU_Overheating`;
-              if (!fixedSet.has(id)) unreadCount++;
+              if (!fixedSet.has(id)) hasIssue = true;
             }
             // Battery Degraded
             if (scan.batteryHealth && scan.batteryHealth < 50) {
               const id = `${scan.deviceId}-${scan.staffEmail}-Battery_Degraded`;
-              if (!fixedSet.has(id)) unreadCount++;
+              if (!fixedSet.has(id)) hasIssue = true;
             }
             // Antivirus Disabled
             if (scan.antivirusStatus !== 'Active') {
               const id = `${scan.deviceId}-${scan.staffEmail}-Antivirus_Disabled`;
-              if (!fixedSet.has(id)) unreadCount++;
+              if (!fixedSet.has(id)) hasIssue = true;
             }
             // Firewall Disabled
             if (scan.firewallStatus !== 'Active') {
               const id = `${scan.deviceId}-${scan.staffEmail}-Firewall_Disabled`;
-              if (!fixedSet.has(id)) unreadCount++;
+              if (!fixedSet.has(id)) hasIssue = true;
+            }
+
+            // If device has any issue, add to set
+            if (hasIssue) {
+              devicesWithIssues.add(scan.deviceId);
             }
           });
 
-          // Only update count, don't show notifications during navigation
-          // (Notifications should only come from real-time issue detection, not count changes)
-          previousCountRef.current = unreadCount;
-          setUnreadRepairCount(unreadCount);
+          // Count only unseen devices
+          let unseenCount = 0;
+          devicesWithIssues.forEach(deviceId => {
+            if (!viewedDevices.has(deviceId)) {
+              unseenCount++;
+            }
+          });
+
+          previousCountRef.current = unseenCount;
+          setUnreadRepairCount(unseenCount);
         }, (error) => {
           // Suppress permission errors during logout (expected behavior)
           if (error.code !== 'permission-denied') {
@@ -122,7 +168,7 @@ export default function Navigation() {
       console.error('Error setting up repairs listener:', error);
       setUnreadRepairCount(0);
     }
-  }, [isAdmin]);
+  }, [isAdmin, storageUpdateTrigger]);
 
   const handleLogout = async () => {
     await logout();
@@ -148,10 +194,15 @@ export default function Navigation() {
     { href: '/user-management', label: 'User Management' },
   ];
 
+  const repairSubItems = [
+    { href: '/repair-management', label: 'Detected Issues' },
+    { href: '/repair-management-history', label: 'Repair History' },
+  ];
+
   const adminNavItems = [
     { href: '/data-analysis', label: 'Data Analysis' },
     { href: '/device-health', label: 'Device Health' },
-    { href: '/repair-management', label: 'Repair Management' },
+    // Repair Management will be a dropdown
     // { href: '/download', label: 'Download App' }, // Hidden per boss request
   ];
 
@@ -218,6 +269,63 @@ export default function Navigation() {
                         }`}
                       >
                         {subItem.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Repair Management Dropdown (Admin Only) */}
+            {isAdmin && (
+              <div className="relative">
+                <button
+                  onClick={() => setIsRepairDropdownOpen(!isRepairDropdownOpen)}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer touch-manipulation flex items-center relative ${
+                    pathname === '/repair-management' || pathname === '/repair-management-history'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  Repair Management
+                  <svg
+                    className={`ml-1 w-4 h-4 transition-transform ${isRepairDropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                  {/* Notification Badge */}
+                  {unreadRepairCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadRepairCount > 9 ? '9+' : unreadRepairCount}
+                    </span>
+                  )}
+                </button>
+
+                {isRepairDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                    {repairSubItems.map((subItem) => (
+                      <button
+                        key={subItem.href}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleNavigation(subItem.href);
+                          setIsRepairDropdownOpen(false);
+                        }}
+                        className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 first:rounded-t-md last:rounded-b-md transition-colors relative ${
+                          pathname === subItem.href
+                            ? 'bg-blue-50 text-blue-700 font-medium'
+                            : 'text-gray-700'
+                        }`}
+                      >
+                        {subItem.label}
+                        {subItem.href === '/repair-management' && unreadRepairCount > 0 && (
+                          <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                            {unreadRepairCount}
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -324,6 +432,66 @@ export default function Navigation() {
                           }`}
                         >
                           {subItem.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Repair Management Dropdown (Admin Only) */}
+              {isAdmin && (
+                <div>
+                  <button
+                    onClick={() => setIsRepairDropdownOpen(!isRepairDropdownOpen)}
+                    className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium transition-colors touch-manipulation flex items-center justify-between relative ${
+                      pathname === '/repair-management' || pathname === '/repair-management-history'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="flex items-center">
+                      Repair Management
+                      {unreadRepairCount > 0 && (
+                        <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                          {unreadRepairCount > 9 ? '9+' : unreadRepairCount}
+                        </span>
+                      )}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 transition-transform ${isRepairDropdownOpen ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {isRepairDropdownOpen && (
+                    <div className="pl-4 mt-1 space-y-1">
+                      {repairSubItems.map((subItem) => (
+                        <button
+                          key={subItem.href}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleNavigation(subItem.href);
+                            setIsRepairDropdownOpen(false);
+                          }}
+                          className={`block w-full text-left px-3 py-2 rounded-md text-sm transition-colors touch-manipulation ${
+                            pathname === subItem.href
+                              ? 'bg-blue-50 text-blue-700 font-medium'
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className="flex items-center justify-between">
+                            {subItem.label}
+                            {subItem.href === '/repair-management' && unreadRepairCount > 0 && (
+                              <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
+                                {unreadRepairCount}
+                              </span>
+                            )}
+                          </span>
                         </button>
                       ))}
                     </div>

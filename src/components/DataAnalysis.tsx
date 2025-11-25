@@ -1,32 +1,13 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useBudget as _useBudget } from '../contexts/BudgetContext';
+import { useBudget } from '../contexts/BudgetContext';
 import { useNavigation as _useNavigation } from '../contexts/NavigationContext';
 // Remove unused imports - DEPARTMENTS and Department are not needed in this component
 import BudgetCard from './BudgetCard';
 import Navigation from './Navigation';
 import YearMonthFilter from './YearMonthFilter';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-
-interface DeviceScan {
-  id: string;
-  deviceId: string;
-  staffName: string;
-  staffEmail: string;
-  department: string;
-  deviceType: string;
-  scanTimestamp: Date;
-  overallStatus: 'Healthy' | 'Warning' | 'Critical';
-  processor: string;
-  installedRAM: string;
-  osVersion: string;
-  systemType: string;
-  graphicsCard: string;
-  totalStorage: string;
-  computerModel: string;
-}
+import type { DeviceScan } from '../types/budget';
 
 // Dynamic Chart.js imports for better performance
 import dynamic from 'next/dynamic';
@@ -87,13 +68,10 @@ ChartJS.register(
 );
 
 function DataAnalysis() {
-  const [deviceScans, setDeviceScans] = useState<DeviceScan[]>([]);
+  const { deviceScans, calculateFilteredRepairCosts, loading } = useBudget();
   const [filteredScans, setFilteredScans] = useState<DeviceScan[]>([]);
-  const [scansLoading, setScansLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
-  // const { getDevicesData } = useBudget();
-  // const { isNavigating } = useNavigation();
   const [showUpgradePopup, setShowUpgradePopup] = useState(false);
   const [showOSPopup, setShowOSPopup] = useState(false);
   const [showRAMPopup, setShowRAMPopup] = useState(false);
@@ -101,54 +79,6 @@ function DataAnalysis() {
   const [exporting, setExporting] = useState(false);
   const [selectedOS, setSelectedOS] = useState<string | null>(null);
   const [showOSDetailModal, setShowOSDetailModal] = useState(false);
-
-  // Fetch device scans from Firebase
-  useEffect(() => {
-    const q = query(
-      collection(db, 'device_scans'),
-      orderBy('scanTimestamp', 'desc'),
-      limit(500) // Limit to 500 most recent scans for better performance
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allScans: DeviceScan[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        allScans.push({
-          id: doc.id,
-          deviceId: data.deviceId,
-          staffName: data.staffName,
-          staffEmail: data.staffEmail || '',
-          department: data.department,
-          deviceType: data.deviceType || 'Desktop',
-          scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
-          overallStatus: data.overallStatus || 'Healthy',
-          processor: data.processor || 'Unknown',
-          installedRAM: data.installedRAM || '0 GB',
-          osVersion: data.osVersion || 'Unknown',
-          systemType: data.systemType || 'Unknown',
-          graphicsCard: data.graphicsCard || 'Unknown',
-          totalStorage: data.totalStorage || '0 GB',
-          computerModel: data.computerModel || 'Unknown'
-        });
-      });
-
-      // Group scans by deviceId and keep only the latest scan for each device
-      const latestScansMap = new Map<string, DeviceScan>();
-      allScans.forEach(scan => {
-        const existing = latestScansMap.get(scan.deviceId);
-        if (!existing || scan.scanTimestamp > existing.scanTimestamp) {
-          latestScansMap.set(scan.deviceId, scan);
-        }
-      });
-
-      const scans = Array.from(latestScansMap.values());
-      setDeviceScans(scans);
-      setScansLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   // Filter scans by year and month
   useEffect(() => {
@@ -181,8 +111,10 @@ function DataAnalysis() {
     setSelectedMonth(month);
   };
 
-  // Use budget context devices for consistent OS distribution
-  // const budgetDevices = getDevicesData();
+  // Calculate filtered repair costs
+  const filteredRepairCost = useMemo(() => {
+    return calculateFilteredRepairCosts(filteredScans);
+  }, [filteredScans, calculateFilteredRepairCosts]);
 
   // Handle OS bar click
   const handleOSBarClick = (osName: string) => {
@@ -1058,7 +990,7 @@ function DataAnalysis() {
             <div className="flex flex-wrap gap-3 pdf-ignore">
               <button
                 onClick={exportToPDF}
-                disabled={exporting || scansLoading}
+                disabled={exporting || loading}
                 className="px-4 py-2 border-4 font-medium rounded-lg transition-colors flex items-center gap-2
                   md:bg-blue-100 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800
                   bg-blue-600 border-blue-700 text-white
@@ -1139,7 +1071,7 @@ function DataAnalysis() {
 
           {/* Right side - Budget Card */}
           <div className="h-full">
-            <BudgetCard />
+            <BudgetCard filteredRepairCost={filteredRepairCost} />
           </div>
         </div>
 
