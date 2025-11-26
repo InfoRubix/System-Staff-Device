@@ -434,7 +434,7 @@ export default function RepairManagementPage() {
     }
 
     // Antivirus Disabled
-    if (scanData.antivirusStatus !== 'Active') {
+    if (!scanData.antivirusStatus || !scanData.antivirusStatus.toLowerCase().includes('active')) {
       const issueType = 'Antivirus Disabled';
       const issueId = `${scanData.deviceId}-${scanData.staffEmail}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
@@ -469,7 +469,7 @@ export default function RepairManagementPage() {
     }
 
     // Firewall Disabled
-    if (scanData.firewallStatus !== 'Active') {
+    if (!scanData.firewallStatus || !scanData.firewallStatus.toLowerCase().includes('active')) {
       const issueType = 'Firewall Disabled';
       const issueId = `${scanData.deviceId}-${scanData.staffEmail}-${issueType.replace(/[^a-zA-Z0-9]/g, '_')}`;
 

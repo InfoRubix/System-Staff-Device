@@ -142,12 +142,45 @@ fn round_ram_to_standard(ram_gb: u64) -> u64 {
 #[cfg(target_os = "windows")]
 fn get_active_window() -> Option<String> {
     use std::process::Command;
+
+    // Get the foreground window process name (the actual active window user is using)
     let output = Command::new("powershell")
-        .args(&["-ExecutionPolicy", "Bypass", "-Command", "Get-Process | Where-Object {$_.MainWindowTitle -ne ''} | Select-Object -First 1 -ExpandProperty MainWindowTitle"])
+        .args(&[
+            "-ExecutionPolicy", "Bypass",
+            "-Command",
+            r#"
+            Add-Type @"
+                using System;
+                using System.Runtime.InteropServices;
+                public class Window {
+                    [DllImport("user32.dll")]
+                    public static extern IntPtr GetForegroundWindow();
+                    [DllImport("user32.dll")]
+                    public static extern int GetWindowThreadProcessId(IntPtr hWnd, out int processId);
+                }
+"@
+            $hwnd = [Window]::GetForegroundWindow()
+            $processId = 0
+            [Window]::GetWindowThreadProcessId($hwnd, [ref]$processId) | Out-Null
+            if ($processId -ne 0) {
+                $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+                if ($process) {
+                    $processName = $process.ProcessName
+                    $windowTitle = $process.MainWindowTitle
+                    if ($windowTitle) {
+                        Write-Output "$processName : $windowTitle"
+                    } else {
+                        Write-Output $processName
+                    }
+                }
+            }
+            "#
+        ])
         .output()
         .ok()?;
-    let title = String::from_utf8(output.stdout).ok()?.trim().to_string();
-    if title.is_empty() { None } else { Some(title) }
+
+    let result = String::from_utf8(output.stdout).ok()?.trim().to_string();
+    if result.is_empty() { None } else { Some(result) }
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -158,8 +191,25 @@ fn get_active_window() -> Option<String> {
 #[cfg(target_os = "windows")]
 fn get_running_processes() -> Vec<String> {
     use std::process::Command;
+
+    // Get only processes with visible windows (actual apps user opened)
     let output = Command::new("powershell")
-        .args(&["-ExecutionPolicy", "Bypass", "-Command", "Get-Process | Select-Object -ExpandProperty ProcessName | Sort-Object -Unique"])
+        .args(&[
+            "-ExecutionPolicy", "Bypass",
+            "-Command",
+            r#"
+            Get-Process | Where-Object {
+                $_.MainWindowTitle -ne '' -and
+                $_.ProcessName -notmatch 'svchost|csrss|winlogon|services|lsass|dwm|explorer|SearchHost|StartMenuExperienceHost|ShellExperienceHost|RuntimeBroker|ApplicationFrameHost|SystemSettings|TextInputHost'
+            } | Select-Object ProcessName, MainWindowTitle -Unique | ForEach-Object {
+                if ($_.MainWindowTitle) {
+                    "$($_.ProcessName) - $($_.MainWindowTitle)"
+                } else {
+                    $_.ProcessName
+                }
+            }
+            "#
+        ])
         .output();
 
     if let Ok(output) = output {
@@ -167,7 +217,7 @@ fn get_running_processes() -> Vec<String> {
             return text.lines()
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
-                .take(50) // Limit to 50 processes
+                .take(20) // Limit to 20 actual user apps
                 .collect();
         }
     }
@@ -213,52 +263,109 @@ fn determine_activity_status() -> String {
 fn get_wifi_info() -> (Option<u32>, Option<u32>, Option<String>, Option<String>) {
     use std::process::Command;
 
-    let output = Command::new("netsh")
+    // First, try to get WiFi info using netsh wlan
+    let wifi_output = Command::new("netsh")
         .args(&["wlan", "show", "interfaces"])
         .output();
 
-    if let Ok(output) = output {
+    if let Ok(output) = wifi_output {
         if let Ok(text) = String::from_utf8(output.stdout) {
-            let mut signal: Option<u32> = None;
-            let mut speed: Option<u32> = None;
-            let mut ssid: Option<String> = None;
-            let mut status: Option<String> = None;
+            if !text.trim().is_empty() && !text.contains("There is no wireless interface") {
+                let mut signal: Option<u32> = None;
+                let mut speed: Option<u32> = None;
+                let mut ssid: Option<String> = None;
+                let mut status: Option<String> = None;
 
+                for line in text.lines() {
+                    let line = line.trim();
+
+                    // Parse signal strength
+                    if line.starts_with("Signal") {
+                        if let Some(value) = line.split(':').nth(1) {
+                            let value = value.trim().replace("%", "");
+                            signal = value.parse::<u32>().ok();
+                        }
+                    }
+
+                    // Parse link speed (Receive rate or Transmit rate)
+                    if line.contains("Receive rate") || line.contains("Transmit rate") {
+                        if let Some(value) = line.split(':').nth(1) {
+                            let value = value.trim().split_whitespace().next().unwrap_or("");
+                            speed = value.parse::<u32>().ok();
+                        }
+                    }
+
+                    // Parse SSID
+                    if line.starts_with("SSID") && !line.contains("BSSID") {
+                        if let Some(value) = line.split(':').nth(1) {
+                            ssid = Some(value.trim().to_string());
+                        }
+                    }
+
+                    // Parse connection status
+                    if line.starts_with("State") {
+                        if let Some(value) = line.split(':').nth(1) {
+                            status = Some(value.trim().to_string());
+                        }
+                    }
+                }
+
+                // If we got WiFi data, return it
+                if signal.is_some() || speed.is_some() || ssid.is_some() {
+                    return (signal, speed, ssid, status);
+                }
+            }
+        }
+    }
+
+    // Fallback: Check all network interfaces for active connection (Ethernet, USB tethering, mobile hotspot, etc.)
+    let interface_output = Command::new("netsh")
+        .args(&["interface", "show", "interface"])
+        .output();
+
+    if let Ok(output) = interface_output {
+        if let Ok(text) = String::from_utf8(output.stdout) {
+            // Find the first connected interface
             for line in text.lines() {
                 let line = line.trim();
+                if line.contains("Connected") && !line.contains("Disconnected") {
+                    // Extract interface name (last column)
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if parts.len() >= 4 {
+                        let interface_name = parts[3..].join(" ");
 
-                // Parse signal strength
-                if line.starts_with("Signal") {
-                    if let Some(value) = line.split(':').nth(1) {
-                        let value = value.trim().replace("%", "");
-                        signal = value.parse::<u32>().ok();
-                    }
-                }
+                        // Try to get link speed using PowerShell
+                        let speed_output = Command::new("powershell")
+                            .args(&[
+                                "-ExecutionPolicy", "Bypass",
+                                "-Command",
+                                &format!("Get-NetAdapter | Where-Object {{$_.Name -like '*{}*' -and $_.Status -eq 'Up'}} | Select-Object -ExpandProperty LinkSpeed", interface_name)
+                            ])
+                            .output();
 
-                // Parse link speed (Receive rate or Transmit rate)
-                if line.contains("Receive rate") || line.contains("Transmit rate") {
-                    if let Some(value) = line.split(':').nth(1) {
-                        let value = value.trim().split_whitespace().next().unwrap_or("");
-                        speed = value.parse::<u32>().ok();
-                    }
-                }
-
-                // Parse SSID
-                if line.starts_with("SSID") && !line.contains("BSSID") {
-                    if let Some(value) = line.split(':').nth(1) {
-                        ssid = Some(value.trim().to_string());
-                    }
-                }
-
-                // Parse connection status
-                if line.starts_with("State") {
-                    if let Some(value) = line.split(':').nth(1) {
-                        status = Some(value.trim().to_string());
+                        if let Ok(speed_out) = speed_output {
+                            if let Ok(speed_text) = String::from_utf8(speed_out.stdout) {
+                                let speed_text = speed_text.trim();
+                                // Parse speed like "1 Gbps" or "100 Mbps"
+                                if let Some(speed_value) = speed_text.split_whitespace().next() {
+                                    if let Ok(mut speed_num) = speed_value.parse::<u32>() {
+                                        // Convert Gbps to Mbps if needed
+                                        if speed_text.contains("Gbps") {
+                                            speed_num *= 1000;
+                                        }
+                                        return (
+                                            None, // No signal strength for non-WiFi
+                                            Some(speed_num),
+                                            Some(interface_name.clone()),
+                                            Some("Connected".to_string())
+                                        );
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
-
-            return (signal, speed, ssid, status);
         }
     }
 

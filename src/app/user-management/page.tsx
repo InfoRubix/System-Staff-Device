@@ -9,9 +9,15 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db, firebaseConfig } from '@/lib/firebase';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { formatDate } from '@/lib/dateFormat';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigation } from '@/contexts/NavigationContext';
+import Navigation from '@/components/Navigation';
 
 export default function UserManagementPage() {
   const router = useRouter();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { finishNavigation, isNavigating, setPageLoaded, isPageLoaded, setShowLoadingScreen } = useNavigation();
+  const [componentsReady, setComponentsReady] = useState(false);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,10 +55,67 @@ export default function UserManagementPage() {
   const [resetConfirmText, setResetConfirmText] = useState('');
   const [showResetSuccessModal, setShowResetSuccessModal] = useState(false);
 
+  // Reset states when navigation starts
+  useEffect(() => {
+    if (isNavigating) {
+      setComponentsReady(false);
+    }
+  }, [isNavigating]);
+
+  // Mark components as ready when auth is done
+  useEffect(() => {
+    if (!loading && isAuthenticated && isAdmin) {
+      if (isNavigating) {
+        console.log('User Management Page - Starting navigation loading timer');
+
+        const userAgent = navigator.userAgent;
+        const isPhone = /iPhone|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+        const isTablet = /iPad|Android(?!.*Mobile)|tablet/i.test(userAgent);
+        const isLaptop = /Macintosh|Windows NT.*WOW64|Windows NT.*Win64/i.test(userAgent);
+
+        let loadingTime;
+        if (isPhone) {
+          loadingTime = 3000;
+        } else if (isTablet) {
+          loadingTime = 2500;
+        } else if (isLaptop) {
+          loadingTime = 2000;
+        } else {
+          loadingTime = 1500;
+        }
+
+        const readyTimer = setTimeout(() => {
+          console.log('User Management Page - Timer completed, setting components ready');
+          setComponentsReady(true);
+          setPageLoaded();
+        }, loadingTime);
+
+        return () => clearTimeout(readyTimer);
+      } else {
+        setComponentsReady(true);
+        setPageLoaded();
+      }
+    }
+  }, [loading, isAuthenticated, isAdmin, isNavigating, setPageLoaded]);
+
+  // Finish navigation when page is fully loaded
+  useEffect(() => {
+    if (isNavigating && isPageLoaded && componentsReady) {
+      const finishTimer = setTimeout(() => {
+        finishNavigation();
+        setShowLoadingScreen(false);
+      }, 800);
+
+      return () => clearTimeout(finishTimer);
+    }
+  }, [isNavigating, isPageLoaded, componentsReady, finishNavigation, setShowLoadingScreen]);
+
   // Load staff
   useEffect(() => {
-    loadStaff();
-  }, []);
+    if (isAuthenticated && isAdmin) {
+      loadStaff();
+    }
+  }, [isAuthenticated, isAdmin]);
 
   // Load active departments from Firestore (same as signup page)
   useEffect(() => {
@@ -275,10 +338,33 @@ export default function UserManagementPage() {
 
   const uniqueDepartments = Array.from(new Set(staff.map(s => s.department))).sort();
 
+  // Don't render the page content while the loading screen should be visible
+  if (isNavigating || !componentsReady) {
+    return null;
+  }
+
+  // Show auth loading for direct page access
+  if (loading && !isNavigating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-lg text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !isAdmin) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{
-      background: 'linear-gradient(135deg, #e3f2fd 0%, #f0f4ff 50%, #e8eeff 100%)',
-    }}>
+    <>
+      <Navigation />
+      <div className="min-h-screen relative overflow-hidden" style={{
+        background: 'linear-gradient(135deg, #e3f2fd 0%, #f0f4ff 50%, #e8eeff 100%)',
+      }}>
       {/* Blurred Background Elements - Large Corner Bubbles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Top Left Corner - Large Blue Bubble with visible border */}
@@ -1058,6 +1144,7 @@ export default function UserManagementPage() {
           animation: modal-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 }
