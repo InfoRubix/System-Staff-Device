@@ -18,6 +18,8 @@ function BudgetCard({ filteredRepairCost }: BudgetCardProps) {
   } = useBudget();
 
   const [showPopup, setShowPopup] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDept, setSelectedDept] = useState('all');
 
   // Get devices with repair details from BudgetContext
   const devicesWithIssues = getDevicesWithRepairDetails();
@@ -127,6 +129,33 @@ function BudgetCard({ filteredRepairCost }: BudgetCardProps) {
 
               {Object.keys(departmentBreakdown).length > 0 ? (
                 <>
+                  {/* Filters */}
+                  <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Department Filter</label>
+                      <select
+                        value={selectedDept}
+                        onChange={(e) => setSelectedDept(e.target.value)}
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">All Departments</option>
+                        {Object.keys(departmentBreakdown).map(dept => (
+                          <option key={dept} value={dept}>{dept}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Search Staff</label>
+                      <input
+                        type="text"
+                        placeholder="Search by name or email..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
                   {/* Department Cost Summary Table */}
                   <div className="mb-8">
                     <h3 className="text-lg font-bold text-gray-800 mb-3 uppercase">Department Cost Summary</h3>
@@ -139,7 +168,9 @@ function BudgetCard({ filteredRepairCost }: BudgetCardProps) {
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.entries(departmentBreakdown).map(([department, costs], index) => {
+                          {Object.entries(departmentBreakdown)
+                            .filter(([dept]) => selectedDept === 'all' || dept === selectedDept)
+                            .map(([department, costs], index) => {
                             const subtotal = costs.repair + costs.replacement;
                             if (subtotal === 0) return null;
 
@@ -163,12 +194,17 @@ function BudgetCard({ filteredRepairCost }: BudgetCardProps) {
                       Detailed Breakdown by Staff
                     </h3>
 
-                    {Object.entries(departmentBreakdown).map(([department, costs]) => {
+                    {Object.entries(departmentBreakdown)
+                      .filter(([dept]) => selectedDept === 'all' || dept === selectedDept)
+                      .map(([department, costs]) => {
                       const subtotal = costs.repair + costs.replacement;
                       if (subtotal === 0) return null;
 
                       const departmentDevices = devicesWithIssues.filter(
-                        device => device.department === department
+                        device => device.department === department &&
+                          (searchTerm === '' ||
+                           device.staffName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           device.staffEmail.toLowerCase().includes(searchTerm.toLowerCase()))
                       );
 
                       if (departmentDevices.length === 0) return null;

@@ -36,6 +36,10 @@ struct SystemInfo {
     system_type: String,  // NEW: 32-bit or 64-bit
     antivirus_status: String,  // NEW: Antivirus status
     firewall_status: String,  // NEW: Firewall status
+    active_window: Option<String>,  // NEW: Currently active window title
+    running_processes: Vec<String>,  // NEW: List of running process names
+    activity_status: String,  // NEW: active, idle, or inactive
+    last_input_time: Option<u64>,  // NEW: Seconds since last keyboard/mouse input
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -60,7 +64,11 @@ struct DiskInfo {
 struct NetworkInfo {
     received: u64,
     transmitted: u64,
-    interface_type: String,  // NEW: WiFi, Ethernet, etc.
+    interface_type: String,  // WiFi, Ethernet, etc.
+    wifi_signal_strength: Option<u32>,  // Signal quality in percentage (0-100%)
+    wifi_link_speed: Option<u32>,       // Connection speed in Mbps
+    wifi_ssid: Option<String>,          // Network name (SSID)
+    wifi_status: Option<String>,        // Connected/Disconnected
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -130,6 +138,138 @@ fn round_ram_to_standard(ram_gb: u64) -> u64 {
     ram_gb
 }
 
+// Activity tracking functions
+#[cfg(target_os = "windows")]
+fn get_active_window() -> Option<String> {
+    use std::process::Command;
+    let output = Command::new("powershell")
+        .args(&["-ExecutionPolicy", "Bypass", "-Command", "Get-Process | Where-Object {$_.MainWindowTitle -ne ''} | Select-Object -First 1 -ExpandProperty MainWindowTitle"])
+        .output()
+        .ok()?;
+    let title = String::from_utf8(output.stdout).ok()?.trim().to_string();
+    if title.is_empty() { None } else { Some(title) }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn get_active_window() -> Option<String> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn get_running_processes() -> Vec<String> {
+    use std::process::Command;
+    let output = Command::new("powershell")
+        .args(&["-ExecutionPolicy", "Bypass", "-Command", "Get-Process | Select-Object -ExpandProperty ProcessName | Sort-Object -Unique"])
+        .output();
+
+    if let Ok(output) = output {
+        if let Ok(text) = String::from_utf8(output.stdout) {
+            return text.lines()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .take(50) // Limit to 50 processes
+                .collect();
+        }
+    }
+    Vec::new()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn get_running_processes() -> Vec<String> {
+    Vec::new()
+}
+
+#[cfg(target_os = "windows")]
+fn get_last_input_time() -> Option<u64> {
+    use std::process::Command;
+    // Get idle time in seconds using PowerShell
+    let output = Command::new("powershell")
+        .args(&["-ExecutionPolicy", "Bypass", "-Command",
+            "Add-Type @'\nusing System;\nusing System.Runtime.InteropServices;\npublic class IdleTime {\n    [DllImport(\"user32.dll\")]\n    static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);\n    [StructLayout(LayoutKind.Sequential)]\n    public struct LASTINPUTINFO {\n        public uint cbSize;\n        public uint dwTime;\n    }\n    public static uint GetIdleTime() {\n        LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();\n        lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);\n        GetLastInputInfo(ref lastInputInfo);\n        return ((uint)Environment.TickCount - lastInputInfo.dwTime) / 1000;\n    }\n}\n'@\n[IdleTime]::GetIdleTime()"
+        ])
+        .output()
+        .ok()?;
+
+    let idle_str = String::from_utf8(output.stdout).ok()?.trim().to_string();
+    idle_str.parse::<u64>().ok()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn get_last_input_time() -> Option<u64> {
+    None
+}
+
+fn determine_activity_status() -> String {
+    // Check CPU usage and last input time
+    match get_last_input_time() {
+        Some(secs) if secs < 300 => "active".to_string(), // Active if input < 5 mins ago
+        Some(secs) if secs < 1800 => "idle".to_string(),  // Idle if input < 30 mins ago
+        _ => "inactive".to_string(),
+    }
+}
+
+// WiFi detection functions
+#[cfg(target_os = "windows")]
+fn get_wifi_info() -> (Option<u32>, Option<u32>, Option<String>, Option<String>) {
+    use std::process::Command;
+
+    let output = Command::new("netsh")
+        .args(&["wlan", "show", "interfaces"])
+        .output();
+
+    if let Ok(output) = output {
+        if let Ok(text) = String::from_utf8(output.stdout) {
+            let mut signal: Option<u32> = None;
+            let mut speed: Option<u32> = None;
+            let mut ssid: Option<String> = None;
+            let mut status: Option<String> = None;
+
+            for line in text.lines() {
+                let line = line.trim();
+
+                // Parse signal strength
+                if line.starts_with("Signal") {
+                    if let Some(value) = line.split(':').nth(1) {
+                        let value = value.trim().replace("%", "");
+                        signal = value.parse::<u32>().ok();
+                    }
+                }
+
+                // Parse link speed (Receive rate or Transmit rate)
+                if line.contains("Receive rate") || line.contains("Transmit rate") {
+                    if let Some(value) = line.split(':').nth(1) {
+                        let value = value.trim().split_whitespace().next().unwrap_or("");
+                        speed = value.parse::<u32>().ok();
+                    }
+                }
+
+                // Parse SSID
+                if line.starts_with("SSID") && !line.contains("BSSID") {
+                    if let Some(value) = line.split(':').nth(1) {
+                        ssid = Some(value.trim().to_string());
+                    }
+                }
+
+                // Parse connection status
+                if line.starts_with("State") {
+                    if let Some(value) = line.split(':').nth(1) {
+                        status = Some(value.trim().to_string());
+                    }
+                }
+            }
+
+            return (signal, speed, ssid, status);
+        }
+    }
+
+    (None, None, None, None)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn get_wifi_info() -> (Option<u32>, Option<u32>, Option<String>, Option<String>) {
+    (None, None, None, None)
+}
+
 #[tauri::command]
 fn get_system_info() -> Result<SystemInfo, String> {
     // Get or generate device token first
@@ -192,6 +332,10 @@ fn get_system_info() -> Result<SystemInfo, String> {
 
     // Get network info with interface type
     let networks = Networks::new_with_refreshed_list();
+
+    // Get WiFi information once (applies to all WiFi interfaces)
+    let (wifi_signal, wifi_speed, wifi_ssid, wifi_status) = get_wifi_info();
+
     let network_info: HashMap<String, NetworkInfo> = networks
         .list()
         .iter()
@@ -207,12 +351,23 @@ fn get_system_info() -> Result<SystemInfo, String> {
                 "Other"
             };
 
+            // Add WiFi metrics only for WiFi interfaces
+            let (signal, speed, ssid, status) = if interface_type == "WiFi" {
+                (wifi_signal, wifi_speed, wifi_ssid.clone(), wifi_status.clone())
+            } else {
+                (None, None, None, None)
+            };
+
             (
                 interface_name.to_string(),
                 NetworkInfo {
                     received: data.total_received(),
                     transmitted: data.total_transmitted(),
                     interface_type: interface_type.to_string(),
+                    wifi_signal_strength: signal,
+                    wifi_link_speed: speed,
+                    wifi_ssid: ssid,
+                    wifi_status: status,
                 }
             )
         })
@@ -274,6 +429,10 @@ fn get_system_info() -> Result<SystemInfo, String> {
         system_type,
         antivirus_status,
         firewall_status,
+        active_window: get_active_window(),
+        running_processes: get_running_processes(),
+        activity_status: determine_activity_status(),
+        last_input_time: get_last_input_time(),
     })
 }
 
@@ -1096,6 +1255,60 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
         }));
     }
 
+    // Build network_info map
+    let mut network_info_map = serde_json::Map::new();
+    for (name, info) in &system_info.network_info {
+        let mut wifi_fields = serde_json::Map::new();
+        wifi_fields.insert("received".to_string(), serde_json::json!({"integerValue": info.received.to_string()}));
+        wifi_fields.insert("transmitted".to_string(), serde_json::json!({"integerValue": info.transmitted.to_string()}));
+        wifi_fields.insert("interface_type".to_string(), serde_json::json!({"stringValue": &info.interface_type}));
+
+        if let Some(signal) = info.wifi_signal_strength {
+            wifi_fields.insert("wifi_signal_strength".to_string(), serde_json::json!({"integerValue": signal.to_string()}));
+        } else {
+            wifi_fields.insert("wifi_signal_strength".to_string(), serde_json::json!({"nullValue": null}));
+        }
+
+        if let Some(speed) = info.wifi_link_speed {
+            wifi_fields.insert("wifi_link_speed".to_string(), serde_json::json!({"integerValue": speed.to_string()}));
+        } else {
+            wifi_fields.insert("wifi_link_speed".to_string(), serde_json::json!({"nullValue": null}));
+        }
+
+        if let Some(ssid) = &info.wifi_ssid {
+            wifi_fields.insert("wifi_ssid".to_string(), serde_json::json!({"stringValue": ssid}));
+        } else {
+            wifi_fields.insert("wifi_ssid".to_string(), serde_json::json!({"nullValue": null}));
+        }
+
+        if let Some(status) = &info.wifi_status {
+            wifi_fields.insert("wifi_status".to_string(), serde_json::json!({"stringValue": status}));
+        } else {
+            wifi_fields.insert("wifi_status".to_string(), serde_json::json!({"nullValue": null}));
+        }
+
+        network_info_map.insert(name.clone(), serde_json::json!({"mapValue": {"fields": wifi_fields}}));
+    }
+
+    // Build running_processes array
+    let running_processes_array: Vec<serde_json::Value> = system_info.running_processes.iter()
+        .map(|p| serde_json::json!({"stringValue": p}))
+        .collect();
+
+    // Build active_window value
+    let active_window_value = if let Some(window) = &system_info.active_window {
+        serde_json::json!({"stringValue": window})
+    } else {
+        serde_json::json!({"nullValue": null})
+    };
+
+    // Build last_input_time value
+    let last_input_time_value = if let Some(time) = system_info.last_input_time {
+        serde_json::json!({"integerValue": time.to_string()})
+    } else {
+        serde_json::json!({"nullValue": null})
+    };
+
     // Create Firestore document format
     let firestore_doc = serde_json::json!({
         "fields": {
@@ -1148,7 +1361,22 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
             "systemType": {"stringValue": &system_info.system_type},
             "totalStorage": {"stringValue": if !system_info.disk_info.is_empty() { format!("{} GB", system_info.disk_info[0].total_space / (1024 * 1024 * 1024)) } else { "Unknown".to_string() }},
             "graphicsCard": {"stringValue": system_info.gpu_info.as_ref().map(|g| g.name.clone()).unwrap_or("Unknown".to_string())},
-            "osInstallDate": {"stringValue": system_info.os_install_date.as_ref().map(|d| d.clone()).unwrap_or("Unknown".to_string())}
+            "osInstallDate": {"stringValue": system_info.os_install_date.as_ref().map(|d| d.clone()).unwrap_or("Unknown".to_string())},
+            // Activity tracking data
+            "active_window": active_window_value,
+            "running_processes": {
+                "arrayValue": {
+                    "values": running_processes_array
+                }
+            },
+            "activity_status": {"stringValue": &system_info.activity_status},
+            "last_input_time": last_input_time_value,
+            // Network info (WiFi data)
+            "network_info": {
+                "mapValue": {
+                    "fields": network_info_map
+                }
+            }
         }
     });
 
@@ -1238,14 +1466,14 @@ fn update_last_scan_time() -> Result<(), String> {
     Ok(())
 }
 
-// Function to check if scan is due (2 weeks = 14 days)
+// Function to check if scan is due (2 hours)
 fn is_scan_due() -> Result<bool, String> {
     match get_last_scan_time()? {
         None => Ok(true), // Never scanned before
         Some(last_scan) => {
             let now = Utc::now();
-            let two_weeks = Duration::days(14);
-            Ok(now.signed_duration_since(last_scan) >= two_weeks)
+            let two_hours = Duration::hours(2);
+            Ok(now.signed_duration_since(last_scan) >= two_hours)
         }
     }
 }
@@ -1257,7 +1485,7 @@ fn check_and_run_auto_scan(staff_email: String, staff_name: String, department: 
         Ok("Auto-scan completed successfully".to_string())
     } else {
         let last_scan = get_last_scan_time()?.unwrap();
-        let next_scan = last_scan + Duration::days(14);
+        let next_scan = last_scan + Duration::hours(2);
         Ok(format!("Scan not due yet. Next scan: {}", next_scan.format("%Y-%m-%d %H:%M:%S")))
     }
 }

@@ -1,6 +1,6 @@
 {
   "productName": "Device Monitor",
-  "version": "1.6.0",
+  "version": "1.7.1",
   "identifier": "com.devicemonitor.app",
   "build": {
     "beforeDevCommand": "npm run dev",

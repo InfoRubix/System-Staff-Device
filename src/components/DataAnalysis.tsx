@@ -1281,15 +1281,16 @@ function DataAnalysis() {
                     let ramCategory = 'Other';
                     let ramColor = 'bg-gray-100 text-gray-700';
 
-                    if (ramSize < 8) {
-                      ramCategory = 'Under 8GB';
-                      ramColor = 'bg-red-100 text-red-700';
-                    } else if (ramSize === 8) {
+                    // Round to nearest standard RAM size
+                    if (ramSize <= 8) {
                       ramCategory = '8GB';
                       ramColor = 'bg-yellow-100 text-yellow-700';
-                    } else if (ramSize >= 16) {
-                      ramCategory = '16GB+';
+                    } else if (ramSize > 8 && ramSize <= 16) {
+                      ramCategory = '16GB';
                       ramColor = 'bg-green-100 text-green-700';
+                    } else if (ramSize > 16) {
+                      ramCategory = '32GB+';
+                      ramColor = 'bg-blue-100 text-blue-700';
                     }
 
                     return (

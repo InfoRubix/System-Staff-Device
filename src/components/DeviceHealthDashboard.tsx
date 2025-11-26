@@ -18,6 +18,12 @@ interface HealthScan {
   diskHealth: 'Good' | 'Warning' | 'Critical';
   batteryHealth?: number;
 
+  // Network Health
+  wifiSignalStrength?: number;  // 0-100%
+  wifiLinkSpeed?: number;       // Mbps
+  wifiSsid?: string;            // Network name
+  wifiStatus?: string;          // Connected/Disconnected
+
   // Software Health
   osVersion: string;
   antivirusStatus: 'Active' | 'Inactive' | 'Not Installed';
@@ -352,6 +358,41 @@ function HealthCard({ scan }: { scan: HealthScan }) {
                 unit="%"
                 color={scan.batteryHealth < 50 ? 'red' : scan.batteryHealth < 70 ? 'yellow' : 'green'}
               />
+            )}
+
+            {/* WiFi Signal Strength */}
+            {scan.wifiSignalStrength !== undefined && (
+              <MetricBar
+                label="WiFi Signal"
+                value={scan.wifiSignalStrength}
+                max={100}
+                unit="%"
+                color={scan.wifiSignalStrength < 40 ? 'red' : scan.wifiSignalStrength < 70 ? 'yellow' : 'green'}
+              />
+            )}
+
+            {/* WiFi Network Info */}
+            {scan.wifiSsid && (
+              <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Network (SSID)</span>
+                  <span className="font-medium text-gray-900">{scan.wifiSsid}</span>
+                </div>
+                {scan.wifiLinkSpeed && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Link Speed</span>
+                    <span className="font-medium text-gray-900">{scan.wifiLinkSpeed} Mbps</span>
+                  </div>
+                )}
+                {scan.wifiStatus && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Status</span>
+                    <span className={`font-medium ${scan.wifiStatus.toLowerCase().includes('connected') ? 'text-green-600' : 'text-red-600'}`}>
+                      {scan.wifiStatus}
+                    </span>
+                  </div>
+                )}
+              </div>
             )}
 
             {scan.cpuTemp && (
