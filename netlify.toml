@@ -1,8 +1,12 @@
 [build]
-  # Build command for static export
+  # Build command for Next.js with serverless functions
   command = "npm run build"
-  # Output directory
-  publish = "out"
+  # Output directory for Next.js (not static export)
+  publish = ".next"
+
+# Enable Next.js plugin for API routes and serverless functions
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 # Security headers (same as public/_headers but as backup)
 [[headers]]
@@ -22,9 +26,3 @@
   to = "https://your-domain.netlify.app/:splat"
   status = 301
   force = true
-
-# SPA fallback for client-side routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200

@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Static export for Tauri
-  output: 'export',
+  // Only use static export for Tauri builds, not for Netlify
+  // Check if building for Tauri (when TAURI env var is set)
+  output: process.env.TAURI_BUILD === 'true' ? 'export' : undefined,
   // Disable image optimization for static export
   images: {
     unoptimized: true,

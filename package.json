@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@netlify/plugin-nextjs": "^5.14.7",
     "@tauri-apps/cli": "^2.9.3",
     "eslint": "^9",
     "eslint-config-next": "15.5.2"
