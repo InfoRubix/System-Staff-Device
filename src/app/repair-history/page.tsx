@@ -332,11 +332,16 @@ export default function RepairHistoryPage() {
       }}>
         {/* Background bubbles */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Top Left Corner - Large Blue Bubble with visible border */}
           <div className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full">
             <div className="w-full h-full bg-gradient-to-br from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
           </div>
+
+          {/* Bottom Right Corner - Large Blue Bubble with visible border */}
           <div className="absolute -bottom-32 -right-32 w-[700px] h-[700px] rounded-full">
             <div className="w-full h-full bg-gradient-to-tl from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
           </div>
         </div>
 
