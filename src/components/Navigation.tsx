@@ -202,6 +202,7 @@ export default function Navigation() {
   const adminNavItems = [
     { href: '/data-analysis', label: 'Data Analysis' },
     { href: '/device-health', label: 'Device Health' },
+    { href: '/activity-tracking', label: 'Activity Tracking' },
     // Repair Management will be a dropdown
     // { href: '/download', label: 'Download App' }, // Hidden per boss request
   ];

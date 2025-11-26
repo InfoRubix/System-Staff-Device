@@ -28,6 +28,10 @@ interface HealthScan {
   diskSpaceFree: number;
   diskHealth: 'Good' | 'Warning' | 'Critical';
   batteryHealth?: number;
+  wifiSignalStrength?: number;
+  wifiLinkSpeed?: number;
+  wifiSsid?: string;
+  wifiStatus?: string;
   osVersion: string;
   antivirusStatus: 'Active' | 'Inactive' | 'Not Installed';
   firewallStatus: 'Active' | 'Inactive';
@@ -58,10 +62,31 @@ export default function DeviceHealthPage() {
       const allScans: HealthScan[] = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
+
+        // Extract WiFi info from network_info (if exists)
+        let wifiSignal, wifiSpeed, wifiSsid, wifiStatus;
+        if (data.network_info) {
+          // Find WiFi interface
+          for (const [_interfaceName, info] of Object.entries(data.network_info)) {
+            const networkInfo = info as any;
+            if (networkInfo.interface_type === 'WiFi') {
+              wifiSignal = networkInfo.wifi_signal_strength;
+              wifiSpeed = networkInfo.wifi_link_speed;
+              wifiSsid = networkInfo.wifi_ssid;
+              wifiStatus = networkInfo.wifi_status;
+              break; // Use first WiFi interface found
+            }
+          }
+        }
+
         allScans.push({
           id: doc.id,
           ...data,
           scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
+          wifiSignalStrength: wifiSignal,
+          wifiLinkSpeed: wifiSpeed,
+          wifiSsid: wifiSsid,
+          wifiStatus: wifiStatus,
         } as HealthScan);
       });
 
