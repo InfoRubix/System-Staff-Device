@@ -7,19 +7,19 @@ export const APP_INFO = {
   productName: tauriConfig.productName,
 
   // File information (update when rebuilding the app)
-  fileSize: '59 MB',
-  fileSizeMB: 59,
+  fileSize: '70 MB',
+  fileSizeMB: 70,
 
   // What's new in this version
-  releaseDate: 'November 2024',
+  releaseDate: 'November 2025',
   features: [
-    '🎨 Improved user interface - Cleaner and more modern design',
-    '📊 Device scan history preserved - Historical data kept even when users change',
-    '📌 System tray icon - Runs in background, close window to minimize to tray',
-    '💻 Automatic device detection - Correctly identifies Laptop vs Desktop',
-    '🚀 Auto-start on boot - Starts automatically when Windows boots',
-    '🔧 Bug fixes and performance improvements',
-    '✅ Enhanced account security - Validates user status before each scan',
+    '🎯 Improved active window detection - Accurately tracks which app you are currently using',
+    '📱 Smart running processes - Shows only user apps, filtered system processes',
+    '📡 Enhanced network detection - WiFi, Ethernet, USB tethering, and mobile hotspot support',
+    '🔒 Fixed security detection - Firewall and antivirus status now properly recognized',
+    '⚡ Faster page loading - User Management and all admin pages load smoothly',
+    '🎨 Updated Repair History design - Consistent visual style across all pages',
+    '🔧 Activity Tracking improvements - More accurate idle time and app usage data',
   ],
 
   // Technical details
