@@ -13,13 +13,13 @@ export const APP_INFO = {
   // What's new in this version
   releaseDate: 'November 2025',
   features: [
+    '🔧 Fixed static export compatibility - All pages now work correctly with Tauri build',
     '🎯 Improved active window detection - Accurately tracks which app you are currently using',
     '📱 Smart running processes - Shows only user apps, filtered system processes',
     '📡 Enhanced network detection - WiFi, Ethernet, USB tethering, and mobile hotspot support',
     '🔒 Fixed security detection - Firewall and antivirus status now properly recognized',
     '⚡ Faster page loading - User Management and all admin pages load smoothly',
     '🎨 Updated Repair History design - Consistent visual style across all pages',
-    '🔧 Activity Tracking improvements - More accurate idle time and app usage data',
   ],
 
   // Technical details

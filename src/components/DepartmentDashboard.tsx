@@ -11,6 +11,7 @@ import SuccessToast from './SuccessToast';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDate } from '@/lib/dateFormat';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface DeviceScan {
   id: string;
@@ -54,6 +55,8 @@ type DepartmentStats = {
 function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTransferStaff: _onTransferStaff }: DepartmentDashboardProps) {
   const { devices, loading, searchDevices, deleteDevice, refreshDevices } = useDevices();
   const { departments } = useDepartments();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [deviceScans, setDeviceScans] = useState<DeviceScan[]>([]);
   const [_scansLoading, setScansLoading] = useState(true);
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
@@ -127,6 +130,17 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
 
     return () => unsubscribe();
   }, []);
+
+  // Load selected department from URL on mount and when departments change
+  useEffect(() => {
+    const deptParam = searchParams.get('department');
+    if (deptParam && departments.length > 0) {
+      const dept = departments.find(d => d === deptParam);
+      if (dept) {
+        setSelectedDepartment(dept);
+      }
+    }
+  }, [searchParams, departments]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -291,7 +305,10 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
     return (
       <DepartmentDetail
         department={selectedDepartment}
-        onBack={() => setSelectedDepartment(null)}
+        onBack={() => {
+          setSelectedDepartment(null);
+          router.push('/dashboard');
+        }}
         onEdit={onEdit}
       />
     );
@@ -546,7 +563,10 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
                   brokenDevices: 0,
                   underRepairDevices: 0,
                 }}
-                onClick={() => setSelectedDepartment(department)}
+                onClick={() => {
+                  setSelectedDepartment(department);
+                  router.push(`/dashboard?department=${encodeURIComponent(department)}`);
+                }}
               />
             ))}
           </div>

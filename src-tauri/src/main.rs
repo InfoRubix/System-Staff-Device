@@ -17,6 +17,9 @@ use std::time::Duration as StdDuration;
 #[cfg(target_os = "windows")]
 use std::env;
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 #[derive(Debug, Serialize, Deserialize)]
 struct SystemInfo {
     device_id: String,  // Unique device identifier
@@ -149,6 +152,7 @@ fn get_active_window() -> Option<String> {
 
     // Get the foreground window process name (the actual active window user is using)
     let output = Command::new("powershell")
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW - Hide console
         .args(&[
             "-ExecutionPolicy", "Bypass",
             "-Command",
@@ -198,6 +202,7 @@ fn get_running_processes() -> Vec<String> {
 
     // Get only processes with visible windows (actual apps user opened)
     let output = Command::new("powershell")
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW - Hide console
         .args(&[
             "-ExecutionPolicy", "Bypass",
             "-Command",
@@ -238,6 +243,7 @@ fn get_last_input_time() -> Option<u64> {
     use std::process::Command;
     // Get idle time in seconds using PowerShell
     let output = Command::new("powershell")
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW - Hide console
         .args(&["-ExecutionPolicy", "Bypass", "-Command",
             "Add-Type @'\nusing System;\nusing System.Runtime.InteropServices;\npublic class IdleTime {\n    [DllImport(\"user32.dll\")]\n    static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);\n    [StructLayout(LayoutKind.Sequential)]\n    public struct LASTINPUTINFO {\n        public uint cbSize;\n        public uint dwTime;\n    }\n    public static uint GetIdleTime() {\n        LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();\n        lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);\n        GetLastInputInfo(ref lastInputInfo);\n        return ((uint)Environment.TickCount - lastInputInfo.dwTime) / 1000;\n    }\n}\n'@\n[IdleTime]::GetIdleTime()"
         ])
@@ -379,6 +385,7 @@ fn get_wifi_info() -> (Option<u32>, Option<u32>, Option<String>, Option<String>)
 
     // First, try to get WiFi info using netsh wlan
     let wifi_output = Command::new("netsh")
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW - Hide console
         .args(&["wlan", "show", "interfaces"])
         .output();
 
@@ -401,11 +408,33 @@ fn get_wifi_info() -> (Option<u32>, Option<u32>, Option<String>, Option<String>)
                         }
                     }
 
-                    // Parse link speed (Receive rate or Transmit rate)
+                    // Parse link speed (multiple formats)
+                    // 1. Receive rate or Transmit rate (normal WiFi)
                     if line.contains("Receive rate") || line.contains("Transmit rate") {
                         if let Some(value) = line.split(':').nth(1) {
                             let value = value.trim().split_whitespace().next().unwrap_or("");
-                            speed = value.parse::<u32>().ok();
+                            if let Ok(parsed_speed) = value.parse::<u32>() {
+                                // Only update if we don't have a speed yet, or if this is higher
+                                speed = Some(speed.unwrap_or(0).max(parsed_speed));
+                            }
+                        }
+                    }
+
+                    // 2. Radio type (for mobile hotspots and newer WiFi standards)
+                    // Examples: "802.11n", "802.11ac", "802.11ax"
+                    if line.starts_with("Radio type") && speed.is_none() {
+                        if let Some(value) = line.split(':').nth(1) {
+                            let radio_type = value.trim();
+                            // Estimate speed based on radio type
+                            speed = Some(match radio_type {
+                                t if t.contains("802.11ax") || t.contains("Wi-Fi 6") => 1200, // WiFi 6: ~1.2 Gbps
+                                t if t.contains("802.11ac") || t.contains("Wi-Fi 5") => 867,  // WiFi 5: ~867 Mbps
+                                t if t.contains("802.11n") || t.contains("Wi-Fi 4") => 300,   // WiFi 4: ~300 Mbps
+                                t if t.contains("802.11g") => 54,    // WiFi 3: 54 Mbps
+                                t if t.contains("802.11a") => 54,    // WiFi 2: 54 Mbps
+                                t if t.contains("802.11b") => 11,    // WiFi 1: 11 Mbps
+                                _ => 100 // Unknown, assume 100 Mbps
+                            });
                         }
                     }
 
@@ -434,6 +463,7 @@ fn get_wifi_info() -> (Option<u32>, Option<u32>, Option<String>, Option<String>)
 
     // Fallback: Check all network interfaces for active connection (Ethernet, USB tethering, mobile hotspot, etc.)
     let interface_output = Command::new("netsh")
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW - Hide console
         .args(&["interface", "show", "interface"])
         .output();
 
@@ -448,12 +478,14 @@ fn get_wifi_info() -> (Option<u32>, Option<u32>, Option<String>, Option<String>)
                     if parts.len() >= 4 {
                         let interface_name = parts[3..].join(" ");
 
-                        // Try to get link speed using PowerShell
+                        // Try to get link speed using PowerShell (works for WiFi, Ethernet, and Mobile Hotspot)
                         let speed_output = Command::new("powershell")
+                            .creation_flags(0x08000000) // CREATE_NO_WINDOW - Hide console
                             .args(&[
                                 "-ExecutionPolicy", "Bypass",
                                 "-Command",
-                                &format!("Get-NetAdapter | Where-Object {{$_.Name -like '*{}*' -and $_.Status -eq 'Up'}} | Select-Object -ExpandProperty LinkSpeed", interface_name)
+                                // Search for adapter by partial name match (handles WiFi, Ethernet, and hotspot)
+                                &format!("$adapter = Get-NetAdapter | Where-Object {{$_.Status -eq 'Up'}}; if ($adapter) {{ $adapter | Select-Object -First 1 -ExpandProperty LinkSpeed }}")
                             ])
                             .output();
 
@@ -880,6 +912,7 @@ fn detect_computer_info() -> Option<ComputerInfo> {
     // If still Unknown, try using WMIC command as fallback
     if model == "Unknown" || manufacturer == "Unknown" {
         if let Ok(output) = Command::new("wmic")
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW - Hide console
             .args(&["computersystem", "get", "manufacturer,model", "/format:list"])
             .output()
         {
@@ -1061,6 +1094,7 @@ fn detect_firewall_status() -> String {
 
     // Otherwise, check Windows Firewall using netsh
     let output = Command::new("netsh")
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW - Hide console
         .args(["advfirewall", "show", "allprofiles", "state"])
         .output();
 
@@ -1748,6 +1782,7 @@ fn register_auto_start() -> Result<(), Box<dyn std::error::Error>> {
 
     // Use reg.exe to add to Windows startup
     Command::new("reg")
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW - Hide console
         .args(&[
             "add",
             "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",

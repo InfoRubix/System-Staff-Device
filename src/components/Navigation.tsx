@@ -125,13 +125,13 @@ export default function Navigation() {
               const id = `${scan.deviceId}-${scan.staffEmail}-Battery_Degraded`;
               if (!fixedSet.has(id)) hasIssue = true;
             }
-            // Antivirus Disabled
-            if (scan.antivirusStatus !== 'Active') {
+            // Antivirus Disabled (check if status contains "Inactive")
+            if (scan.antivirusStatus && scan.antivirusStatus.includes('Inactive')) {
               const id = `${scan.deviceId}-${scan.staffEmail}-Antivirus_Disabled`;
               if (!fixedSet.has(id)) hasIssue = true;
             }
-            // Firewall Disabled
-            if (scan.firewallStatus !== 'Active') {
+            // Firewall Disabled (check if status contains "Inactive")
+            if (scan.firewallStatus && scan.firewallStatus.includes('Inactive')) {
               const id = `${scan.deviceId}-${scan.staffEmail}-Firewall_Disabled`;
               if (!fixedSet.has(id)) hasIssue = true;
             }
