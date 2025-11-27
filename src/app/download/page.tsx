@@ -140,11 +140,11 @@ export default function DownloadPage() {
       });
 
       // Start download from Google Drive
-      window.location.href = 'https://drive.google.com/uc?export=download&id=1bg7gKOkU9x3ZnI2ac9P3WWln6XMAPaiB';
+      window.location.href = 'https://drive.google.com/uc?export=download&id=1pWMAGTyNPM0FVX4_QAurS8eTF4nnI6sX';
     } catch (error) {
       console.error('Error logging download:', error);
       // Still allow download even if logging fails
-      window.location.href = 'https://drive.google.com/uc?export=download&id=1bg7gKOkU9x3ZnI2ac9P3WWln6XMAPaiB';
+      window.location.href = 'https://drive.google.com/uc?export=download&id=1pWMAGTyNPM0FVX4_QAurS8eTF4nnI6sX';
     } finally {
       setTimeout(() => setIsDownloading(false), 2000);
     }

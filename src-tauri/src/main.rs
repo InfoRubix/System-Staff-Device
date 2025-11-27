@@ -1,5 +1,6 @@
 // Prevents additional console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![recursion_limit = "512"]
 
 use serde::{Deserialize, Serialize};
 use sysinfo::{System, Disks, Networks, Components};
@@ -9,6 +10,9 @@ use uuid::Uuid;
 use directories::ProjectDirs;
 use chrono::{Utc, DateTime, Duration};
 use tauri::Manager;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration as StdDuration;
 
 #[cfg(target_os = "windows")]
 use std::env;
@@ -256,6 +260,116 @@ fn determine_activity_status() -> String {
         Some(secs) if secs < 1800 => "idle".to_string(),  // Idle if input < 30 mins ago
         _ => "inactive".to_string(),
     }
+}
+
+// App usage tracking (tracks hours per app over 2-week period)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct AppUsageData {
+    app_name: String,
+    total_minutes: u64,  // Total minutes used
+}
+
+fn get_app_usage_file() -> Result<String, String> {
+    let proj_dirs = ProjectDirs::from("com", "DeviceMonitor", "DeviceMonitor")
+        .ok_or("Failed to get project directory")?;
+    let data_dir = proj_dirs.data_dir();
+    fs::create_dir_all(data_dir).map_err(|e| format!("Failed to create data directory: {}", e))?;
+    Ok(data_dir.join("app_usage.json").to_string_lossy().to_string())
+}
+
+fn load_app_usage() -> HashMap<String, u64> {
+    match get_app_usage_file() {
+        Ok(file_path) => {
+            if let Ok(content) = fs::read_to_string(&file_path) {
+                if let Ok(data) = serde_json::from_str::<HashMap<String, u64>>(&content) {
+                    return data;
+                }
+            }
+        }
+        Err(_) => {}
+    }
+    HashMap::new()
+}
+
+fn save_app_usage(usage_data: &HashMap<String, u64>) -> Result<(), String> {
+    let file_path = get_app_usage_file()?;
+    let json = serde_json::to_string_pretty(usage_data)
+        .map_err(|e| format!("Failed to serialize app usage: {}", e))?;
+    fs::write(&file_path, json)
+        .map_err(|e| format!("Failed to write app usage file: {}", e))?;
+    Ok(())
+}
+
+fn get_top_apps(usage_data: &HashMap<String, u64>, limit: usize) -> Vec<AppUsageData> {
+    let mut apps: Vec<_> = usage_data.iter()
+        .map(|(name, &minutes)| AppUsageData {
+            app_name: name.clone(),
+            total_minutes: minutes,
+        })
+        .collect();
+
+    // Sort by total minutes descending
+    apps.sort_by(|a, b| b.total_minutes.cmp(&a.total_minutes));
+    apps.into_iter().take(limit).collect()
+}
+
+fn reset_app_usage() -> Result<(), String> {
+    let file_path = get_app_usage_file()?;
+    fs::write(&file_path, "{}")
+        .map_err(|e| format!("Failed to reset app usage: {}", e))?;
+    Ok(())
+}
+
+// Start background thread to track app usage
+fn start_app_usage_tracker() {
+    thread::spawn(move || {
+        let mut last_app: Option<String> = None;
+        let check_interval = StdDuration::from_secs(60); // Check every minute
+
+        loop {
+            thread::sleep(check_interval);
+
+            // Only track if user is active
+            let status = determine_activity_status();
+            if status != "active" {
+                last_app = None;
+                continue;
+            }
+
+            // Get current active window
+            if let Some(active_window) = get_active_window() {
+                // Extract app name (before " : " or " - ")
+                let app_name = if let Some(pos) = active_window.find(" : ") {
+                    active_window[..pos].to_string()
+                } else if let Some(pos) = active_window.find(" - ") {
+                    active_window[..pos].to_string()
+                } else {
+                    active_window.clone()
+                };
+
+                // Skip system apps and edge cases
+                if app_name.to_lowercase().contains("system") ||
+                   app_name.to_lowercase().contains("explorer") ||
+                   app_name.to_lowercase().contains("taskmgr") ||
+                   app_name.is_empty() {
+                    continue;
+                }
+
+                // Load current usage
+                let mut usage_data = load_app_usage();
+
+                // Add 1 minute to this app
+                *usage_data.entry(app_name.clone()).or_insert(0) += 1;
+
+                // Save updated usage
+                let _ = save_app_usage(&usage_data);
+
+                last_app = Some(app_name);
+            } else {
+                last_app = None;
+            }
+        }
+    });
 }
 
 // WiFi detection functions
@@ -1416,6 +1530,22 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
         serde_json::json!({"nullValue": null})
     };
 
+    // Get top 10 apps from usage tracking
+    let usage_data = load_app_usage();
+    let top_apps = get_top_apps(&usage_data, 10);
+
+    // Build top_apps array for Firebase (pre-build to avoid JSON macro recursion)
+    let top_apps_array: Vec<serde_json::Value> = top_apps.iter()
+        .map(|app| {
+            let app_fields = serde_json::json!({
+                "appName": {"stringValue": &app.app_name},
+                "totalMinutes": {"integerValue": app.total_minutes.to_string()},
+                "totalHours": {"doubleValue": (app.total_minutes as f64 / 60.0)}
+            });
+            serde_json::json!({"mapValue": {"fields": app_fields}})
+        })
+        .collect();
+
     // Create Firestore document format
     let firestore_doc = serde_json::json!({
         "fields": {
@@ -1478,6 +1608,12 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
             },
             "activity_status": {"stringValue": &system_info.activity_status},
             "last_input_time": last_input_time_value,
+            // Top 10 most used apps (2-week period)
+            "top_apps": {
+                "arrayValue": {
+                    "values": top_apps_array
+                }
+            },
             // Network info (WiFi data)
             "network_info": {
                 "mapValue": {
@@ -1497,6 +1633,8 @@ fn submit_device_scan(system_info: &SystemInfo, staff_email: &str, staff_name: &
         .map_err(|e| format!("Failed to send request: {}", e))?;
 
     if response.status().is_success() {
+        // Reset app usage tracking for next 2-week period
+        let _ = reset_app_usage();
         Ok(())
     } else {
         Err(format!("Firebase error: {} - {}", response.status(), response.text().unwrap_or_default()))
@@ -1573,14 +1711,14 @@ fn update_last_scan_time() -> Result<(), String> {
     Ok(())
 }
 
-// Function to check if scan is due (2 hours)
+// Function to check if scan is due (2 weeks)
 fn is_scan_due() -> Result<bool, String> {
     match get_last_scan_time()? {
         None => Ok(true), // Never scanned before
         Some(last_scan) => {
             let now = Utc::now();
-            let two_hours = Duration::hours(2);
-            Ok(now.signed_duration_since(last_scan) >= two_hours)
+            let two_weeks = Duration::weeks(2);
+            Ok(now.signed_duration_since(last_scan) >= two_weeks)
         }
     }
 }
@@ -1592,7 +1730,7 @@ fn check_and_run_auto_scan(staff_email: String, staff_name: String, department: 
         Ok("Auto-scan completed successfully".to_string())
     } else {
         let last_scan = get_last_scan_time()?.unwrap();
-        let next_scan = last_scan + Duration::hours(2);
+        let next_scan = last_scan + Duration::weeks(2);
         Ok(format!("Scan not due yet. Next scan: {}", next_scan.format("%Y-%m-%d %H:%M:%S")))
     }
 }
@@ -1711,6 +1849,10 @@ fn main() {
                     }
                 });
             }
+
+            // Start app usage tracker in background
+            start_app_usage_tracker();
+            println!("📊 App usage tracker started");
 
             println!("🚀 Device Monitor started with system tray");
 

@@ -59,7 +59,7 @@ export const APP_INFO = {
     {
       icon: '⚡',
       title: 'Lightweight & fast',
-      description: `Only ${59} MB download, uses minimal system resources`,
+      description: `Only ${70} MB download, uses minimal system resources`,
     },
   ],
 
