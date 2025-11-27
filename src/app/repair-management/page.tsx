@@ -99,6 +99,17 @@ export default function RepairManagementPage() {
     return () => unsubscribe();
   }, [isAdmin]);
 
+  // Load expanded issue from URL (client-side only)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const deviceParam = params.get('device');
+      if (deviceParam) {
+        setExpandedIssue(deviceParam);
+      }
+    }
+  }, []);
+
   // Load technicians
   useEffect(() => {
     const loadTechnicians = async () => {
@@ -548,6 +559,13 @@ export default function RepairManagementPage() {
   const toggleIssue = async (issueId: string) => {
     const isExpanding = expandedIssue !== issueId;
     setExpandedIssue(isExpanding ? issueId : null);
+
+    // Update URL
+    if (isExpanding) {
+      router.push(`/repair-management?device=${encodeURIComponent(issueId)}`);
+    } else {
+      router.push('/repair-management');
+    }
 
     // Mark device as viewed when expanding (like game notifications)
     if (isExpanding) {

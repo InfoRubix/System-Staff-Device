@@ -7,6 +7,12 @@ import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Navigation from '@/components/Navigation';
 
+interface TopApp {
+  appName: string;
+  totalMinutes: number;
+  totalHours: number;
+}
+
 interface DeviceScan {
   deviceId: string;
   staffEmail: string;
@@ -17,6 +23,7 @@ interface DeviceScan {
   running_processes?: string[];
   activity_status?: string;
   last_input_time?: number;
+  top_apps?: TopApp[];
 }
 
 interface StaffMember {
@@ -36,6 +43,7 @@ interface StaffActivity {
   lastActivity: Date;
   runningProcesses: string[];
   lastInputTime?: number;
+  topApps: TopApp[];
 }
 
 export default function ActivityTrackingPage() {
@@ -52,6 +60,17 @@ export default function ActivityTrackingPage() {
       router.push('/');
     }
   }, [loading, isAuthenticated, isAdmin, router]);
+
+  // Load expanded staff from URL (client-side only)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const staffParam = params.get('staff');
+      if (staffParam) {
+        setExpandedStaff(staffParam);
+      }
+    }
+  }, []);
 
   // Load all staff members from staff collection
   useEffect(() => {
@@ -105,7 +124,8 @@ export default function ActivityTrackingPage() {
             active_window: data.active_window,
             running_processes: data.running_processes || [],
             activity_status: data.activity_status || 'inactive',
-            last_input_time: data.last_input_time
+            last_input_time: data.last_input_time,
+            top_apps: data.top_apps || []
           });
         }
       });
@@ -131,7 +151,8 @@ export default function ActivityTrackingPage() {
           currentApp: staffScan?.active_window || 'No data',
           lastActivity: staffScan?.scanTimestamp?.toDate() || new Date(),
           runningProcesses: staffScan?.running_processes || [],
-          lastInputTime: staffScan?.last_input_time
+          lastInputTime: staffScan?.last_input_time,
+          topApps: staffScan?.top_apps || []
         });
       });
 
@@ -321,7 +342,11 @@ export default function ActivityTrackingPage() {
                       <div key={activity.id} className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-xl overflow-hidden">
                         {/* Staff Header */}
                         <button
-                          onClick={() => setExpandedStaff(expandedStaff === activity.id ? null : activity.id)}
+                          onClick={() => {
+                            const newExpanded = expandedStaff === activity.id ? null : activity.id;
+                            setExpandedStaff(newExpanded);
+                            router.push(newExpanded ? `/activity-tracking?staff=${encodeURIComponent(activity.id)}` : '/activity-tracking');
+                          }}
                           className="w-full p-6 flex items-center justify-between hover:bg-white/40 transition-colors"
                         >
                           <div className="flex items-center gap-4">
@@ -383,14 +408,26 @@ export default function ActivityTrackingPage() {
                               </div>
                             </div>
 
-                            <h4 className="font-bold text-gray-900 mb-3 uppercase tracking-wide text-sm">Running Processes ({activity.runningProcesses.length})</h4>
-                            {activity.runningProcesses.length === 0 ? (
-                              <p className="text-sm text-gray-600 font-medium">No process data available</p>
+                            <h4 className="font-bold text-gray-900 mb-3 uppercase tracking-wide text-sm">Top 10 Most Used Apps (2-Week Period)</h4>
+                            {activity.topApps.length === 0 ? (
+                              <p className="text-sm text-gray-600 font-medium">No app usage data available yet. Data will appear after the next 2-week scan.</p>
                             ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
-                                {activity.runningProcesses.map((process, idx) => (
-                                  <div key={idx} className="px-4 py-3 bg-white/80 backdrop-blur-sm rounded-xl border-2 border-gray-200 text-sm font-medium text-gray-700 shadow-sm">
-                                    {process}
+                              <div className="space-y-3 max-h-80 overflow-y-auto">
+                                {activity.topApps.map((app, idx) => (
+                                  <div key={idx} className="flex items-center justify-between px-5 py-4 bg-white/80 backdrop-blur-sm rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex items-center gap-4">
+                                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-sm">
+                                        {idx + 1}
+                                      </div>
+                                      <div>
+                                        <p className="font-semibold text-gray-900 text-sm">{app.appName}</p>
+                                        <p className="text-xs text-gray-500 mt-1">{Math.floor(app.totalHours)}h {Math.round((app.totalHours % 1) * 60)}m total usage</p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-2xl font-bold text-blue-600">{app.totalHours.toFixed(1)}<span className="text-sm text-gray-500 ml-1">hrs</span></p>
+                                      <p className="text-xs text-gray-500 mt-1">{app.totalMinutes} mins</p>
+                                    </div>
                                   </div>
                                 ))}
                               </div>

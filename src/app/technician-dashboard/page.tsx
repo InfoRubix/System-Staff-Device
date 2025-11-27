@@ -56,6 +56,17 @@ export default function TechnicianDashboardPage() {
     }
   }, [loading, isAuthenticated, user, router]);
 
+  // Load expanded repair from URL (client-side only)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const repairParam = params.get('repair');
+      if (repairParam) {
+        setExpandedRepair(repairParam);
+      }
+    }
+  }, []);
+
   // Load assigned repairs from Firestore
   useEffect(() => {
     if (!user || (user as any).role !== 'technician') return;
@@ -227,13 +238,12 @@ export default function TechnicianDashboardPage() {
 
   // Initialize notes when repair is expanded
   const handleToggleExpand = (repairId: string, existingNotes?: string) => {
-    if (expandedRepair === repairId) {
-      setExpandedRepair(null);
-    } else {
-      setExpandedRepair(repairId);
-      if (existingNotes && !technicianNotes[repairId]) {
-        setTechnicianNotes(prev => ({ ...prev, [repairId]: existingNotes }));
-      }
+    const newExpanded = expandedRepair === repairId ? null : repairId;
+    setExpandedRepair(newExpanded);
+    router.push(newExpanded ? `/technician-dashboard?repair=${encodeURIComponent(repairId)}` : '/technician-dashboard');
+
+    if (newExpanded && existingNotes && !technicianNotes[repairId]) {
+      setTechnicianNotes(prev => ({ ...prev, [repairId]: existingNotes }));
     }
   };
 

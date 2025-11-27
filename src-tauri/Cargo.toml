@@ -1,6 +1,6 @@
 [package]
 name = "device-monitor"
-version = "1.7.2"
+version = "1.7.3"
 description = "Staff & Device Monitoring System"
 authors = ["you"]
 license = ""
