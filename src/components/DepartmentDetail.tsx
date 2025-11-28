@@ -5,6 +5,7 @@ import { useDevices } from '../contexts/DeviceContext';
 import { Department, Device } from '../types/device';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import Pagination from './Pagination';
 
 interface DeviceScan {
   id: string;
@@ -33,6 +34,8 @@ function DepartmentDetail({ department, onBack, onEdit: _onEdit }: DepartmentDet
   const [showDeviceModal, setShowDeviceModal] = useState<Device | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [deviceScans, setDeviceScans] = useState<DeviceScan[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // Load device scans from Firebase
   useEffect(() => {
@@ -179,7 +182,15 @@ function DepartmentDetail({ department, onBack, onEdit: _onEdit }: DepartmentDet
   };
 
   const style = getDepartmentStyle(department);
-  const filteredDevices = departmentData.devices;
+  const allFilteredDevices = departmentData.devices;
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  // Paginate devices
+  const filteredDevices = allFilteredDevices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="space-y-6">
@@ -355,6 +366,21 @@ function DepartmentDetail({ department, onBack, onEdit: _onEdit }: DepartmentDet
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination */}
+              {allFilteredDevices.length > itemsPerPage && (
+                <div className="mt-6 px-4">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(allFilteredDevices.length / itemsPerPage)}
+                    onPageChange={setCurrentPage}
+                    totalItems={allFilteredDevices.length}
+                    itemsPerPage={itemsPerPage}
+                    startIndex={(currentPage - 1) * itemsPerPage + 1}
+                    endIndex={Math.min(currentPage * itemsPerPage, allFilteredDevices.length)}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}
