@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDevices } from '../contexts/DeviceContext';
 import { useDepartments } from '../contexts/DepartmentContext';
+import { useNavigation } from '../contexts/NavigationContext';
 import { Department, Device } from '../types/device';
 import DepartmentCard from './DepartmentCard';
 import DepartmentDetail from './DepartmentDetail';
@@ -55,6 +56,7 @@ type DepartmentStats = {
 function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTransferStaff: _onTransferStaff }: DepartmentDashboardProps) {
   const { devices, loading, searchDevices, deleteDevice, refreshDevices } = useDevices();
   const { departments } = useDepartments();
+  const { startNavigation } = useNavigation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [deviceScans, setDeviceScans] = useState<DeviceScan[]>([]);
@@ -564,6 +566,8 @@ function DepartmentDashboard({ onEdit, onAddDepartment, onDeleteDepartment, onTr
                   underRepairDevices: 0,
                 }}
                 onClick={() => {
+                  // Trigger navigation loading animation
+                  startNavigation(`/dashboard?department=${encodeURIComponent(department)}`);
                   setSelectedDepartment(department);
                   router.push(`/dashboard?department=${encodeURIComponent(department)}`);
                 }}
