@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Navigation from '@/components/Navigation';
+import Pagination from '@/components/Pagination';
 
 interface TopApp {
   appName: string;
@@ -54,6 +55,8 @@ export default function ActivityTrackingPage() {
   const [allActivity, setAllActivity] = useState<StaffActivity[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   useEffect(() => {
     if (!loading && (!isAuthenticated || !isAdmin)) {
@@ -162,6 +165,11 @@ export default function ActivityTrackingPage() {
     return () => unsubscribe();
   }, [isAdmin, allStaff]);
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, deptFilter]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -199,8 +207,8 @@ export default function ActivityTrackingPage() {
 
   const filteredActivity = getFilteredActivity();
 
-  // Group by department
-  const groupedActivity = filteredActivity.reduce((acc, activity) => {
+  // Group by department (not used in rendering but kept for potential future use)
+  const _groupedActivity = filteredActivity.reduce((acc, activity) => {
     const dept = activity.department || 'Unknown';
     if (!acc[dept]) acc[dept] = [];
     acc[dept].push(activity);
@@ -329,16 +337,18 @@ export default function ActivityTrackingPage() {
 
           {/* Activity List */}
           <div className="space-y-6">
-            {Object.keys(groupedActivity).length === 0 ? (
+            {filteredActivity.length === 0 ? (
               <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-xl p-12 text-center">
                 <p className="text-gray-600 font-medium">No staff activity found. Staff need to login to Desktop Monitor App first.</p>
               </div>
             ) : (
-              Object.entries(groupedActivity).sort(([a], [b]) => a.localeCompare(b)).map(([department, staff]) => (
-                <div key={department}>
-                  <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide mb-3 px-2">{department}</h2>
-                  <div className="space-y-3">
-                    {staff.sort((a, b) => a.name.localeCompare(b.name)).map((activity) => (
+              <>
+                {/* Paginated flat list */}
+                <div className="space-y-3">
+                  {filteredActivity
+                    .sort((a, b) => a.department.localeCompare(b.department) || a.name.localeCompare(b.name))
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((activity) => (
                       <div key={activity.id} className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-xl overflow-hidden">
                         {/* Staff Header */}
                         <button
@@ -436,9 +446,23 @@ export default function ActivityTrackingPage() {
                         )}
                       </div>
                     ))}
-                  </div>
                 </div>
-              ))
+
+                {/* Pagination */}
+                {filteredActivity.length > itemsPerPage && (
+                  <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-xl p-6">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={Math.ceil(filteredActivity.length / itemsPerPage)}
+                      onPageChange={setCurrentPage}
+                      totalItems={filteredActivity.length}
+                      itemsPerPage={itemsPerPage}
+                      startIndex={(currentPage - 1) * itemsPerPage + 1}
+                      endIndex={Math.min(currentPage * itemsPerPage, filteredActivity.length)}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
