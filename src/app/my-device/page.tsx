@@ -23,7 +23,11 @@ interface HealthScan {
   osVersion: string;
   antivirusStatus: 'Active' | 'Inactive' | 'Not Installed';
   firewallStatus: 'Active' | 'Inactive';
-  issues: any[];
+  issues: Array<{
+    severity: string;
+    type: string;
+    message: string;
+  }>;
   overallStatus: 'Healthy' | 'Warning' | 'Critical';
 }
 
@@ -31,7 +35,7 @@ export default function MyDevicePage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [myDevice, setMyDevice] = useState<HealthScan | null>(null);
+  const [myDevices, setMyDevices] = useState<HealthScan[]>([]);
   const [hasAppInstalled, setHasAppInstalled] = useState(false);
 
   useEffect(() => {
@@ -54,22 +58,36 @@ export default function MyDevicePage() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        // Sort by timestamp in-memory to get the latest scan
-        const sortedDocs = snapshot.docs.sort((a, b) => {
-          const aTime = a.data().scanTimestamp?.toDate?.() || new Date(0);
-          const bTime = b.data().scanTimestamp?.toDate?.() || new Date(0);
-          return bTime.getTime() - aTime.getTime();
+        // Group scans by deviceId and get the latest scan for each device
+        const deviceMap = new Map<string, HealthScan>();
+
+        snapshot.docs.forEach((doc) => {
+          const data = doc.data();
+          const deviceId = data.deviceId;
+          const scanTime = data.scanTimestamp?.toDate?.() || new Date(0);
+
+          // If this device isn't in the map yet, or if this scan is newer, add/update it
+          const existing = deviceMap.get(deviceId);
+          const existingTime = existing?.scanTimestamp || new Date(0);
+
+          if (!existing || scanTime.getTime() > existingTime.getTime()) {
+            deviceMap.set(deviceId, {
+              id: doc.id,
+              ...data,
+              scanTimestamp: scanTime,
+            } as HealthScan);
+          }
         });
 
-        const data = sortedDocs[0].data();
-        setMyDevice({
-          id: sortedDocs[0].id,
-          ...data,
-          scanTimestamp: data.scanTimestamp?.toDate() || new Date(),
-        } as HealthScan);
+        // Convert map to array and sort by most recent scan
+        const devices = Array.from(deviceMap.values()).sort((a, b) =>
+          b.scanTimestamp.getTime() - a.scanTimestamp.getTime()
+        );
+
+        setMyDevices(devices);
         setHasAppInstalled(true);
       } else {
-        setMyDevice(null);
+        setMyDevices([]);
         setHasAppInstalled(false);
       }
     });
@@ -116,77 +134,97 @@ export default function MyDevicePage() {
         </div>
 
         {/* Device Health Data - Show if app IS installed */}
-        {hasAppInstalled && myDevice ? (
+        {hasAppInstalled && myDevices.length > 0 ? (
           <div className="space-y-6">
-            {/* Status Card */}
-            <div className={`backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg overflow-hidden border-l-8 ${
-              myDevice.overallStatus === 'Healthy' ? 'border-l-green-500' :
-              myDevice.overallStatus === 'Warning' ? 'border-l-yellow-500' : 'border-l-red-500'
-            }`}>
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-3xl font-semibold text-gray-800 tracking-wide uppercase">DEVICE · HEALTH · STATUS</h2>
-                    <p className="text-sm text-gray-600 mt-3 font-normal">
-                      Last scan: {formatDateTime(myDevice.scanTimestamp)}
-                    </p>
-                  </div>
-                  <div className="text-5xl">
-                    {myDevice.overallStatus === 'Healthy' ? '✅' :
-                     myDevice.overallStatus === 'Warning' ? '⚠️' : '🔴'}
-                  </div>
-                </div>
-
-                {/* Metrics */}
-                <div className="space-y-4">
-                  <MetricBar label="CPU Usage" value={myDevice.cpuUsage} max={100} unit="%"
-                    color={myDevice.cpuUsage > 80 ? 'red' : myDevice.cpuUsage > 60 ? 'yellow' : 'green'} />
-
-                  <MetricBar label="RAM Usage" value={myDevice.ramUsage} max={100} unit="%"
-                    color={myDevice.ramUsage > 85 ? 'red' : myDevice.ramUsage > 70 ? 'yellow' : 'green'} />
-
-                  <MetricBar label="Free Disk Space" value={myDevice.diskSpaceFree} max={500} unit="GB"
-                    color={myDevice.diskSpaceFree < 20 ? 'red' : myDevice.diskSpaceFree < 50 ? 'yellow' : 'green'} />
-
-                  {myDevice.batteryHealth && (
-                    <MetricBar label="Battery Health" value={myDevice.batteryHealth} max={100} unit="%"
-                      color={myDevice.batteryHealth < 50 ? 'red' : myDevice.batteryHealth < 70 ? 'yellow' : 'green'} />
-                  )}
-                </div>
+            {/* Show info if multiple devices */}
+            {myDevices.length > 1 && (
+              <div className="backdrop-blur-2xl bg-blue-100/60 border-4 border-white rounded-lg shadow-lg p-4">
+                <p className="text-sm text-blue-900 font-semibold">
+                  📱 You have {myDevices.length} devices registered (Desktop, Laptop, etc.)
+                </p>
               </div>
-            </div>
+            )}
 
-            {/* Security Status */}
-            <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg p-6">
-              <h3 className="text-2xl font-semibold text-gray-800 tracking-wide uppercase mb-4">SECURITY · STATUS</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-700">Antivirus</span>
-                    <span className={`font-semibold ${myDevice.antivirusStatus === 'Active' ? 'text-green-600' : 'text-red-600'}`}>
-                      {myDevice.antivirusStatus}
-                    </span>
+            {/* Loop through all devices */}
+            {myDevices.map((myDevice, deviceIndex) => (
+              <div key={myDevice.id} className="space-y-6">
+                {/* Device Header */}
+                <div className="backdrop-blur-2xl bg-purple-100/60 border-4 border-white rounded-lg shadow-lg p-4">
+                  <h3 className="text-xl font-semibold text-gray-800 tracking-wide uppercase">
+                    💻 Device {deviceIndex + 1} {myDevices.length > 1 ? `(${myDevice.osVersion.includes('10') ? 'Desktop' : myDevice.osVersion.includes('11') ? 'Laptop' : 'Computer'})` : ''}
+                  </h3>
+                  <p className="text-xs text-gray-600 mt-1">Device ID: {myDevice.deviceId.substring(0, 8)}...</p>
+                </div>
+
+                {/* Status Card */}
+                <div className={`backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg overflow-hidden border-l-8 ${
+                  myDevice.overallStatus === 'Healthy' ? 'border-l-green-500' :
+                  myDevice.overallStatus === 'Warning' ? 'border-l-yellow-500' : 'border-l-red-500'
+                }`}>
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-3xl font-semibold text-gray-800 tracking-wide uppercase">DEVICE · HEALTH · STATUS</h2>
+                        <p className="text-sm text-gray-600 mt-3 font-normal">
+                          Last scan: {formatDateTime(myDevice.scanTimestamp)}
+                        </p>
+                      </div>
+                      <div className="text-5xl">
+                        {myDevice.overallStatus === 'Healthy' ? '✅' :
+                         myDevice.overallStatus === 'Warning' ? '⚠️' : '🔴'}
+                      </div>
+                    </div>
+
+                    {/* Metrics */}
+                    <div className="space-y-4">
+                      <MetricBar label="CPU Usage" value={myDevice.cpuUsage} max={100} unit="%"
+                        color={myDevice.cpuUsage > 80 ? 'red' : myDevice.cpuUsage > 60 ? 'yellow' : 'green'} />
+
+                      <MetricBar label="RAM Usage" value={myDevice.ramUsage} max={100} unit="%"
+                        color={myDevice.ramUsage > 85 ? 'red' : myDevice.ramUsage > 70 ? 'yellow' : 'green'} />
+
+                      <MetricBar label="Free Disk Space" value={myDevice.diskSpaceFree} max={500} unit="GB"
+                        color={myDevice.diskSpaceFree < 20 ? 'red' : myDevice.diskSpaceFree < 50 ? 'yellow' : 'green'} />
+
+                      {myDevice.batteryHealth && (
+                        <MetricBar label="Battery Health" value={myDevice.batteryHealth} max={100} unit="%"
+                          color={myDevice.batteryHealth < 50 ? 'red' : myDevice.batteryHealth < 70 ? 'yellow' : 'green'} />
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-700">Firewall</span>
-                    <span className={`font-semibold ${myDevice.firewallStatus === 'Active' ? 'text-green-600' : 'text-red-600'}`}>
-                      {myDevice.firewallStatus}
-                    </span>
+
+                {/* Security Status */}
+                <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg p-6">
+                  <h3 className="text-2xl font-semibold text-gray-800 tracking-wide uppercase mb-4">SECURITY · STATUS</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-700">Antivirus</span>
+                        <span className={`font-semibold ${myDevice.antivirusStatus === 'Active' ? 'text-green-600' : 'text-red-600'}`}>
+                          {myDevice.antivirusStatus}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-700">Firewall</span>
+                        <span className={`font-semibold ${myDevice.firewallStatus === 'Active' ? 'text-green-600' : 'text-red-600'}`}>
+                          {myDevice.firewallStatus}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Issues */}
-            {myDevice.issues && myDevice.issues.length > 0 && (
-              <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg p-6">
-                <h3 className="text-2xl font-semibold text-gray-800 tracking-wide uppercase mb-4">
-                  ISSUES · DETECTED ({myDevice.issues.length})
-                </h3>
-                <div className="space-y-3">
-                  {myDevice.issues.map((issue: any, index: number) => (
+                {/* Issues */}
+                {myDevice.issues && myDevice.issues.length > 0 && (
+                  <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg p-6">
+                    <h3 className="text-2xl font-semibold text-gray-800 tracking-wide uppercase mb-4">
+                      ISSUES · DETECTED ({myDevice.issues.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {myDevice.issues.map((issue, index: number) => (
                     <div key={index} className={`p-4 rounded-lg border ${
                       issue.severity === 'critical' ? 'bg-red-50 border-red-200' :
                       issue.severity === 'high' ? 'bg-orange-50 border-orange-200' :
@@ -201,20 +239,22 @@ export default function MyDevicePage() {
               </div>
             )}
 
-            {/* System Info */}
-            <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg p-6">
-              <h3 className="text-2xl font-semibold text-gray-800 tracking-wide uppercase mb-4">SYSTEM · INFORMATION</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-600">OS Version</p>
-                  <p className="font-medium">{myDevice.osVersion}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Department</p>
-                  <p className="font-medium">{myDevice.department}</p>
+                {/* System Info */}
+                <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg p-6">
+                  <h3 className="text-2xl font-semibold text-gray-800 tracking-wide uppercase mb-4">SYSTEM · INFORMATION</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-600">OS Version</p>
+                      <p className="font-medium">{myDevice.osVersion}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600">Department</p>
+                      <p className="font-medium">{myDevice.department}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         ) : !hasAppInstalled && (
           <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-lg p-12 text-center">

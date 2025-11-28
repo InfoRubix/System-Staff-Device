@@ -12,6 +12,7 @@ import { formatDate } from '@/lib/dateFormat';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigation } from '@/contexts/NavigationContext';
 import Navigation from '@/components/Navigation';
+import Pagination from '@/components/Pagination';
 
 export default function UserManagementPage() {
   const router = useRouter();
@@ -54,6 +55,10 @@ export default function UserManagementPage() {
   const [resetError, setResetError] = useState('');
   const [resetConfirmText, setResetConfirmText] = useState('');
   const [showResetSuccessModal, setShowResetSuccessModal] = useState(false);
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // Show 10 users per page
 
   // Reset states when navigation starts
   useEffect(() => {
@@ -277,6 +282,11 @@ export default function UserManagementPage() {
 
     setFilteredStaff(result);
   }, [searchQuery, departmentFilter, roleFilter, staff]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, departmentFilter, roleFilter]);
 
   const handleDelete = async () => {
     if (!showDeleteModal) return;
@@ -544,7 +554,9 @@ export default function UserManagementPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredStaff.map((member) => (
+                  {filteredStaff
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((member) => (
                     <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
@@ -615,6 +627,19 @@ export default function UserManagementPage() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination */}
+              {filteredStaff.length > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(filteredStaff.length / itemsPerPage)}
+                  onPageChange={setCurrentPage}
+                  totalItems={filteredStaff.length}
+                  itemsPerPage={itemsPerPage}
+                  startIndex={(currentPage - 1) * itemsPerPage}
+                  endIndex={currentPage * itemsPerPage}
+                />
+              )}
             </div>
           )}
         </div>

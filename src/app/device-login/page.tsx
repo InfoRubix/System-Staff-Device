@@ -243,7 +243,8 @@ export default function DeviceLoginPage() {
 
       } catch (scanError) {
         console.error('❌ Scan error:', scanError);
-        setMessage('Login successful, but scan failed. You can try again later. Error: ' + scanError);
+        const errorMsg = scanError instanceof Error ? scanError.message : String(scanError);
+        setMessage(`Login successful! Device registered for ${staffName}. Initial scan will run in the background. Error details: ${errorMsg}`);
         setIsLoggedIn(true);
       }
 

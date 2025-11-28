@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import YearMonthFilter from '@/components/YearMonthFilter';
+import Pagination from '@/components/Pagination';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -30,6 +31,8 @@ export default function RepairHistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // Check authentication
   useEffect(() => {
@@ -84,6 +87,11 @@ export default function RepairHistoryPage() {
 
     return () => unsubscribe();
   }, [user]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedYear, selectedMonth]);
 
   // Filter by year/month
   useEffect(() => {
@@ -408,8 +416,11 @@ export default function RepairHistoryPage() {
               <p className="text-gray-600">You haven&apos;t completed any repairs in this time range.</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredRepairs.map((repair) => (
+            <>
+              <div className="space-y-4">
+                {filteredRepairs
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((repair) => (
                 <div key={repair.id} className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
@@ -454,7 +465,23 @@ export default function RepairHistoryPage() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+
+              {/* Pagination */}
+              {filteredRepairs.length > itemsPerPage && (
+                <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-6 mt-6">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(filteredRepairs.length / itemsPerPage)}
+                    onPageChange={setCurrentPage}
+                    totalItems={filteredRepairs.length}
+                    itemsPerPage={itemsPerPage}
+                    startIndex={(currentPage - 1) * itemsPerPage + 1}
+                    endIndex={Math.min(currentPage * itemsPerPage, filteredRepairs.length)}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

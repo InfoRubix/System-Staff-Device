@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase';
 import { staffService, StaffMember } from '@/lib/staffService';
 import Navigation from '@/components/Navigation';
 import YearMonthFilter from '@/components/YearMonthFilter';
+import Pagination from '@/components/Pagination';
 
 interface RepairIssue {
   id: string;
@@ -71,6 +72,8 @@ export default function RepairManagementPage() {
   const [assignedTechnicianPhone, setAssignedTechnicianPhone] = useState('');
   const [whatsappMessage, setWhatsappMessage] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // Track fixed repairs (to filter them out)
   const [fixedRepairs, setFixedRepairs] = useState<Set<string>>(new Set());
@@ -554,7 +557,15 @@ export default function RepairManagementPage() {
     });
   };
 
-  const displayedIssues = getDisplayedIssues();
+  const allDisplayedIssues = getDisplayedIssues();
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchTerm, selectedYear, selectedMonth]);
+
+  // Paginate the displayed issues
+  const displayedIssues = allDisplayedIssues.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const toggleIssue = async (issueId: string) => {
     const isExpanding = expandedIssue !== issueId;
@@ -598,7 +609,7 @@ export default function RepairManagementPage() {
 
   // Get unique staff list with issues
   const getStaffWithIssues = () => {
-    return displayedIssues.map(group => ({
+    return allDisplayedIssues.map(group => ({
       name: group.staffName,
       email: group.staffEmail,
       issueCount: group.issues.length,
@@ -813,7 +824,7 @@ export default function RepairManagementPage() {
         doc.setFont(undefined, 'normal');
         doc.text('No repair issues found in this period.', pageWidth / 2, yPos + 20, { align: 'center' });
       } else {
-        const tableData = displayedIssues.flatMap(group =>
+        const tableData = allDisplayedIssues.flatMap(group =>
           group.issues.map(issue => ({
             staff: `${group.staffName} (${group.department})`,
             issue: issue.type,
@@ -1052,7 +1063,7 @@ export default function RepairManagementPage() {
                 {filter === 'high' && 'HIGH PRIORITY'}
                 {filter === 'medium' && 'MEDIUM PRIORITY'}
                 <span className="ml-3 text-sm text-gray-500 font-normal">
-                  ({displayedIssues.length})
+                  ({allDisplayedIssues.length})
                 </span>
               </h2>
               {filter !== 'all' && (
@@ -1079,6 +1090,21 @@ export default function RepairManagementPage() {
                 />
               ))}
             </div>
+
+            {/* Pagination */}
+            {allDisplayedIssues.length > itemsPerPage && (
+              <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-2xl shadow-lg p-6 mt-6">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(allDisplayedIssues.length / itemsPerPage)}
+                  onPageChange={setCurrentPage}
+                  totalItems={allDisplayedIssues.length}
+                  itemsPerPage={itemsPerPage}
+                  startIndex={(currentPage - 1) * itemsPerPage + 1}
+                  endIndex={Math.min(currentPage * itemsPerPage, allDisplayedIssues.length)}
+                />
+              </div>
+            )}
           </div>
         ) : null}
 

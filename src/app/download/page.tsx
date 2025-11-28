@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
+import Pagination from '@/components/Pagination';
 import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import APP_INFO from '@/config/appInfo';
@@ -27,6 +28,10 @@ export default function DownloadPage() {
   const [componentsReady, setComponentsReady] = useState(false);
   const [downloads, setDownloads] = useState<DownloadRecord[]>([]);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // Reset states when navigation starts
   useEffect(() => {
@@ -258,7 +263,9 @@ export default function DownloadPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {downloads.map((download, index) => (
+                            {downloads
+                              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                              .map((download, index) => (
                               <tr
                                 key={download.id}
                                 className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${
@@ -302,6 +309,17 @@ export default function DownloadPage() {
                           </tbody>
                         </table>
                       </div>
+
+                      {/* Pagination */}
+                      <Pagination
+                        currentPage={currentPage}
+                        totalPages={Math.ceil(downloads.length / itemsPerPage)}
+                        onPageChange={setCurrentPage}
+                        totalItems={downloads.length}
+                        itemsPerPage={itemsPerPage}
+                        startIndex={(currentPage - 1) * itemsPerPage}
+                        endIndex={currentPage * itemsPerPage}
+                      />
 
                       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <p className="text-sm text-blue-900">
