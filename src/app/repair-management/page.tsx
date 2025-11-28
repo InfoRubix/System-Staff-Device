@@ -141,26 +141,10 @@ export default function RepairManagementPage() {
       if (isNavigating) {
         console.log('Repair Management Page - Starting navigation loading timer');
 
-        // Enhanced device detection for better timing
-        const userAgent = navigator.userAgent;
-        const isPhone = /iPhone|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-        const isTablet = /iPad|Android(?!.*Mobile)|tablet/i.test(userAgent);
-        const isLaptop = /Macintosh|Windows NT.*WOW64|Windows NT.*Win64/i.test(userAgent);
-        const isDesktop = !isPhone && !isTablet;
+        // Consistent loading time for all devices
+        const loadingTime = 800; // 0.8 seconds standard loading time
 
-        // Loading times for repair management
-        let loadingTime;
-        if (isPhone) {
-          loadingTime = 4000; // 4 seconds for phones
-        } else if (isTablet) {
-          loadingTime = 3500; // 3.5 seconds for tablets
-        } else if (isLaptop) {
-          loadingTime = 3000; // 3 seconds for laptops
-        } else {
-          loadingTime = 2500; // 2.5 seconds for desktop
-        }
-
-        console.log('Repair Management Page - Device type and loading time:', { isPhone, isTablet, isLaptop, isDesktop, loadingTime });
+        console.log('Repair Management Page - Starting with standard loading time:', loadingTime);
 
         const readyTimer = setTimeout(() => {
           console.log('Repair Management Page - Timer completed, setting components ready');
@@ -781,6 +765,9 @@ export default function RepairManagementPage() {
       doc.text(`Period: ${periodText}`, 20, yPos);
       yPos += 12;
 
+      // Count total issues from allDisplayedIssues (before using it in stats)
+      const totalIssuesCount = allDisplayedIssues.reduce((sum, group) => sum + group.issues.length, 0);
+
       // Statistics boxes
       const boxWidth = (pageWidth - 50) / 4;
       const boxHeight = 25;
@@ -815,10 +802,12 @@ export default function RepairManagementPage() {
       doc.setFontSize(14);
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFont(undefined, 'bold');
-      doc.text(`Detected Issues (${displayedIssues.length})`, 20, yPos);
+
+      // totalIssuesCount already calculated above for stats box
+      doc.text(`Detected Issues (${totalIssuesCount})`, 20, yPos);
       yPos += 12;
 
-      if (displayedIssues.length === 0) {
+      if (allDisplayedIssues.length === 0) {
         doc.setFontSize(11);
         doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
         doc.setFont(undefined, 'normal');
@@ -838,7 +827,7 @@ export default function RepairManagementPage() {
           { key: 'staff', header: 'Staff (Dept)', width: 1.8 },
           { key: 'issue', header: 'Issue Type', width: 1.5 },
           { key: 'severity', header: 'Severity', width: 0.8 },
-          { key: 'status', header: 'Status', width: 0.8 },
+          { key: 'status', header: 'Status', width: 1.0 },
           { key: 'impact', header: 'Impact', width: 2 }
         ];
 

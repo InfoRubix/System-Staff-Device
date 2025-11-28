@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDate, formatDateTime, formatTime } from '@/lib/dateFormat';
+import Pagination from './Pagination';
 
 interface HealthScan {
   id: string;
@@ -48,9 +49,11 @@ interface DeviceHealthDashboardProps {
 export default function DeviceHealthDashboard({ scans }: DeviceHealthDashboardProps) {
   const [filter, setFilter] = useState<'all' | 'healthy' | 'warning' | 'critical'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // Filter scans
-  const filteredScans = scans.filter((scan) => {
+  const allFilteredScans = scans.filter((scan) => {
     const matchesFilter =
       filter === 'all' ||
       (filter === 'healthy' && scan.overallStatus === 'Healthy') ||
@@ -64,6 +67,14 @@ export default function DeviceHealthDashboard({ scans }: DeviceHealthDashboardPr
 
     return matchesFilter && matchesSearch;
   });
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchTerm]);
+
+  // Paginate scans
+  const filteredScans = allFilteredScans.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Calculate statistics
   const stats = {
@@ -164,7 +175,7 @@ export default function DeviceHealthDashboard({ scans }: DeviceHealthDashboardPr
 
       {/* Device Health Cards - Compact List */}
       <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow">
-        {filteredScans.length === 0 ? (
+        {allFilteredScans.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-gray-500">
               {searchTerm || filter !== 'all'
@@ -173,11 +184,28 @@ export default function DeviceHealthDashboard({ scans }: DeviceHealthDashboardPr
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
-            {filteredScans.map((scan) => (
-              <HealthCard key={scan.id} scan={scan} />
-            ))}
-          </div>
+          <>
+            <div className="divide-y divide-gray-200">
+              {filteredScans.map((scan) => (
+                <HealthCard key={scan.id} scan={scan} />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {allFilteredScans.length > itemsPerPage && (
+              <div className="p-4 border-t border-gray-200">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(allFilteredScans.length / itemsPerPage)}
+                  onPageChange={setCurrentPage}
+                  totalItems={allFilteredScans.length}
+                  itemsPerPage={itemsPerPage}
+                  startIndex={(currentPage - 1) * itemsPerPage + 1}
+                  endIndex={Math.min(currentPage * itemsPerPage, allFilteredScans.length)}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

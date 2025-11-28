@@ -25,26 +25,10 @@ export default function DashboardPage() {
       if (isNavigating) {
         console.log('Dashboard Page - Starting navigation loading timer');
 
-        // Enhanced device detection for better timing
-        const userAgent = navigator.userAgent;
-        const isPhone = /iPhone|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-        const isTablet = /iPad|Android(?!.*Mobile)|tablet/i.test(userAgent);
-        const isLaptop = /Macintosh|Windows NT.*WOW64|Windows NT.*Win64/i.test(userAgent);
-        const isDesktop = !isPhone && !isTablet;
+        // Consistent loading time for all devices
+        const loadingTime = 800; // 0.8 seconds standard loading time
 
-        // Faster loading times for dashboard
-        let loadingTime;
-        if (isPhone) {
-          loadingTime = 1200; // 1.2 seconds for phones
-        } else if (isTablet) {
-          loadingTime = 1000; // 1 second for tablets
-        } else if (isLaptop) {
-          loadingTime = 800; // 0.8 seconds for laptops
-        } else {
-          loadingTime = 600; // 0.6 seconds for desktop
-        }
-
-        console.log('Dashboard Page - Device type and loading time:', { isPhone, isTablet, isLaptop, isDesktop, loadingTime });
+        console.log('Dashboard Page - Starting with standard loading time:', loadingTime);
 
         // Add a longer delay to ensure components are mounted and data is loaded
         const readyTimer = setTimeout(() => {

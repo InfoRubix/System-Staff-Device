@@ -73,21 +73,8 @@ export default function UserManagementPage() {
       if (isNavigating) {
         console.log('User Management Page - Starting navigation loading timer');
 
-        const userAgent = navigator.userAgent;
-        const isPhone = /iPhone|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-        const isTablet = /iPad|Android(?!.*Mobile)|tablet/i.test(userAgent);
-        const isLaptop = /Macintosh|Windows NT.*WOW64|Windows NT.*Win64/i.test(userAgent);
-
-        let loadingTime;
-        if (isPhone) {
-          loadingTime = 3000;
-        } else if (isTablet) {
-          loadingTime = 2500;
-        } else if (isLaptop) {
-          loadingTime = 2000;
-        } else {
-          loadingTime = 1500;
-        }
+        // Consistent loading time for all devices
+        const loadingTime = 800; // 0.8 seconds standard loading time
 
         const readyTimer = setTimeout(() => {
           console.log('User Management Page - Timer completed, setting components ready');

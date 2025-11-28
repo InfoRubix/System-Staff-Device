@@ -144,29 +144,22 @@ class PDFService {
   }
 
   /**
-   * Adds professional table with proper formatting
+   * Adds professional table with proper formatting and automatic page breaks
    */
-  addProfessionalTable(doc, data, columns, startY, skipPageBreakCheck = false) {
+  addProfessionalTable(doc, data, columns, startY, _skipPageBreakCheck = false) {
     const tableWidth = doc.internal.pageSize.width - 40; // 20mm margins on each side
     const columnWidths = this.calculateColumnWidths(columns, tableWidth);
     const baseRowHeight = 10;
+    const pageHeight = doc.internal.pageSize.height; // Use actual page height
+    const bottomMargin = 30;
 
     let yPos = startY;
-
-    // Check if entire table fits on current page (unless skipped)
-    if (!skipPageBreakCheck) {
-      const tableHeight = this.calculateTableHeight(doc, data, columns, baseRowHeight);
-      if (yPos + tableHeight > doc.internal.pageSize.height - 30) {
-        doc.addPage();
-        yPos = 20;
-      }
-    }
 
     // Draw table headers
     this.drawTableHeader(doc, columns, columnWidths, yPos, baseRowHeight);
     yPos += baseRowHeight;
 
-    // Draw table rows
+    // Draw table rows with automatic page breaks
     data.forEach((row, rowIndex) => {
       // Calculate required height for this row (check for long text)
       let maxLines = 1;
@@ -179,6 +172,13 @@ class PDFService {
 
       const rowHeight = baseRowHeight * maxLines;
 
+      // Check if row fits on current page, if not create new page
+      if (yPos + rowHeight > pageHeight - bottomMargin) {
+        // Add new page and continue table (no header)
+        doc.addPage();
+        yPos = 20;
+      }
+
       // Alternate row colors
       if (rowIndex % 2 === 1) {
         doc.setFillColor(...this.brandColors.light);
@@ -190,8 +190,7 @@ class PDFService {
       yPos += rowHeight;
     });
 
-    // Draw table borders (simplified for multi-line support)
-    this.drawTableBordersSimple(doc, columns, columnWidths, startY, yPos);
+    // No borders - cleaner continuous look
   }
 
   /**

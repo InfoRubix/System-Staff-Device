@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigation } from '@/contexts/NavigationContext';
 import { useRouter } from 'next/navigation';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -49,7 +50,9 @@ interface StaffActivity {
 
 export default function ActivityTrackingPage() {
   const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { finishNavigation, isNavigating, setPageLoaded, isPageLoaded, setShowLoadingScreen } = useNavigation();
   const router = useRouter();
+  const [componentsReady, setComponentsReady] = useState(false);
   const [expandedStaff, setExpandedStaff] = useState<string | null>(null);
   const [allStaff, setAllStaff] = useState<StaffMember[]>([]);
   const [allActivity, setAllActivity] = useState<StaffActivity[]>([]);
@@ -170,7 +173,55 @@ export default function ActivityTrackingPage() {
     setCurrentPage(1);
   }, [searchTerm, deptFilter]);
 
-  if (loading) {
+  // Reset states when navigation starts
+  useEffect(() => {
+    if (isNavigating) {
+      setComponentsReady(false);
+    }
+  }, [isNavigating]);
+
+  // Mark components as ready when auth is done and we have data
+  useEffect(() => {
+    if (!loading && isAuthenticated && isAdmin) {
+      if (isNavigating) {
+        console.log('Activity Tracking Page - Starting navigation loading timer');
+
+        // Consistent loading time for all devices
+        const loadingTime = 800; // 0.8 seconds standard loading time
+
+        const readyTimer = setTimeout(() => {
+          console.log('Activity Tracking Page - Timer completed, setting components ready');
+          setComponentsReady(true);
+          setPageLoaded();
+        }, loadingTime);
+
+        return () => clearTimeout(readyTimer);
+      } else {
+        setComponentsReady(true);
+        setPageLoaded();
+      }
+    }
+  }, [loading, isAuthenticated, isAdmin, isNavigating, setPageLoaded]);
+
+  // Finish navigation when page is fully loaded
+  useEffect(() => {
+    if (isNavigating && isPageLoaded && componentsReady) {
+      const finishTimer = setTimeout(() => {
+        finishNavigation();
+        setShowLoadingScreen(false);
+      }, 300);
+
+      return () => clearTimeout(finishTimer);
+    }
+  }, [isNavigating, isPageLoaded, componentsReady, finishNavigation, setShowLoadingScreen]);
+
+  // Don't render the page content while the loading screen should be visible
+  if (isNavigating || !componentsReady) {
+    return null;
+  }
+
+  // Show auth loading for direct page access (not from navigation)
+  if (loading && !isNavigating) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

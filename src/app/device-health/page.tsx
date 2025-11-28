@@ -193,26 +193,10 @@ export default function DeviceHealthPage() {
       if (isNavigating) {
         console.log('Device Health Page - Starting navigation loading timer');
 
-        // Enhanced device detection for better timing
-        const userAgent = navigator.userAgent;
-        const isPhone = /iPhone|Android.*Mobile|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-        const isTablet = /iPad|Android(?!.*Mobile)|tablet/i.test(userAgent);
-        const isLaptop = /Macintosh|Windows NT.*WOW64|Windows NT.*Win64/i.test(userAgent);
-        const isDesktop = !isPhone && !isTablet;
+        // Consistent loading time for all devices
+        const loadingTime = 800; // 0.8 seconds standard loading time
 
-        // Loading times for device health
-        let loadingTime;
-        if (isPhone) {
-          loadingTime = 4000; // 4 seconds for phones
-        } else if (isTablet) {
-          loadingTime = 3500; // 3.5 seconds for tablets
-        } else if (isLaptop) {
-          loadingTime = 3000; // 3 seconds for laptops
-        } else {
-          loadingTime = 2500; // 2.5 seconds for desktop
-        }
-
-        console.log('Device Health Page - Device type and loading time:', { isPhone, isTablet, isLaptop, isDesktop, loadingTime });
+        console.log('Device Health Page - Starting with standard loading time:', loadingTime);
 
         const readyTimer = setTimeout(() => {
           console.log('Device Health Page - Timer completed, setting components ready');

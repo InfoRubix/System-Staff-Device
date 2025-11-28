@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigation } from '@/contexts/NavigationContext';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import YearMonthFilter from '@/components/YearMonthFilter';
@@ -25,7 +26,9 @@ interface CompletedRepair {
 
 export default function RepairHistoryPage() {
   const { user, isAuthenticated, loading } = useAuth();
+  const { finishNavigation, isNavigating, setPageLoaded, isPageLoaded, setShowLoadingScreen } = useNavigation();
   const router = useRouter();
+  const [componentsReady, setComponentsReady] = useState(false);
   const [completedRepairs, setCompletedRepairs] = useState<CompletedRepair[]>([]);
   const [filteredRepairs, setFilteredRepairs] = useState<CompletedRepair[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,6 +95,48 @@ export default function RepairHistoryPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedYear, selectedMonth]);
+
+  // Reset states when navigation starts
+  useEffect(() => {
+    if (isNavigating) {
+      setComponentsReady(false);
+    }
+  }, [isNavigating]);
+
+  // Mark components as ready when auth is done and user is technician
+  useEffect(() => {
+    if (!loading && isAuthenticated && (user as any)?.role === 'technician') {
+      if (isNavigating) {
+        console.log('Repair History Page - Starting navigation loading timer');
+
+        // Consistent loading time for all devices
+        const loadingTime = 800; // 0.8 seconds standard loading time
+
+        const readyTimer = setTimeout(() => {
+          console.log('Repair History Page - Timer completed, setting components ready');
+          setComponentsReady(true);
+          setPageLoaded();
+        }, loadingTime);
+
+        return () => clearTimeout(readyTimer);
+      } else {
+        setComponentsReady(true);
+        setPageLoaded();
+      }
+    }
+  }, [loading, isAuthenticated, user, isNavigating, setPageLoaded]);
+
+  // Finish navigation when page is fully loaded
+  useEffect(() => {
+    if (isNavigating && isPageLoaded && componentsReady) {
+      const finishTimer = setTimeout(() => {
+        finishNavigation();
+        setShowLoadingScreen(false);
+      }, 300);
+
+      return () => clearTimeout(finishTimer);
+    }
+  }, [isNavigating, isPageLoaded, componentsReady, finishNavigation, setShowLoadingScreen]);
 
   // Filter by year/month
   useEffect(() => {
@@ -279,7 +324,13 @@ export default function RepairHistoryPage() {
     }
   };
 
-  if (loading || !user || (user as any).role !== 'technician') {
+  // Don't render the page content while the loading screen should be visible
+  if (isNavigating || !componentsReady) {
+    return null;
+  }
+
+  // Show auth loading for direct page access (not from navigation)
+  if ((loading || !user || (user as any).role !== 'technician') && !isNavigating) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
