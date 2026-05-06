@@ -239,10 +239,10 @@ export default function DeviceHealthPage() {
   // Show auth loading for direct page access (not from navigation)
   if (loading && !isNavigating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600">Checking authentication...</p>
+          <div className="w-10 h-10 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500">Checking authentication...</p>
         </div>
       </div>
     );
@@ -255,62 +255,42 @@ export default function DeviceHealthPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen relative overflow-hidden" style={{
-        background: 'linear-gradient(135deg, #e3f2fd 0%, #f0f4ff 50%, #e8eeff 100%)',
-      }}>
-        {/* Blurred Background Elements - Large Corner Bubbles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Top Left Corner - Large Blue Bubble with visible border */}
-          <div className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full">
-            <div className="w-full h-full bg-gradient-to-br from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
-            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
-          </div>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header Section */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Device Health Overview</h1>
+                <p className="mt-1 text-sm text-gray-500">
+                  Monitor real-time health status and click on any card to filter devices
+                </p>
+              </div>
 
-          {/* Bottom Right Corner - Large Blue Bubble with visible border */}
-          <div className="absolute -bottom-32 -right-32 w-[700px] h-[700px] rounded-full">
-            <div className="w-full h-full bg-gradient-to-tl from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
-            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-          {/* Banner Section */}
-        <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">DEVICE · HEALTH · OVERVIEW</h1>
-              <p className="mt-3 text-sm text-gray-600 font-normal">
-                Monitor real-time health status and click on any card to filter devices
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={exportToPDF}
-                disabled={exporting || filteredScans.length === 0}
-                className="px-4 py-2 border-4 font-medium rounded-lg transition-colors flex items-center gap-2
-                  md:bg-blue-100 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800
-                  bg-blue-600 border-blue-700 text-white
-                  disabled:bg-gray-300 disabled:border-gray-400 disabled:text-gray-500 disabled:cursor-not-allowed"
-              >
-                {exporting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
-                    Generating...
-                  </>
-                ) : (
-                  'GENERATE REPORT'
-                )}
-              </button>
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={exportToPDF}
+                  disabled={exporting || filteredScans.length === 0}
+                  className="px-4 py-2 bg-gray-900 text-white font-medium rounded-xl transition-colors flex items-center gap-2 hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {exporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate Report'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Year/Month Filter */}
-        <YearMonthFilter onFilterChange={handleFilterChange} />
+          {/* Year/Month Filter */}
+          <YearMonthFilter onFilterChange={handleFilterChange} />
 
-        <DeviceHealthDashboard scans={filteredScans} />
+          <DeviceHealthDashboard scans={filteredScans} />
         </div>
       </div>
     </>

@@ -40,8 +40,6 @@ export default function Navigation() {
     };
 
     window.addEventListener('storage', handleStorageChange);
-
-    // Also listen for custom event (for same-tab updates)
     window.addEventListener('viewedDevicesUpdated', handleStorageChange);
 
     return () => {
@@ -58,14 +56,11 @@ export default function Navigation() {
     }
 
     try {
-      // Get all device scans to count detected issues
       const scansQuery = query(collection(db, 'device_scans'), orderBy('scanTimestamp', 'desc'));
       const repairsQuery = query(collection(db, 'repairs'));
 
-      // Track fixed repairs in a shared state
       let fixedSet = new Set<string>();
 
-      // Listen to repairs to build fixed set
       const unsubscribeRepairs = onSnapshot(repairsQuery, (repairsSnapshot) => {
         fixedSet = new Set<string>();
         repairsSnapshot.docs.forEach(doc => {
@@ -81,9 +76,7 @@ export default function Navigation() {
         }
       });
 
-      // Listen to scans to count detected issues
       const unsubscribeScans = onSnapshot(scansQuery, (scansSnapshot) => {
-          // Get latest scan per device
           const latestScans = new Map();
           scansSnapshot.docs.forEach(doc => {
             const data = doc.data();
@@ -97,52 +90,41 @@ export default function Navigation() {
             }
           });
 
-          // Get viewed devices from localStorage
           const viewedDevices = getViewedDevices();
-
-          // Count devices with issues (not individual issues)
           const devicesWithIssues = new Set<string>();
           latestScans.forEach(scan => {
             let hasIssue = false;
 
-            // RAM Critical
             if (scan.ramUsage > 90) {
               const id = `${scan.deviceId}-${scan.staffEmail}-RAM_Critical___Memory_Failure`;
               if (!fixedSet.has(id)) hasIssue = true;
             }
-            // Low Disk Space
             if (scan.diskSpaceFree < 20) {
               const id = `${scan.deviceId}-${scan.staffEmail}-Low_Disk_Space`;
               if (!fixedSet.has(id)) hasIssue = true;
             }
-            // CPU Overheating
             if (scan.cpuTemp && scan.cpuTemp > 85) {
               const id = `${scan.deviceId}-${scan.staffEmail}-CPU_Overheating`;
               if (!fixedSet.has(id)) hasIssue = true;
             }
-            // Battery Degraded
             if (scan.batteryHealth && scan.batteryHealth < 50) {
               const id = `${scan.deviceId}-${scan.staffEmail}-Battery_Degraded`;
               if (!fixedSet.has(id)) hasIssue = true;
             }
-            // Antivirus Disabled (check if status contains "Inactive")
             if (scan.antivirusStatus && scan.antivirusStatus.includes('Inactive')) {
               const id = `${scan.deviceId}-${scan.staffEmail}-Antivirus_Disabled`;
               if (!fixedSet.has(id)) hasIssue = true;
             }
-            // Firewall Disabled (check if status contains "Inactive")
             if (scan.firewallStatus && scan.firewallStatus.includes('Inactive')) {
               const id = `${scan.deviceId}-${scan.staffEmail}-Firewall_Disabled`;
               if (!fixedSet.has(id)) hasIssue = true;
             }
 
-            // If device has any issue, add to set
             if (hasIssue) {
               devicesWithIssues.add(scan.deviceId);
             }
           });
 
-          // Count only unseen devices
           let unseenCount = 0;
           devicesWithIssues.forEach(deviceId => {
             if (!viewedDevices.has(deviceId)) {
@@ -153,7 +135,6 @@ export default function Navigation() {
           previousCountRef.current = unseenCount;
           setUnreadRepairCount(unseenCount);
         }, (error) => {
-          // Suppress permission errors during logout (expected behavior)
           if (error.code !== 'permission-denied') {
             console.error('Error listening to scans:', error);
           }
@@ -177,18 +158,12 @@ export default function Navigation() {
 
   const handleNavigation = (href: string) => {
     if (pathname !== href) {
-      // Start the loading state
       startNavigation(href);
-
-      // Close mobile menu before navigation
       setIsMobileMenuOpen(false);
-
-      // Navigate immediately
       router.push(href);
     }
   };
 
-  // Different navigation items for admin vs regular users
   const dashboardSubItems = [
     { href: '/dashboard', label: 'Department Overview' },
     { href: '/user-management', label: 'User Management' },
@@ -203,8 +178,6 @@ export default function Navigation() {
     { href: '/data-analysis', label: 'Data Analysis' },
     { href: '/device-health', label: 'Device Health' },
     { href: '/activity-tracking', label: 'Activity Tracking' },
-    // Repair Management will be a dropdown
-    // { href: '/download', label: 'Download App' }, // Hidden per boss request
   ];
 
   const technicianNavItems = [
@@ -217,44 +190,38 @@ export default function Navigation() {
     { href: '/download', label: 'Download App' },
   ];
 
-  // Technicians get their own menu, not admin menu
   const navItems = isTechnician ? technicianNavItems : isAdmin ? adminNavItems : userNavItems;
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-200/60 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo/Brand - Hidden */}
+        <div className="flex justify-between items-center h-14">
+          {/* Brand */}
           <div className="flex-shrink-0">
-            {/* Title removed per user request */}
+            <span className="text-sm font-semibold text-gray-900 tracking-tight">DMS</span>
           </div>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden md:flex space-x-4 items-center">
-            {/* Dashboard Dropdown (Super Admin Only - NOT Technician) */}
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-1">
+            {/* Dashboard Dropdown (Super Admin Only) */}
             {(user as any)?.role === 'super_admin' && (
               <div className="relative">
                 <button
                   onClick={() => setIsDashboardDropdownOpen(!isDashboardDropdownOpen)}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer touch-manipulation flex items-center ${
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1 ${
                     pathname === '/dashboard' || pathname === '/user-management'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      ? 'bg-gray-900 text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
                   Dashboard
-                  <svg
-                    className={`ml-1 w-4 h-4 transition-transform ${isDashboardDropdownOpen ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className={`w-3.5 h-3.5 transition-transform ${isDashboardDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
                 {isDashboardDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
                     {dashboardSubItems.map((subItem) => (
                       <button
                         key={subItem.href}
@@ -263,10 +230,10 @@ export default function Navigation() {
                           handleNavigation(subItem.href);
                           setIsDashboardDropdownOpen(false);
                         }}
-                        className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 first:rounded-t-md last:rounded-b-md transition-colors ${
+                        className={`block w-full text-left px-4 py-2 text-sm transition-colors ${
                           pathname === subItem.href
-                            ? 'bg-blue-50 text-blue-700 font-medium'
-                            : 'text-gray-700'
+                            ? 'bg-gray-50 text-gray-900 font-medium'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                         }`}
                       >
                         {subItem.label}
@@ -282,31 +249,25 @@ export default function Navigation() {
               <div className="relative">
                 <button
                   onClick={() => setIsRepairDropdownOpen(!isRepairDropdownOpen)}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer touch-manipulation flex items-center relative ${
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1 relative ${
                     pathname === '/repair-management' || pathname === '/repair-management-history'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      ? 'bg-gray-900 text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
-                  Repair Management
-                  <svg
-                    className={`ml-1 w-4 h-4 transition-transform ${isRepairDropdownOpen ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                  {/* Notification Badge */}
+                  Repairs
                   {unreadRepairCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    <span className="ml-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
                       {unreadRepairCount > 9 ? '9+' : unreadRepairCount}
                     </span>
                   )}
+                  <svg className={`w-3.5 h-3.5 transition-transform ${isRepairDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
 
                 {isRepairDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
                     {repairSubItems.map((subItem) => (
                       <button
                         key={subItem.href}
@@ -315,18 +276,20 @@ export default function Navigation() {
                           handleNavigation(subItem.href);
                           setIsRepairDropdownOpen(false);
                         }}
-                        className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 first:rounded-t-md last:rounded-b-md transition-colors relative ${
+                        className={`block w-full text-left px-4 py-2 text-sm transition-colors ${
                           pathname === subItem.href
-                            ? 'bg-blue-50 text-blue-700 font-medium'
-                            : 'text-gray-700'
+                            ? 'bg-gray-50 text-gray-900 font-medium'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                         }`}
                       >
-                        {subItem.label}
-                        {subItem.href === '/repair-management' && unreadRepairCount > 0 && (
-                          <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
-                            {unreadRepairCount}
-                          </span>
-                        )}
+                        <span className="flex items-center justify-between">
+                          {subItem.label}
+                          {subItem.href === '/repair-management' && unreadRepairCount > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                              {unreadRepairCount}
+                            </span>
+                          )}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -339,17 +302,15 @@ export default function Navigation() {
               <button
                 key={item.href}
                 onClick={() => handleNavigation(item.href)}
-                onTouchStart={() => {}} // Prevent touch delay on mobile
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer touch-manipulation relative ${
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all relative ${
                   pathname === item.href
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 {item.label}
-                {/* Notification Badge for Repair Management */}
                 {item.href === '/repair-management' && unreadRepairCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
                     {unreadRepairCount > 9 ? '9+' : unreadRepairCount}
                   </span>
                 )}
@@ -357,16 +318,13 @@ export default function Navigation() {
             ))}
           </div>
 
-          {/* Desktop Logout Button */}
+          {/* Desktop Logout */}
           <div className="hidden md:flex flex-shrink-0">
             <button
               onClick={handleLogout}
-              className="border-2
-                md:bg-transparent md:border-gray-300 md:text-gray-700 md:hover:bg-red-200 md:hover:border-red-300 md:hover:text-red-700
-                bg-red-600 border-red-700 text-white
-                px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+              className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium"
             >
-              Logout
+              Log out
             </button>
           </div>
 
@@ -374,15 +332,14 @@ export default function Navigation() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+              className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
             >
-              <span className="sr-only">Open main menu</span>
               {isMobileMenuOpen ? (
-                <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               ) : (
-                <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               )}
@@ -392,32 +349,27 @@ export default function Navigation() {
 
         {/* Mobile menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 border-t border-gray-200 bg-white">
-              {/* Dashboard Dropdown (Super Admin Only - NOT Technician) */}
+          <div className="md:hidden py-3 border-t border-gray-100">
+            <div className="space-y-1">
+              {/* Dashboard Dropdown (Super Admin Only) */}
               {(user as any)?.role === 'super_admin' && (
                 <div>
                   <button
                     onClick={() => setIsDashboardDropdownOpen(!isDashboardDropdownOpen)}
-                    className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium transition-colors touch-manipulation flex items-center justify-between ${
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-between ${
                       pathname === '/dashboard' || pathname === '/user-management'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
                     Dashboard
-                    <svg
-                      className={`w-4 h-4 transition-transform ${isDashboardDropdownOpen ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className={`w-4 h-4 transition-transform ${isDashboardDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
 
                   {isDashboardDropdownOpen && (
-                    <div className="pl-4 mt-1 space-y-1">
+                    <div className="pl-3 mt-1 space-y-1">
                       {dashboardSubItems.map((subItem) => (
                         <button
                           key={subItem.href}
@@ -426,10 +378,10 @@ export default function Navigation() {
                             handleNavigation(subItem.href);
                             setIsDashboardDropdownOpen(false);
                           }}
-                          className={`block w-full text-left px-3 py-2 rounded-md text-sm transition-colors touch-manipulation ${
+                          className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                             pathname === subItem.href
-                              ? 'bg-blue-50 text-blue-700 font-medium'
-                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                              ? 'bg-gray-100 text-gray-900 font-medium'
+                              : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                           }`}
                         >
                           {subItem.label}
@@ -445,32 +397,27 @@ export default function Navigation() {
                 <div>
                   <button
                     onClick={() => setIsRepairDropdownOpen(!isRepairDropdownOpen)}
-                    className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium transition-colors touch-manipulation flex items-center justify-between relative ${
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-between ${
                       pathname === '/repair-management' || pathname === '/repair-management-history'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
-                    <span className="flex items-center">
-                      Repair Management
+                    <span className="flex items-center gap-2">
+                      Repairs
                       {unreadRepairCount > 0 && (
-                        <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                        <span className="bg-red-500 text-white text-[10px] font-bold rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
                           {unreadRepairCount > 9 ? '9+' : unreadRepairCount}
                         </span>
                       )}
                     </span>
-                    <svg
-                      className={`w-4 h-4 transition-transform ${isRepairDropdownOpen ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className={`w-4 h-4 transition-transform ${isRepairDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
 
                   {isRepairDropdownOpen && (
-                    <div className="pl-4 mt-1 space-y-1">
+                    <div className="pl-3 mt-1 space-y-1">
                       {repairSubItems.map((subItem) => (
                         <button
                           key={subItem.href}
@@ -479,20 +426,13 @@ export default function Navigation() {
                             handleNavigation(subItem.href);
                             setIsRepairDropdownOpen(false);
                           }}
-                          className={`block w-full text-left px-3 py-2 rounded-md text-sm transition-colors touch-manipulation ${
+                          className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                             pathname === subItem.href
-                              ? 'bg-blue-50 text-blue-700 font-medium'
-                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                              ? 'bg-gray-100 text-gray-900 font-medium'
+                              : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                           }`}
                         >
-                          <span className="flex items-center justify-between">
-                            {subItem.label}
-                            {subItem.href === '/repair-management' && unreadRepairCount > 0 && (
-                              <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
-                                {unreadRepairCount}
-                              </span>
-                            )}
-                          </span>
+                          {subItem.label}
                         </button>
                       ))}
                     </div>
@@ -505,18 +445,16 @@ export default function Navigation() {
                 <button
                   key={item.href}
                   onClick={() => handleNavigation(item.href)}
-                  onTouchStart={() => {}} // Prevent touch delay on mobile
-                  className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium transition-colors touch-manipulation relative ${
+                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     pathname === item.href
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      ? 'bg-gray-900 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   <span className="flex items-center justify-between">
                     {item.label}
-                    {/* Notification Badge for Repair Management */}
                     {item.href === '/repair-management' && unreadRepairCount > 0 && (
-                      <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center ml-2">
+                      <span className="bg-red-500 text-white text-[10px] font-bold rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
                         {unreadRepairCount > 9 ? '9+' : unreadRepairCount}
                       </span>
                     )}
@@ -525,15 +463,14 @@ export default function Navigation() {
               ))}
 
               {/* Logout */}
-              <button
-                onClick={handleLogout}
-                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium border-2
-                  md:bg-transparent md:border-gray-300 md:text-gray-700 md:hover:bg-red-200 md:hover:border-red-300 md:hover:text-red-700
-                  bg-red-600 border-red-700 text-white
-                  transition-colors duration-200 mt-4"
-              >
-                Logout
-              </button>
+              <div className="pt-3 mt-3 border-t border-gray-100">
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  Log out
+                </button>
+              </div>
             </div>
           </div>
         )}

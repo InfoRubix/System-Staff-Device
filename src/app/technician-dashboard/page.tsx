@@ -204,10 +204,10 @@ export default function TechnicianDashboardPage() {
       }
 
       await updateDoc(repairRef, updateData);
-      alert(`✅ Status updated to "${newStatus.replace('_', ' ')}"${newStatus === 'completed' ? ' - Super admin will see this as FIXED!' : ''}`);
+      alert(`Status updated to "${newStatus.replace('_', ' ')}"${newStatus === 'completed' ? ' - Super admin will see this as FIXED!' : ''}`);
     } catch (error) {
       console.error('Error updating status:', error);
-      alert('❌ Failed to update status. Please try again.');
+      alert('Failed to update status. Please try again.');
     }
   };
 
@@ -215,7 +215,7 @@ export default function TechnicianDashboardPage() {
   const handleSaveNotes = async (repairId: string) => {
     const notes = technicianNotes[repairId] || '';
     if (!notes.trim()) {
-      alert('⚠️ Please enter some notes before saving.');
+      alert('Please enter some notes before saving.');
       return;
     }
 
@@ -227,10 +227,10 @@ export default function TechnicianDashboardPage() {
         updatedAt: new Date()
       });
 
-      alert('✅ Notes saved successfully!');
+      alert('Notes saved successfully!');
     } catch (error) {
       console.error('Error saving notes:', error);
-      alert('❌ Failed to save notes. Please try again.');
+      alert('Failed to save notes. Please try again.');
     } finally {
       setIsSavingNote(null);
     }
@@ -352,24 +352,24 @@ export default function TechnicianDashboardPage() {
   };
 
   const severityColors = {
-    urgent: 'bg-red-100 text-red-700 border-red-300',
-    high: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-    medium: 'bg-blue-100 text-blue-700 border-blue-300',
-    low: 'bg-gray-100 text-gray-700 border-gray-300',
+    urgent: 'bg-red-50 text-red-700 border-red-100',
+    high: 'bg-amber-50 text-amber-700 border-amber-100',
+    medium: 'bg-blue-50 text-blue-700 border-blue-100',
+    low: 'bg-gray-50 text-gray-700 border-gray-100',
   };
 
   const statusColors = {
-    assigned: 'bg-orange-100 text-orange-700',
-    in_progress: 'bg-blue-100 text-blue-700',
-    completed: 'bg-green-100 text-green-700',
+    assigned: 'bg-orange-50 text-orange-700',
+    in_progress: 'bg-blue-50 text-blue-700',
+    completed: 'bg-green-50 text-green-700',
   };
 
   if (loading || !user || (user as any).role !== 'technician') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600">Loading...</p>
+          <div className="w-10 h-10 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500">Loading...</p>
         </div>
       </div>
     );
@@ -378,37 +378,20 @@ export default function TechnicianDashboardPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen relative overflow-hidden py-8 px-4 sm:px-6 lg:px-8" style={{
-        background: 'linear-gradient(135deg, #e3f2fd 0%, #f0f4ff 50%, #e8eeff 100%)',
-      }}>
-        {/* Blurred Background Elements - Large Corner Bubbles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Top Left Corner - Large Blue Bubble with visible border */}
-          <div className="absolute -top-32 -left-32 w-[600px] h-[600px] rounded-full">
-            <div className="w-full h-full bg-gradient-to-br from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
-            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
-          </div>
-
-          {/* Bottom Right Corner - Large Blue Bubble with visible border */}
-          <div className="absolute -bottom-32 -right-32 w-[700px] h-[700px] rounded-full">
-            <div className="w-full h-full bg-gradient-to-tl from-blue-200/60 to-blue-300/50 rounded-full blur-3xl"></div>
-            <div className="absolute inset-0 rounded-full border-2 border-white/70"></div>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto relative z-10">
+      <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-4xl font-semibold text-gray-800 tracking-wide uppercase">TECHNICIAN · DASHBOARD</h1>
-                <p className="mt-3 text-sm text-gray-600 font-normal">
-                  Welcome back, <span className="font-semibold">{user.displayName || user.email}</span>
+                <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Technician Dashboard</h1>
+                <p className="mt-1 text-sm text-gray-500">
+                  Welcome back, <span className="font-medium text-gray-700">{user.displayName || user.email}</span>
                 </p>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-purple-600">{repairs.length}</div>
-                <div className="text-sm text-gray-500">Total Repairs</div>
+                <div className="text-2xl font-semibold text-gray-900">{repairs.length}</div>
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Repairs</div>
               </div>
             </div>
           </div>
@@ -417,77 +400,75 @@ export default function TechnicianDashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
             <button
               onClick={() => setStatusFilter('assigned')}
-              className={`backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-6 transition-all duration-200 hover:shadow-lg text-left ${
-                statusFilter === 'assigned' ? 'ring-4 ring-orange-300' : ''
+              className={`bg-white rounded-2xl border shadow-sm p-6 transition-all duration-200 hover:shadow-md text-left ${
+                statusFilter === 'assigned' ? 'border-gray-900 ring-1 ring-gray-900' : 'border-gray-100'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">New Assignments</p>
-                  <p className="text-3xl font-bold text-orange-600 mt-1">{assignedCount}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">New Assignments</p>
+                  <p className="text-3xl font-semibold text-gray-900 mt-1">{assignedCount}</p>
                 </div>
-                <div className="text-4xl">📋</div>
               </div>
             </button>
 
             <button
               onClick={() => setStatusFilter('in_progress')}
-              className={`backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-6 transition-all duration-200 hover:shadow-lg text-left ${
-                statusFilter === 'in_progress' ? 'ring-4 ring-blue-300' : ''
+              className={`bg-white rounded-2xl border shadow-sm p-6 transition-all duration-200 hover:shadow-md text-left ${
+                statusFilter === 'in_progress' ? 'border-gray-900 ring-1 ring-gray-900' : 'border-gray-100'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">In Progress</p>
-                  <p className="text-3xl font-bold text-blue-600 mt-1">{inProgressCount}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">In Progress</p>
+                  <p className="text-3xl font-semibold text-gray-900 mt-1">{inProgressCount}</p>
                 </div>
-                <div className="text-4xl">⚙️</div>
               </div>
             </button>
           </div>
 
           {/* Search & Advanced Filters */}
-          <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-6 mb-6">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
             <div className="mb-4">
-              <h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wider">🔍 Search & Filter</h3>
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Search & Filter</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Search Bar */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">Search</label>
+                <label className="block text-xs font-medium text-gray-500 mb-2">Search</label>
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Device ID, staff name, issue..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                 />
               </div>
 
               {/* Severity Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">Severity</label>
+                <label className="block text-xs font-medium text-gray-500 mb-2">Severity</label>
                 <select
                   value={severityFilter}
                   onChange={(e) => setSeverityFilter(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                 >
                   <option value="all">All Severities</option>
-                  <option value="urgent">🔴 Urgent</option>
-                  <option value="high">🟡 High</option>
-                  <option value="medium">🔵 Medium</option>
-                  <option value="low">⚪ Low</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
                 </select>
               </div>
 
               {/* Date Range Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-2">Date Range</label>
+                <label className="block text-xs font-medium text-gray-500 mb-2">Date Range</label>
                 <select
                   value={dateRangeFilter}
                   onChange={(e) => setDateRangeFilter(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-50 border-0 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                 >
                   <option value="all">All Time</option>
                   <option value="today">Today</option>
@@ -500,23 +481,23 @@ export default function TechnicianDashboardPage() {
             {/* Active Filters Info */}
             {(searchTerm || severityFilter !== 'all' || dateRangeFilter !== 'all') && (
               <div className="mt-4 flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-gray-600">Active filters:</span>
+                <span className="text-xs text-gray-500">Active filters:</span>
                 {searchTerm && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                  <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">
                     Search: &quot;{searchTerm}&quot;
-                    <button onClick={() => setSearchTerm('')} className="ml-1 hover:text-blue-900">×</button>
+                    <button onClick={() => setSearchTerm('')} className="ml-1 hover:text-gray-900">&times;</button>
                   </span>
                 )}
                 {severityFilter !== 'all' && (
-                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">
+                  <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">
                     Severity: {severityFilter}
-                    <button onClick={() => setSeverityFilter('all')} className="ml-1 hover:text-yellow-900">×</button>
+                    <button onClick={() => setSeverityFilter('all')} className="ml-1 hover:text-gray-900">&times;</button>
                   </span>
                 )}
                 {dateRangeFilter !== 'all' && (
-                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                  <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">
                     Date: {dateRangeFilter}
-                    <button onClick={() => setDateRangeFilter('all')} className="ml-1 hover:text-green-900">×</button>
+                    <button onClick={() => setDateRangeFilter('all')} className="ml-1 hover:text-gray-900">&times;</button>
                   </span>
                 )}
                 <button
@@ -525,9 +506,7 @@ export default function TechnicianDashboardPage() {
                     setSeverityFilter('all');
                     setDateRangeFilter('all');
                   }}
-                  className="px-2 py-1 rounded text-xs
-                    md:bg-red-100 md:text-red-700 md:hover:bg-red-200
-                    bg-red-600 text-white"
+                  className="text-xs font-medium bg-gray-900 text-white px-2 py-1 rounded-lg hover:bg-gray-800"
                 >
                   Clear All
                 </button>
@@ -537,13 +516,13 @@ export default function TechnicianDashboardPage() {
 
           {/* Filter Info */}
           {statusFilter !== 'all' && (
-            <div className="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
+            <div className="mb-4 flex items-center justify-between bg-white rounded-2xl border border-gray-100 shadow-sm p-3">
+              <p className="text-sm text-gray-700">
                 Showing {filteredRepairs.length} {statusFilter.replace('_', ' ')} repair(s)
               </p>
               <button
                 onClick={() => setStatusFilter('all')}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                className="text-sm text-gray-900 hover:text-gray-700 font-medium"
               >
                 Clear Filter
               </button>
@@ -552,19 +531,16 @@ export default function TechnicianDashboardPage() {
 
           {/* Repairs List */}
           {isLoading ? (
-            <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-12 text-center">
-              <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading repairs...</p>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+              <div className="w-10 h-10 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-sm text-gray-500">Loading repairs...</p>
             </div>
           ) : filteredRepairs.length === 0 ? (
-            <div className="backdrop-blur-2xl bg-white/30 border-4 border-white rounded-lg shadow p-12 text-center">
-              <div className="text-6xl mb-4">
-                {statusFilter === 'all' ? '📭' : '🔍'}
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 {statusFilter === 'all' ? 'No Active Repairs' : `No ${statusFilter.replace('_', ' ')} repairs`}
               </h2>
-              <p className="text-gray-600">
+              <p className="text-sm text-gray-500">
                 {statusFilter === 'all'
                   ? 'You have no active repair assignments. Completed repairs are in "Repair History".'
                   : `You have no repairs with status "${statusFilter.replace('_', ' ')}".`}
@@ -575,32 +551,37 @@ export default function TechnicianDashboardPage() {
               {filteredRepairs.map((repair) => (
                 <div
                   key={repair.id}
-                  className={`backdrop-blur-2xl bg-white/30 rounded-lg shadow border-2 ${severityColors[repair.severity]} transition-all duration-200 hover:shadow-lg`}
+                  className={`bg-white rounded-2xl border shadow-sm transition-all duration-200 hover:shadow-md ${
+                    repair.severity === 'urgent' ? 'border-red-100' :
+                    repair.severity === 'high' ? 'border-amber-100' :
+                    repair.severity === 'medium' ? 'border-blue-100' :
+                    'border-gray-100'
+                  }`}
                 >
                   {/* Card Header */}
                   <button
                     onClick={() => handleToggleExpand(repair.id, repair.technicianNotes)}
-                    className="w-full p-4 flex items-center justify-between text-left hover:opacity-80"
+                    className="w-full p-4 flex items-center justify-between text-left"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-gray-900">{repair.issueType}</h3>
-                        <span className={`px-2 py-1 text-xs font-bold rounded uppercase ${statusColors[repair.status]}`}>
+                        <h3 className="font-medium text-gray-900">{repair.issueType}</h3>
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-lg ${statusColors[repair.status]}`}>
                           {repair.status.replace('_', ' ')}
                         </span>
-                        <span className="px-2 py-1 text-xs font-bold rounded uppercase bg-red-600 text-white">
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-lg ${severityColors[repair.severity]}`}>
                           {repair.severity}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600">
-                        <strong>Staff:</strong> {repair.staffName} ({repair.department})
+                      <p className="text-sm text-gray-500">
+                        <span className="font-medium text-gray-700">Staff:</span> {repair.staffName} ({repair.department})
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-xs text-gray-400 mt-1">
                         Assigned: {formatDateTime(repair.assignedDate)}
                       </p>
                     </div>
                     <svg
-                      className={`w-6 h-6 text-gray-600 transition-transform ${
+                      className={`w-5 h-5 text-gray-400 transition-transform ${
                         expandedRepair === repair.id ? 'rotate-180' : ''
                       }`}
                       fill="none"
@@ -613,34 +594,34 @@ export default function TechnicianDashboardPage() {
 
                   {/* Expanded Details */}
                   {expandedRepair === repair.id && (
-                    <div className="px-4 pb-4 border-t-2 pt-4 space-y-4">
+                    <div className="px-4 pb-4 border-t border-gray-50 pt-4 space-y-4">
                       {/* Issue Details */}
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <h4 className="font-semibold text-gray-900 mb-2">📋 Issue Description:</h4>
+                      <div className="bg-gray-50 rounded-xl p-3">
+                        <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Issue Description</h4>
                         <p className="text-sm text-gray-700">{repair.description}</p>
                       </div>
 
                       {/* Device Info */}
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <h4 className="font-semibold text-gray-900 mb-2">💻 Device Information:</h4>
+                      <div className="bg-gray-50 rounded-xl p-3">
+                        <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Device Information</h4>
                         <div className="text-sm space-y-1">
-                          <p className="text-gray-700"><strong>Staff:</strong> {repair.staffName}</p>
-                          <p className="text-gray-700"><strong>Email:</strong> {repair.staffEmail}</p>
-                          <p className="text-gray-700"><strong>Department:</strong> {repair.department}</p>
-                          <p className="text-gray-700"><strong>Device ID:</strong> <span className="font-mono">{repair.deviceId}</span></p>
+                          <p className="text-gray-700"><span className="font-medium">Staff:</span> {repair.staffName}</p>
+                          <p className="text-gray-700"><span className="font-medium">Email:</span> {repair.staffEmail}</p>
+                          <p className="text-gray-700"><span className="font-medium">Department:</span> {repair.department}</p>
+                          <p className="text-gray-700"><span className="font-medium">Device ID:</span> <span className="font-mono text-xs">{repair.deviceId}</span></p>
                         </div>
                       </div>
 
                       {/* Technician Notes */}
-                      <div className="bg-blue-50 rounded-lg p-4">
-                        <label className="block text-sm font-semibold text-gray-800 mb-2">
-                          📝 Your Notes:
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                          Your Notes
                         </label>
                         <textarea
                           value={technicianNotes[repair.id] || ''}
                           onChange={(e) => setTechnicianNotes(prev => ({ ...prev, [repair.id]: e.target.value }))}
                           placeholder="Add your notes, findings, or updates here..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                          className="w-full px-3 py-2 bg-white border border-gray-100 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
                           rows={3}
                         />
                         <div className="flex justify-end mt-2">
@@ -649,43 +630,37 @@ export default function TechnicianDashboardPage() {
                             disabled={isSavingNote === repair.id}
                             className={`${
                               technicianNotes[repair.id]?.trim() && technicianNotes[repair.id] !== repair.technicianNotes
-                                ? 'border-4 md:bg-green-100 md:border-green-300 md:hover:bg-green-200 md:hover:border-green-400 md:text-green-700 md:hover:text-green-800 bg-green-600 border-green-700 text-white'
-                                : 'bg-gray-400 cursor-not-allowed text-white border-4 border-gray-400'
-                            } px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50`}
+                                ? 'bg-gray-900 text-white hover:bg-gray-800'
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            } px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50`}
                           >
-                            {isSavingNote === repair.id ? '💾 Saving...' : '✅ Save Notes'}
+                            {isSavingNote === repair.id ? 'Saving...' : 'Save Notes'}
                           </button>
                         </div>
                       </div>
 
                       {/* Status Update Buttons */}
-                      <div className="flex gap-3 pt-4 border-t">
+                      <div className="flex gap-3 pt-4 border-t border-gray-50">
                         {repair.status === 'assigned' && (
                           <button
                             onClick={() => handleUpdateStatus(repair.id, 'in_progress')}
-                            className="flex-1 border-4
-                              md:bg-blue-100 md:border-blue-300 md:hover:bg-blue-200 md:hover:border-blue-400 md:text-blue-700 md:hover:text-blue-800
-                              bg-blue-600 border-blue-700 text-white
-                              px-4 py-2 rounded-lg font-medium transition-colors"
+                            className="flex-1 bg-gray-900 text-white px-4 py-2 rounded-xl font-medium transition-colors hover:bg-gray-800"
                           >
-                            ⚙️ Start Working
+                            Start Working
                           </button>
                         )}
                         {repair.status === 'in_progress' && (
                           <button
                             onClick={() => handleUpdateStatus(repair.id, 'completed')}
-                            className="flex-1 border-4
-                              md:bg-green-100 md:border-green-300 md:hover:bg-green-200 md:hover:border-green-400 md:text-green-700 md:hover:text-green-800
-                              bg-green-600 border-green-700 text-white
-                              px-4 py-2 rounded-lg font-medium transition-colors"
+                            className="flex-1 bg-gray-900 text-white px-4 py-2 rounded-xl font-medium transition-colors hover:bg-gray-800"
                           >
-                            ✅ Mark Completed
+                            Mark Completed
                           </button>
                         )}
                         {repair.status === 'completed' && (
-                          <div className="flex-1 bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-center">
+                          <div className="flex-1 bg-green-50 border border-green-100 rounded-xl px-4 py-2 text-center">
                             <p className="text-sm text-green-700 font-medium">
-                              ✅ Completed on {repair.completedDate ? formatDate(repair.completedDate) : 'N/A'}
+                              Completed on {repair.completedDate ? formatDate(repair.completedDate) : 'N/A'}
                             </p>
                           </div>
                         )}
