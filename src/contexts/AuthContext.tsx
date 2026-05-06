@@ -32,7 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setError(null);
-      setLoading(true);
 
       const userData = await authService.signIn(email, password);
       setUser(userData);
@@ -41,15 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
       return false;
-    } finally {
-      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, name: string, department: string): Promise<boolean> => {
     try {
       setError(null);
-      setLoading(true);
       const userData = await authService.signUp(email, password, name, department);
       setUser(userData);
       return true;
@@ -57,8 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Sign up error:', err);
       setError(err instanceof Error ? err.message : 'Sign up failed');
       return false;
-    } finally {
-      setLoading(false);
     }
   };
 

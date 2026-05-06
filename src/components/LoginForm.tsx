@@ -16,7 +16,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<string[]>([]);
   const [_loadingDepartments, setLoadingDepartments] = useState(true);
-  const { login, signUp } = useAuth();
+  const { login, signUp, error: authError } = useAuth();
   const router = useRouter();
 
   // Auto-generate name from email
@@ -246,9 +246,9 @@ function LoginForm() {
             )}
 
             {/* Error Message */}
-            {error && (
+            {(error || authError) && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
+                {error || authError}
               </div>
             )}
 
